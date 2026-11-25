@@ -1,4 +1,4 @@
-import type { PartnerDeal } from "@repo/shared/partner-deal";
+import type { PartnerDeal, PartnerSupplierLink } from "@repo/shared/partner-deal";
 import type { PublicProductGroup } from "@repo/shared/product-groups";
 export type ShippingType = "domestic" | "overseas";
 
@@ -245,6 +245,8 @@ export type SourcingRequest = {
   updatedAt: string;
   // 입점 신청 진행 단계·계약 조건(partner_deals, 입점 신청만)
   deal?: PartnerDeal | null;
+  // 입점 성공 → 이은 공급사(없으면 이름이 같은 공급사)·정산 방식·공급사 센터 계정(입점 신청만, 2026-11-25)
+  supplierLink?: PartnerSupplierLink | null;
 };
 
 // 공개 단가표에 내려오는 배송 정책(관리용 필드 제외)

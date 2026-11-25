@@ -63,6 +63,7 @@ import { EncyclopediaSearchAdmin } from "./EncyclopediaSearchAdmin";
 import { CategoriesAdmin } from "./CategoriesAdmin";
 import type { SupplierAccountView } from "./SupplierPortalAdmin";
 import { SettlementBadge, SupplierSettlementFields, parseSettlementDraft, saveSupplierSettlement, settlementDraft, type SettlementDraft, type SupplierSettlementView } from "./SupplierSettlementFields";
+import { PartnerSupplierPanel } from "./PartnerSupplierPanel";
 import { isSupplierAccount } from "@/components/auth/AdminGuard";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
 import { authClient, clearAuthToken } from "@/lib/auth";
@@ -2184,6 +2185,26 @@ function SuppliersAdmin() {
     setSettlement(settlementDraft(supplier ? settlements[supplier.id] : null));
   };
 
+  // 입점 신청 화면의 "공급사 관리에서 보기"(?supplier=)·"공급사 센터 계정(ID) 만들기"(?account=)로 들어오면 그 공급사를 바로 엽니다(한 번만).
+  const location = useLocation();
+  const navigate = useNavigate();
+  const deepLinkDone = useRef(false);
+  const openRef = useRef(open);
+  openRef.current = open;
+  useEffect(() => {
+    if (loading || deepLinkDone.current) return;
+    const params = new URLSearchParams(location.search);
+    const accountId = params.get("account");
+    const supplierId = params.get("supplier");
+    if (!accountId && !supplierId) return;
+    deepLinkDone.current = true;
+    const target = suppliers.find((item) => item.id === (accountId ?? supplierId));
+    if (!target) toast.error("공급사를 찾지 못했어요. 목록에서 골라 주세요.");
+    else if (accountId) setAccountTarget(target);
+    else openRef.current(target);
+    navigate("/admin/suppliers", { replace: true });
+  }, [loading, location.search, suppliers, navigate]);
+
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
@@ -2685,13 +2706,14 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
   // 입점 신청 DB를 엑셀(CSV, 한글 깨짐 방지 BOM)로 내려받습니다: 진행 단계·계약 조건·상담 메모 포함
   const exportPartnersCsv = () => {
     const cell = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
-    const header = ["접수번호", "접수일", "업체명", "업종", "주요 상품", "담당자", "연락처", "이메일", "진행 단계", "계약 형태", "수수료율(%)", "연락일", "종료일", "상담 메모", "업체 정보·소개", "홈페이지"];
+    const header = ["접수번호", "접수일", "업체명", "업종", "주요 상품", "담당자", "연락처", "이메일", "진행 단계", "계약 형태", "수수료율(%)", "연락일", "종료일", "상담 메모", "업체 정보·소개", "홈페이지", "공급사 등록", "공급사 센터 아이디"];
     const rows = filtered.map((request) => {
       const deal = request.deal;
       return [
         requestNumber.get(request.id), request.createdAt.slice(0, 10), request.companyName, request.businessType, request.productName, request.requesterName, request.contact, request.email,
         PARTNER_STAGE_LABELS[stageOf(request)], deal?.stage === "contracted" && deal.contractType ? PARTNER_CONTRACT_LABELS[deal.contractType] : "", deal?.stage === "contracted" && deal.contractType === "commission" ? deal.commissionRate ?? "" : "",
-        deal?.contactedAt?.slice(0, 10), deal?.closedAt?.slice(0, 10), deal?.contractMemo, request.details, request.referenceUrl
+        deal?.contactedAt?.slice(0, 10), deal?.closedAt?.slice(0, 10), deal?.contractMemo, request.details, request.referenceUrl,
+        request.supplierLink?.linked ? request.supplierLink.supplierName : "", request.supplierLink?.linked ? request.supplierLink.username ?? "" : ""
       ].map(cell).join(",");
     });
     const blob = new Blob([`\uFEFF${[header.map(cell).join(","), ...rows].join("\r\n")}`], { type: "text/csv;charset=utf-8" });
@@ -2846,7 +2868,7 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
                     {isPartner ? <>
                       <td data-label="업체·주요 상품"><div className="request-product"><strong>{request.companyName || "-"}</strong><small>{request.productName}</small></div></td>
                       <td data-label="업종"><span className="request-type-chip">{request.businessType || "-"}</span></td>
-                      <td data-label="계약 조건">{partnerContractSummary(request.deal) ? <strong className="partner-contract-summary">{partnerContractSummary(request.deal)}</strong> : <span className="partner-contract-empty">-</span>}</td>
+                      <td data-label="계약 조건">{partnerContractSummary(request.deal) ? <strong className="partner-contract-summary">{partnerContractSummary(request.deal)}</strong> : <span className="partner-contract-empty">-</span>}{request.supplierLink?.linked ? <span className="partner-supplier-badge" title={`공급사 관리: ${request.supplierLink.supplierName}`}>공급사 등록{request.supplierLink.hasAccount ? " · 계정" : ""}</span> : null}</td>
                       <td data-label="담당자"><strong>{request.requesterName}</strong></td>
                       <td data-label="핸드폰 번호"><a className="request-contact" href={`tel:${request.contact.replace(/[^0-9+]/g, "")}`} onClick={(event) => event.stopPropagation()}>{request.contact}</a></td>
                       <td data-label="이메일"><div className="request-email"><a href={`mailto:${request.email ?? ""}`} title={request.email ?? undefined} onClick={(event) => event.stopPropagation()}>{request.email || "-"}</a><small className={`mail-status ${request.emailStatus ?? ""}`}>{mailLabel(request.emailStatus)}</small></div></td>
@@ -2900,11 +2922,19 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
               </div>
             )}
             {typeOf(selectedRequest) === "partner" ? (
-              <PartnerDealEditor
-                key={`${selectedRequest.id}-${selectedRequest.deal?.updatedAt ?? "new"}`}
-                request={selectedRequest}
-                onSaved={async (next) => { setSelectedRequest(next); await loadSourcing(); }}
-              />
+              <>
+                <PartnerDealEditor
+                  key={`${selectedRequest.id}-${selectedRequest.deal?.updatedAt ?? "new"}`}
+                  request={selectedRequest}
+                  onSaved={async (next) => { setSelectedRequest(next); await loadSourcing(); }}
+                />
+                {/* 입점 성공 → 공급사 등록·정산 방식·계정(2026-11-25) */}
+                <PartnerSupplierPanel
+                  key={`${selectedRequest.id}-supplier-${selectedRequest.supplierLink?.supplierId ?? "none"}-${selectedRequest.deal?.updatedAt ?? "new"}`}
+                  request={selectedRequest}
+                  onSaved={async (next) => { setSelectedRequest(next); await loadSourcing(); }}
+                />
+              </>
             ) : (
               <div className="request-detail-actions">
                 {([

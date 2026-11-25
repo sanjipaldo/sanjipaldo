@@ -27,15 +27,18 @@ import {
   startRunnerJob
 } from "../services/baljuora-sync";
 import {
+  buildFeeInvoiceFile,
   buildHometaxFile,
   getHometaxPreview,
   getHometaxSettings,
   getSalesDashboard,
   listBuyers,
   listSupplierSettlements,
+  markFeeInvoices,
   saveHometaxSettings,
   updateBuyer,
-  updateSupplierSettlement
+  updateSupplierSettlement,
+  updateSupplierSettlementsBulk
 } from "../services/baljuora-sales";
 import { BUYER_OVERRIDE_FIELDS } from "@repo/shared/baljuora-sales";
 import { SUPPLIER_SETTLEMENT_STATUSES } from "@repo/shared/supplier-portal";
@@ -280,7 +283,9 @@ baljuoraRouter.put("/admin/hometax/settings", adminRoute, async (c) => {
     }).optional(),
     vatIncluded: z.boolean().optional(),
     receiptType: z.enum(["01", "02"]).optional(),
-    includeShipping: z.boolean().optional()
+    includeShipping: z.boolean().optional(),
+    // 판매 수수료 세금계산서(두고푸드 → 공급사): 수수료에 부가세 포함(기본) / 별도
+    commissionVatIncluded: z.boolean().optional()
   }).safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "홈택스 설정 값을 확인해 주세요."), 400);
   try {
@@ -313,6 +318,57 @@ baljuoraRouter.get("/admin/hometax/file", adminRoute, async (c) => {
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
       "Cache-Control": "no-store"
     });
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 여러 공급사 상태를 한 번에(판매 수수료 "한 번에 청구하기" 등)
+baljuoraRouter.put("/admin/settlements/bulk", adminRoute, async (c) => {
+  const parsed = z.object({
+    kind: z.enum(["weekly", "monthly", "fee"]),
+    period: z.string().trim().max(10),
+    status: z.enum(SUPPLIER_SETTLEMENT_STATUSES as [string, ...string[]]),
+    supplierNames: z.array(z.string().trim().min(1).max(120)).min(1).max(300)
+  }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "바꿀 공급사와 상태를 확인해 주세요."), 400);
+  try {
+    const user = c.var.currentUser;
+    return c.json(apiSuccess(await updateSupplierSettlementsBulk({ ...parsed.data, status: parsed.data.status as (typeof SUPPLIER_SETTLEMENT_STATUSES)[number] }, user?.username || user?.email || null)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 판매 수수료 세금계산서(두고푸드 → 공급사) 홈택스 일괄발급 엑셀. supplier를 주지 않으면 입금 확인 + 발행 전 공급사
+baljuoraRouter.get("/admin/settlements/fee-invoice-file", adminRoute, async (c) => {
+  const month = MonthSchema.safeParse(c.req.query("month"));
+  if (!month.success) return c.json(apiFailure("INVALID_INPUT", "세금계산서를 낼 달을 골라 주세요."), 400);
+  try {
+    const names = (c.req.queries("supplier") ?? []).map((name) => name.trim()).filter(Boolean).slice(0, 300);
+    const file = await buildFeeInvoiceFile(month.data, names.length > 0 ? names : null);
+    return c.body(file.bytes, 200, {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
+      "X-Doogo-Invoice-Suppliers": encodeURIComponent(JSON.stringify(file.suppliers)),
+      "Cache-Control": "no-store"
+    });
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 홈택스에서 발행한 뒤 "발행 완료로 표시"(issued false = 되돌리기)
+baljuoraRouter.post("/admin/settlements/fee-invoices", adminRoute, async (c) => {
+  const parsed = z.object({
+    month: MonthSchema,
+    supplierNames: z.array(z.string().trim().min(1).max(120)).min(1).max(300),
+    issued: z.boolean()
+  }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "달과 공급사를 확인해 주세요."), 400);
+  try {
+    const user = c.var.currentUser;
+    return c.json(apiSuccess(await markFeeInvoices(parsed.data, user?.username || user?.email || null)));
   } catch (error) {
     return errorResponse(c, error);
   }

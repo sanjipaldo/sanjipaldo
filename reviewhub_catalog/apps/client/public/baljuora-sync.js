@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.7.1";
+  var VERSION = "1.8.0";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   var INFO_FIELDS = ["name", "category"];
@@ -704,6 +704,23 @@
       list.push(entry);
     }
     return list;
+  }
+
+  // 매입처 이름 비교(1.8.0): 띄어쓰기·기호·(주)·㈜·주식회사·(유)·유한회사는 빼고 비교합니다("봄날 농원(주)" = "봄날농원").
+  function supplierNameKey(value) {
+    return String(value || "").toLowerCase().replace(/\(주\)|㈜|주식회사|\(유\)|유한회사/g, "").replace(/[^0-9a-z가-힣]/g, "");
+  }
+
+  // 발주오라 상품의 기본 매입처 이름: 매입처 목록(productSuppliers)의 기본 줄(없으면 하나뿐인 줄) → 상품의 매입처 칸. 못 읽으면 null.
+  function defaultSupplierName(record) {
+    if (!isObject(record)) return null;
+    if (Array.isArray(record.productSuppliers)) {
+      var rows = record.productSuppliers.filter(isObject);
+      var main = rows.find(function (row) { return row.isDefault === true || row.isMain === true || row.default === true; }) || (rows.length === 1 ? rows[0] : null);
+      var name = main ? pickString(main, ["supplierName", "supplierCompanyName"]) || pickString(main.supplier, ["companyName", "name"]) : null;
+      if (name) return name;
+    }
+    return pickString(record, ["supplierName"]) || pickString(record.supplier, ["companyName", "name"]);
   }
 
   function categoryKeyOf(detail) {
@@ -1696,6 +1713,34 @@
       });
     }
 
+    // 신규 등록 때 복사할 발주오라 상품 고르기(1.8.0, 2026-11-25 프로세스 점검): 새 상품은 복사한 상품의 매입처 줄(매입처·매입원가·매입배송정책)을
+    // 그대로 쓰므로, 매입처가 다른 상품을 복사하면 발주가 엉뚱한 매입처로 갑니다. 복사할 상품의 기본 매입처가 DB센터 매입처명과 같은지 보고,
+    // 다르면 발주오라에서 같은 매입처 상품을 찾아 복사합니다. 같은 매입처 상품이 없으면 등록하지 않고 이유를 알립니다.
+    async function pickCreateTemplate(item, context) {
+      var wantKey = supplierNameKey(item.supplierName);
+      var template = null;
+      if (item.templateId) {
+        // 복사할 상품을 발주오라에서 지웠으면(404) 같은 매입처 상품을 찾아봅니다. 그 밖의 오류(로그인 만료 등)는 그대로 멈춥니다.
+        try { template = await getDetail(item.templateId); } catch (error) { if (!error || error.status !== 404) throw error; }
+      }
+      // DB센터 상품에 매입처가 없으면 비교할 수 없어 설정 복사용 상품을 그대로 씁니다(예전과 같음).
+      if (!wantKey) {
+        if (!template) throw SyncError("새 상품의 매입처·배송정책을 복사할 발주오라 상품이 없습니다. DB센터 동기화 설정에서 '설정 복사용 상품코드'를 정하거나, 같은 매입처 상품을 먼저 연결해 주세요.");
+        return template;
+      }
+      var templateName = template ? defaultSupplierName(template) : null;
+      if (template && templateName && supplierNameKey(templateName) === wantKey) return template;
+      // 매입처 이름을 읽지 못했어도 DB센터에서 같은 매입처로 연결된 상품이면 그대로 씁니다.
+      if (template && !templateName && item.templateMatch === "supplier") return template;
+      var sameId = context.supplierTemplates ? context.supplierTemplates[wantKey] : null;
+      if (sameId && (!template || sameId !== template.id)) {
+        var same = await getDetail(sameId);
+        var sameName = defaultSupplierName(same);
+        if (isObject(same) && (!sameName || supplierNameKey(sameName) === wantKey)) return same;
+      }
+      throw SyncError("발주오라에 '" + item.supplierName + "' 매입처 상품이 없어 신규 등록을 멈췄습니다" + (templateName ? "(설정 복사용 상품의 매입처는 '" + templateName + "')" : "") + ". 다른 매입처로 등록되면 발주가 엉뚱한 매입처로 갑니다. 발주오라에서 이 매입처를 만들고 첫 상품을 1개 직접 등록한 뒤, DB센터에서 '발주오라 상품 불러오기(비교)'를 하고 다시 동기화해 주세요.");
+    }
+
     async function pushItem(item, plan, context, code) {
       var result = { productId: item.productId, action: item.action, ok: false, baljuoraId: item.baljuoraId, code: item.code, applied: [], skipped: [], snapshot: null, error: null };
       try {
@@ -1707,8 +1752,7 @@
           if (context.existingCodes && item.code && context.existingCodes[String(item.code).toUpperCase()]) {
             throw SyncError("발주오라에 같은 상품코드(" + item.code + ")가 이미 있습니다. DB센터에서 '발주오라 상품 불러오기'를 다시 한 뒤 동기화해 주세요.");
           }
-          if (!item.templateId) throw SyncError("새 상품의 매입처·배송정책을 복사할 발주오라 상품이 없습니다. DB센터 동기화 설정에서 '설정 복사용 상품코드'를 정하거나, 같은 매입처 상품을 먼저 연결해 주세요.");
-          var template = await getDetail(item.templateId);
+          var template = await pickCreateTemplate(item, context);
           var body = buildCreateBody(template, item);
           var created = unwrap(await sendAdaptive("POST", "products", body, writable(template)));
           if (!state.structure.productCreate) state.structure.productCreate = structureOf(created);
@@ -1768,7 +1812,7 @@
       report.progress(0, plan.items.length, "발주오라 매출처 그룹을 확인하는 중…");
       var group = plan.groupId ? { id: plan.groupId, name: plan.groupKeyword } : null;
       if (plan.items.some(function (item) { return item.fields.indexOf("groupPrice") >= 0; }) && !group) group = await findGroup(plan.groupKeyword);
-      var context = { group: group, groupKeyword: plan.groupKeyword, existingCodes: null, createdCategories: {}, preserveCategoryIds: null };
+      var context = { group: group, groupKeyword: plan.groupKeyword, existingCodes: null, supplierTemplates: null, createdCategories: {}, preserveCategoryIds: null };
       var categoriesNow = null;
       // 1) DB센터 → 발주오라 상품 카테고리 맞추기(추가·이름 바꾸기)를 상품보다 먼저 합니다.
       if (isObject(plan.categoryTree) && Array.isArray(plan.categoryTree.ops) && plan.categoryTree.ops.length > 0) {
@@ -1787,12 +1831,18 @@
         context.preserveCategoryIds = excludedTreeIds(categoriesNow || [], plan.categoryExclude || ["브랜드별"]);
       }
       if (plan.items.some(function (item) { return item.action === "create"; })) {
-        report.progress(0, plan.items.length, "같은 상품코드가 발주오라에 이미 있는지 확인하는 중…");
+        report.progress(0, plan.items.length, "같은 상품코드·같은 매입처 상품이 발주오라에 있는지 확인하는 중…");
         var listed = await listAllProducts();
         context.existingCodes = {};
+        // 매입처(이름) → 그 매입처의 발주오라 상품 id: 신규 등록 때 같은 매입처 상품을 복사합니다(묶음 상품 제외).
+        context.supplierTemplates = {};
         listed.forEach(function (record) {
-          var found = isObject(record) ? firstString(record, CODE_KEYS) : null;
+          if (!isObject(record)) return;
+          var found = firstString(record, CODE_KEYS);
           if (found) context.existingCodes[found.value.toUpperCase()] = record.id;
+          if (typeof record.id !== "string" || record.targetType === "bundle" || record.type === "bundle" || record.productType === "bundle") return;
+          var key = supplierNameKey(defaultSupplierName(record));
+          if (key && !context.supplierTemplates[key]) context.supplierTemplates[key] = record.id;
         });
       }
       var pending = [];
@@ -2414,6 +2464,8 @@
     chunkPathsOf: chunkPathsOf,
     codeSnippets: codeSnippets,
     buildCreateBody: buildCreateBody,
+    supplierNameKey: supplierNameKey,
+    defaultSupplierName: defaultSupplierName,
     verifyApplied: verifyApplied,
     createRunner: createRunner,
     readCode: readCode,

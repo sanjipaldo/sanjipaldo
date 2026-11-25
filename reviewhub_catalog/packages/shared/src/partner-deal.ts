@@ -53,3 +53,59 @@ export function partnerContractSummary(deal?: Pick<PartnerDeal, "stage" | "contr
 export function partnerStageToStatus(stage: PartnerStage): "received" | "reviewing" | "completed" {
   return stage === "received" ? "received" : stage === "contacted" || stage === "negotiating" ? "reviewing" : "completed";
 }
+
+// 입점 신청서의 추가 업체 정보(선택 칸). 서버가 details 앞부분에 "[업체 정보]" + "라벨: 값" 줄로 함께 저장합니다(마이그레이션 없음).
+export const PARTNER_PROFILE_LABELS = {
+  representative: "대표자",
+  businessNumber: "사업자등록번호",
+  shipFrom: "출고지",
+  monthlyVolume: "월 공급 가능 물량",
+  salesChannels: "현재 판매 채널"
+} as const;
+export type PartnerProfileKey = keyof typeof PARTNER_PROFILE_LABELS;
+export type PartnerProfile = Partial<Record<PartnerProfileKey, string>>;
+
+const PARTNER_PROFILE_HEADER = "[업체 정보]";
+
+/** details의 "[업체 정보]" 줄을 다시 읽습니다(빈 줄이나 다음 [제목]에서 끝). 없으면 빈 객체. */
+export function parsePartnerProfile(details: string | null | undefined): PartnerProfile {
+  const text = String(details ?? "");
+  const start = text.indexOf(PARTNER_PROFILE_HEADER);
+  if (start < 0) return {};
+  const byLabel = new Map(Object.entries(PARTNER_PROFILE_LABELS).map(([key, label]) => [label as string, key as PartnerProfileKey]));
+  const profile: PartnerProfile = {};
+  for (const raw of text.slice(start + PARTNER_PROFILE_HEADER.length).split("\n").slice(1)) {
+    const line = raw.trim();
+    if (!line || line.startsWith("[")) break;
+    const colon = line.indexOf(":");
+    if (colon < 0) continue;
+    const key = byLabel.get(line.slice(0, colon).trim());
+    const value = line.slice(colon + 1).trim();
+    if (key && value && !profile[key]) profile[key] = value;
+  }
+  return profile;
+}
+
+// 입점 성공 → 공급사 연결(2026-11-25): 입점 신청을 공급사 관리의 공급사와 잇고, 계약 형태대로 정산 방식을 맞춥니다.
+export type PartnerSupplierSettlement = { type: "commission" | "wholesale"; commissionRate: number; cycle: "weekly" | "monthly"; explicit: boolean };
+export type PartnerSupplierLink = {
+  supplierId: string;
+  supplierName: string;
+  /** true = "공급사로 등록"으로 이은 공급사, false = 이름이 같은 공급사가 있을 뿐(아직 잇지 않음) */
+  linked: boolean;
+  linkedAt: string | null;
+  isActive: boolean;
+  hasAccount: boolean;
+  username: string | null;
+  settlement: PartnerSupplierSettlement | null;
+  /** 판매 수수료 세금계산서(공급받는자)에 필요한데 비어 있는 칸 */
+  taxProblems: string[];
+};
+
+/** 계약(수수료 위탁·일반 도소매)과 공급사 정산 방식이 같은지. 계약 형태 "기타"는 비교하지 않습니다(true). */
+export function settlementMatchesContract(deal: Pick<PartnerDeal, "contractType" | "commissionRate"> | null | undefined, settlement: PartnerSupplierSettlement | null | undefined) {
+  if (!deal?.contractType || deal.contractType === "other") return true;
+  if (!settlement?.explicit) return false;
+  if (deal.contractType === "wholesale") return settlement.type === "wholesale";
+  return settlement.type === "commission" && (deal.commissionRate == null || Math.abs(settlement.commissionRate - deal.commissionRate) < 0.05);
+}

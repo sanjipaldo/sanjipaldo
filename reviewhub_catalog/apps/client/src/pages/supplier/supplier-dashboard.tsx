@@ -90,18 +90,32 @@ export function SettlementMoneyList({ summary, settings }: { summary: Settlement
   );
 }
 
-/** 판매 수수료 청구(판매수수료 방식만): 그 달 판매분 → 다음 달 1~3일 두고푸드로 */
+/** 공급사가 두고푸드로 보낼 수수료 금액(부가세 별도 계약이면 수수료 + 부가세) */
+export function feePayable(fee: SupplierFee) {
+  return fee.amounts?.total ?? fee.commission;
+}
+
+/** 수수료 세금계산서(두고푸드 → 공급사) 안내 한 줄 */
+function feeInvoiceText(fee: SupplierFee) {
+  if (fee.invoice?.issued) return `두고푸드가 '${COMMISSION_INVOICE_ITEM}' 세금계산서를 발행했어요${fee.invoice.issuedAt ? ` · ${shortDate(fee.invoice.issuedAt)}` : ""}`;
+  if (fee.state?.status === "done") return `입금 확인됨 · 두고푸드가 '${COMMISSION_INVOICE_ITEM}' 세금계산서를 발행해요`;
+  return `입금이 확인되면 두고푸드가 '${COMMISSION_INVOICE_ITEM}' 세금계산서를 발행해요`;
+}
+
+/** 판매 수수료 청구(판매수수료 방식만): 그 달 판매분(배송비 제외) × 수수료율 → 두고푸드가 다음 달 초 청구 → 1~3일 입금 → 입금 확인 → 세금계산서 */
 export function FeeList({ fees }: { fees: SupplierFee[] }) {
   if (fees.length === 0) return null;
   return (
     <ul className="sup-fee-list">
       {fees.map((fee) => (
-        <li key={fee.month}>
+        <li key={fee.month} className={fee.state?.status === "paid" ? "is-billed" : fee.state?.status === "done" ? "is-done" : ""}>
           <div>
             <strong>{monthLabel(fee.month)} 판매분 수수료</strong>
-            <span>판매 대금 {won(fee.netAmount)} × {fee.commissionRate}% · {formatPayoutLabel(fee)}까지{fee.closed ? "" : " (이 달 판매가 끝나면 확정)"}</span>
+            <span>판매 대금 {won(fee.netAmount)}(배송비 제외) × {fee.commissionRate}% · {formatPayoutLabel(fee)}까지 두고푸드로 입금{fee.closed ? "" : " (이 달 판매가 끝나면 확정)"}</span>
+            {fee.vatIncluded === false && fee.amounts ? <span>수수료 {won(fee.commission)} + 부가세 {won(fee.amounts.tax)}</span> : null}
+            <span className={`sup-fee-invoice${fee.invoice?.issued ? " is-issued" : ""}`}>{feeInvoiceText(fee)}</span>
           </div>
-          <b>{won(fee.commission)}</b>
+          <b>{won(feePayable(fee))}</b>
           <FeeStatus state={fee.state} />
         </li>
       ))}
@@ -109,11 +123,27 @@ export function FeeList({ fees }: { fees: SupplierFee[] }) {
   );
 }
 
-/** 대시보드 달력: 날짜마다 판매 금액, 정산 입금일 표시. 누르면 판매·정산 화면으로 */
-function SupplierMiniCalendar({ month, today, days, payoutDays }: { month: string; today: string; days: SalesDay[]; payoutDays: SalesMonth["payoutDays"] }) {
+/** 달력에 표시할 수수료 입금 기간(그 달 1~3일 = 지난달 판매분 수수료). 날짜 → { 첫날 여부, 수수료 } */
+export function feeDueMap(fees: SupplierFee[] | undefined, month: string) {
+  const map = new Map<string, { first: boolean; fee: SupplierFee }>();
+  for (const fee of fees ?? []) {
+    if (feePayable(fee) <= 0 || !fee.payoutStart.startsWith(month)) continue;
+    const startDay = Number(fee.payoutStart.slice(-2));
+    const endDay = Number(fee.payoutEnd.slice(-2));
+    for (let day = startDay; day <= endDay; day += 1) {
+      const date = `${month}-${String(day).padStart(2, "0")}`;
+      map.set(date, { first: day === startDay, fee });
+    }
+  }
+  return map;
+}
+
+/** 대시보드 달력: 날짜마다 판매 금액, 정산 입금일(두고푸드 → 공급사)·수수료 입금일(공급사 → 두고푸드) 표시. 누르면 판매·정산 화면으로 */
+function SupplierMiniCalendar({ month, today, days, payoutDays, fees }: { month: string; today: string; days: SalesDay[]; payoutDays: SalesMonth["payoutDays"]; fees?: SupplierFee[] }) {
   const { start, end } = monthRange(month);
   const dayMap = new Map(days.map((day) => [day.date, day]));
   const payoutMap = new Map(payoutDays.map((payout) => [payout.date, payout]));
+  const feeMap = feeDueMap(fees, month);
   const cells: Array<string | null> = [
     ...Array.from({ length: weekdayOf(start) }, () => null),
     ...Array.from({ length: Number(end.slice(-2)) }, (_, index) => `${month}-${String(index + 1).padStart(2, "0")}`)
@@ -126,17 +156,24 @@ function SupplierMiniCalendar({ month, today, days, payoutDays }: { month: strin
           if (!date) return <span key={`blank-${index}`} className="sup-mini-cell is-blank" aria-hidden="true" />;
           const item = dayMap.get(date);
           const payout = payoutMap.get(date);
-          const label = [dayLabel(date), item?.netAmount ? `판매 ${won(item.netAmount)}` : "판매 없음", payout ? `정산 입금 ${won(payout.amount)}` : ""].filter(Boolean).join(", ");
+          const fee = feeMap.get(date);
+          const label = [
+            dayLabel(date),
+            item?.netAmount ? `판매 ${won(item.netAmount)}` : "판매 없음",
+            payout ? `정산 입금 ${won(payout.amount)}` : "",
+            fee ? `${monthLabel(fee.fee.month)} 판매 수수료 ${won(feePayable(fee.fee))} 두고푸드로 입금(${formatPayoutLabel(fee.fee)})` : ""
+          ].filter(Boolean).join(", ");
           return (
-            <Link key={date} to="/supplier/sales" className={`sup-mini-cell${date === today ? " is-today" : ""}${item?.netAmount ? " has-sale" : ""}${payout ? " is-payout" : ""}`} aria-label={label} title={label}>
+            <Link key={date} to="/supplier/sales" className={`sup-mini-cell${date === today ? " is-today" : ""}${item?.netAmount ? " has-sale" : ""}${payout ? " is-payout" : ""}${fee ? " is-fee" : ""}`} aria-label={label} title={label}>
               <b>{Number(date.slice(-2))}</b>
               {item && item.netAmount > 0 && <span>{compactWon(item.netAmount)}</span>}
               {payout && <em>입금</em>}
+              {fee && <em className="is-fee">수수료</em>}
             </Link>
           );
         })}
       </div>
-      <p className="sup-mini-legend"><span className="is-sale">판매 금액</span><span className="is-payout">정산 입금일</span><span className="is-today">오늘</span></p>
+      <p className="sup-mini-legend"><span className="is-sale">판매 금액</span><span className="is-payout">정산 입금일</span>{feeMap.size > 0 && <span className="is-fee">수수료 입금일</span>}<span className="is-today">오늘</span></p>
     </div>
   );
 }
@@ -221,7 +258,7 @@ export function SupplierHome({ profile, reloadKey, onCreate }: { profile: Suppli
         </section>
         <section className="admin-card sup-dash-calendar">
           <div className="card-heading"><CalendarDays size={19} aria-hidden="true" /><div><h2>판매 달력</h2><p>날짜마다 {amountLabel} · 정산 입금일</p></div><Link to="/supplier/sales">크게 보기 <ArrowRight size={13} /></Link></div>
-          <SupplierMiniCalendar month={data.month} today={data.today} days={sales.days} payoutDays={sales.payoutDays ?? []} />
+          <SupplierMiniCalendar month={data.month} today={data.today} days={sales.days} payoutDays={sales.payoutDays ?? []} fees={commission ? data.fees : undefined} />
         </section>
       </div>
 

@@ -24,6 +24,7 @@ import {
   getAdminOverview,
   getAdminProductsCatalog,
   getAdminSourcingCatalog,
+  getPartnerRequestView,
   getAdminCategoriesSummary,
   getSuppliers,
   getShippingPolicies,
@@ -78,6 +79,7 @@ import { getCatalogOperationsOverview } from "../services/catalog-operations";
 import { getAdminHomeLayout, getMemberStats, resetAdminHomeLayout, saveAdminHomeLayout } from "../services/admin-home";
 import { AdminAccountError, changeOwnAdminPassword, createAdminAccount, deleteAdminAccount, listAdminAccounts, resetAdminPassword } from "../services/admin-accounts";
 import { loadSettlementDirectory, saveSupplierSettlementSettings } from "../services/supplier-settlement";
+import { registerPartnerSupplier } from "../services/partner-supplier";
 import { SHIPPING_RATE_TYPES, SHIPPING_UNIT_LABELS, validateRateTiers } from "../services/shipping-rates";
 import { getBaljuoraHomeSummary } from "../services/baljuora-sync";
 import { StorageError, storagePut } from "../services/s3_storage";
@@ -1233,6 +1235,24 @@ catalogRouter.put("/admin/partner/:id/deal", adminRoute, async (c) => {
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", parsed.error.issues[0]?.message || "진행 단계 입력값을 확인해 주세요."), 400);
   try {
     return c.json(apiSuccess({ request: await updatePartnerDeal(c.req.param("id"), parsed.data) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 입점 성공 → 공급사로 등록(이름이 같은 공급사가 있으면 연결)하고 계약 형태대로 정산 방식을 맞춥니다(2026-11-25).
+const PartnerSupplierSchema = z.object({
+  name: z.string().trim().max(160).nullable().optional(),
+  cycle: z.enum(["weekly", "monthly"]).nullable().optional()
+});
+
+catalogRouter.post("/admin/partner/:id/register-supplier", adminRoute, async (c) => {
+  const parsed = PartnerSupplierSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "매입처명·지급 주기를 확인해 주세요."), 400);
+  try {
+    const user = c.var.currentUser;
+    const result = await registerPartnerSupplier(c.req.param("id"), parsed.data, user.username || user.email || null);
+    return c.json(apiSuccess({ ...result, request: await getPartnerRequestView(c.req.param("id")) }));
   } catch (error) {
     return errorResponse(c, error);
   }

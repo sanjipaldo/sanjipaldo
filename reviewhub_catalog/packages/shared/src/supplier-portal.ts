@@ -307,8 +307,8 @@ export const SUPPLIER_SETTLEMENT_TYPE_LABELS: Record<SupplierSettlementType, str
 };
 export type SupplierSettlementSettings = { type: SupplierSettlementType; commissionRate: number; cycle: SupplierSettlementCycle };
 export const DEFAULT_SETTLEMENT_SETTINGS: SupplierSettlementSettings = { type: "commission", commissionRate: DEFAULT_SUPPLIER_COMMISSION_RATE, cycle: "weekly" };
-/** 판매 수수료 세금계산서 품목 이름(두고푸드 → 공급사) */
-export const COMMISSION_INVOICE_ITEM = "마케팅·세일즈 수수료";
+/** 판매 수수료 세금계산서 품목 이름(두고푸드 → 공급사, 2026-11-25 관리자 결정 "판매 대행·마케팅 대행 수수료") */
+export const COMMISSION_INVOICE_ITEM = "판매대행·마케팅대행 수수료";
 /** 반품·환불 책임(공급사 화면·관리자 정산 설정에 같은 글) */
 export const SUPPLIER_RETURN_POLICY = "반품·환불: 공급사 귀책(상품 문제)이면 위탁셀러(수강생) 응대(CS)는 두고푸드가 맡고, 제품 파손·변질은 공급사가 100% 책임지고 보상해요. 반품·환불된 금액은 정산 금액에서 빠져요.";
 
@@ -337,7 +337,7 @@ export function settlementPlanText(settings: SupplierSettlementSettings) {
   if (settings.type === "wholesale") {
     return `일반 도매(매입) · ${SUPPLIER_CYCLE_LABELS[settings.cycle]}: ${when} 공급가(원가) × 판매 수량과 배송비를 입금해요. 판매 수수료는 없어요.`;
   }
-  return `판매수수료 ${settings.commissionRate}% · ${SUPPLIER_CYCLE_LABELS[settings.cycle]}: ${when} 판매 대금 100%와 배송비를 먼저 입금해요. 판매 수수료 ${settings.commissionRate}%는 한 달 판매 대금 기준으로 다음 달 1~3일에 두고푸드로 보내 주시면, 두고푸드가 '${COMMISSION_INVOICE_ITEM}' 세금계산서를 발행해요.`;
+  return `판매수수료 ${settings.commissionRate}% · ${SUPPLIER_CYCLE_LABELS[settings.cycle]}: ${when} 판매 대금 100%와 배송비를 먼저 입금해요. 판매 수수료 ${settings.commissionRate}%는 한 달 판매 대금(배송비 제외) 기준으로 두고푸드가 다음 달 초에 청구하면 1~3일에 보내 주시고, 입금이 확인되면 두고푸드가 '${COMMISSION_INVOICE_ITEM}' 세금계산서를 발행해요.`;
 }
 
 /** 판매 줄을 모은 금액(정산 계산 재료). 반품 = 취소·반품 처리 수량. 원가를 모르는 줄은 원가 0원으로 세고 costMissing에 셉니다. */
@@ -429,6 +429,30 @@ export function feeDueRange(month: string) {
 }
 
 export const PAYOUT_STATUS_LABELS: Record<SupplierSettlementStatus, string> = { pending: "지급 대기", paid: "지급 완료", done: "지급 완료" };
-export const FEE_STATUS_LABELS: Record<SupplierSettlementStatus, string> = { pending: "청구 전", paid: "세금계산서 발행", done: "수수료 입금 확인" };
+// 판매 수수료(2026-11-25 관리자 확정 순서): 청구 전 → 청구함(공급사 입금 대기, 공급사 센터 달력에 입금일·금액) → 입금 확인 = 정산 완료.
+// 수수료 세금계산서(두고푸드 → 공급사)는 입금을 확인한 뒤 따로 발행하고 "inv:YYYY-MM" 기록으로 남깁니다(feeInvoiceKey).
+export const FEE_STATUS_LABELS: Record<SupplierSettlementStatus, string> = { pending: "청구 전", paid: "청구함 · 입금 대기", done: "입금 확인 · 정산 완료" };
 export const SUPPLIER_PAYOUT_STATUS_LABELS: Record<SupplierSettlementStatus, string> = { pending: "입금 예정", paid: "입금 완료", done: "입금 완료" };
-export const SUPPLIER_FEE_STATUS_LABELS: Record<SupplierSettlementStatus, string> = { pending: "수수료 청구 전", paid: "세금계산서 발행 · 수수료 입금 대기", done: "수수료 입금 확인" };
+export const SUPPLIER_FEE_STATUS_LABELS: Record<SupplierSettlementStatus, string> = { pending: "청구 전", paid: "청구됨 · 두고푸드로 입금해 주세요", done: "입금 확인 · 정산 완료" };
+
+/** 판매 수수료 세금계산서 발행 기록 열쇠(supplier_settlements.month): 발행하면 status "done" */
+export function feeInvoiceKey(month: string) {
+  return `inv:${month}`;
+}
+
+/** 판매 수수료 세금계산서(두고푸드 → 공급사) 발행 상태 */
+export type FeeInvoiceState = { issued: boolean; issuedAt: string | null; amount: number | null };
+
+/**
+ * 판매 수수료 금액 나누기: 수수료에 부가세가 들어 있으면(기본) 공급가액 = round(수수료 × 10 ÷ 11)·세액 = 나머지·입금할 금액 = 수수료,
+ * 부가세 별도면 공급가액 = 수수료·세액 = round(수수료 × 10%)·입금할 금액 = 수수료 + 세액.
+ */
+export function commissionInvoiceAmounts(commission: number, vatIncluded: boolean) {
+  const amount = Math.max(0, Math.round(Number.isFinite(commission) ? commission : 0));
+  if (vatIncluded) {
+    const supply = Math.round((amount * 10) / 11);
+    return { supply, tax: amount - supply, total: amount };
+  }
+  const tax = Math.round(amount / 10);
+  return { supply: amount, tax, total: amount + tax };
+}

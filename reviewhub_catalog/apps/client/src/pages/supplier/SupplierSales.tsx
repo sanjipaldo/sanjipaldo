@@ -19,7 +19,7 @@ import {
 import { SalesThumb } from "../admin/sales-widgets";
 import "../admin/sales-admin.css";
 import { compactWon, count, dayLabel, monthLabel, supplierGet, won, type SalesMonth } from "./supplier-api";
-import { FeeList, PayoutStatus, SettlementMoneyList } from "./supplier-dashboard";
+import { FeeList, FeeStatus, PayoutStatus, SettlementMoneyList, feeDueMap, feePayable } from "./supplier-dashboard";
 
 type PayoutDay = SalesMonth["payoutDays"][number];
 
@@ -76,12 +76,15 @@ export function SupplierSales() {
     ...Array.from({ length: weekdayOf(start) }, () => null),
     ...Array.from({ length: Number(end.slice(-2)) }, (_, index) => `${month}-${String(index + 1).padStart(2, "0")}`)
   ];
-  const selectedDay = selected ? dayMap.get(selected) : undefined;
-  const selectedPayout = selected ? payoutMap.get(selected) : undefined;
   const totals = view?.totals;
   const settings = settingsOf(view);
   const rate = settings.commissionRate;
   const commission = settings.type === "commission";
+  // 판매 수수료 입금일(공급사 → 두고푸드): 그 달 1~3일 = 지난달 판매분 수수료
+  const feeMap = useMemo(() => feeDueMap(commission ? view?.fees : undefined, month), [view, month, commission]);
+  const selectedDay = selected ? dayMap.get(selected) : undefined;
+  const selectedPayout = selected ? payoutMap.get(selected) : undefined;
+  const selectedFee = selected ? feeMap.get(selected) : undefined;
   const amountLabel = commission ? "판매 금액" : "공급 금액";
 
   return (
@@ -126,17 +129,19 @@ export function SupplierSales() {
                   if (!date) return <span key={`blank-${index}`} className="sup-cal-cell is-blank" aria-hidden="true" />;
                   const item = dayMap.get(date);
                   const payout = payoutMap.get(date);
+                  const fee = feeMap.get(date);
                   const isToday = date === view.today;
                   const weekday = weekdayOf(date);
                   const labelParts = [dayLabel(date)];
                   if (item?.saleAmount) labelParts.push(`판매 ${won(item.saleAmount)}`);
                   if (item?.returnAmount) labelParts.push(`반품 ${won(item.returnAmount)}`);
                   if (payout) labelParts.push(payout.first ? `정산 입금 ${won(payout.payout.amount)}` : "정산 입금 기간");
+                  if (fee) labelParts.push(fee.first ? `판매 수수료 ${won(feePayable(fee.fee))} 두고푸드로 입금` : "판매 수수료 입금 기간");
                   return (
                     <button
                       key={date}
                       type="button"
-                      className={`sup-cal-cell ${isToday ? "is-today" : ""} ${selected === date ? "is-selected" : ""} ${payout ? "is-payout" : ""} ${weekday === 0 ? "is-sunday" : weekday === 6 ? "is-saturday" : ""}`}
+                      className={`sup-cal-cell ${isToday ? "is-today" : ""} ${selected === date ? "is-selected" : ""} ${payout ? "is-payout" : ""} ${fee ? "is-fee" : ""} ${weekday === 0 ? "is-sunday" : weekday === 6 ? "is-saturday" : ""}`}
                       onClick={() => setSelected(date)}
                       aria-pressed={selected === date}
                       aria-label={labelParts.join(", ")}
@@ -151,11 +156,17 @@ export function SupplierSales() {
                           {payout.first && payout.payout.amount > 0 && <span className="sup-full">{won(payout.payout.amount)}</span>}
                         </span>
                       )}
+                      {fee && (
+                        <span className={`sup-cal-fee ${fee.fee.state?.status === "done" ? "is-done" : ""}`}>
+                          <em>{fee.first ? "수수료" : <>수수료<span className="sup-full"> 기간</span></>}</em>
+                          {fee.first && <span className="sup-full">{won(feePayable(fee.fee))}</span>}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
-              <p className="sup-calendar-legend"><span className="is-sale">판매</span><span className="is-return">반품</span><span className="is-payout">정산 입금일</span><span className="is-today">오늘</span></p>
+              <p className="sup-calendar-legend"><span className="is-sale">판매</span><span className="is-return">반품</span><span className="is-payout">정산 입금일</span>{feeMap.size > 0 && <span className="is-fee">수수료 입금일(공급사 → 두고푸드)</span>}<span className="is-today">오늘</span></p>
             </section>
             <aside className="sup-sales-aside">
               {selected && (
@@ -176,6 +187,15 @@ export function SupplierSales() {
                       <div>
                         <strong>{selectedPayout.first ? "정산 입금일" : "정산 입금 기간"} · {formatPayoutLabel({ payoutStart: selectedPayout.payout.date, payoutEnd: selectedPayout.payout.endDate })}</strong>
                         <span>{formatPeriodLabel({ start: selectedPayout.payout.periodStart, end: selectedPayout.payout.periodEnd })} 판매분 {selectedPayout.payout.amount > 0 ? won(selectedPayout.payout.amount) : "없음"} · {selectedPayout.payout.done ? "지난 정산" : "입금 예정"}</span>
+                      </div>
+                    </div>
+                  )}
+                  {selectedFee && (
+                    <div className={`sup-day-payout is-fee ${selectedFee.fee.state?.status === "done" ? "is-done" : ""}`}>
+                      <BadgePercent size={17} aria-hidden="true" />
+                      <div>
+                        <strong>판매 수수료 입금일 · {formatPayoutLabel(selectedFee.fee)}</strong>
+                        <span>{monthLabel(selectedFee.fee.month)} 판매분 수수료 {won(feePayable(selectedFee.fee))}를 두고푸드로 보내 주세요 · <FeeStatus state={selectedFee.fee.state} /></span>
                       </div>
                     </div>
                   )}

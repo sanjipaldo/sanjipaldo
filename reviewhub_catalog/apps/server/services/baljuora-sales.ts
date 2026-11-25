@@ -23,8 +23,10 @@ import {
   hometaxBuyerProblems,
   hometaxRowCells,
   hometaxSupplierProblems,
+  lastDayOfMonth,
   normalizeBusinessNumber,
   seoulDateOf,
+  truncateHometax,
   type BaljuoraBuyerInput,
   type BaljuoraSalesLineInput,
   type BuyerOverrides,
@@ -35,8 +37,11 @@ import {
   type HometaxSettings
 } from "@repo/shared/baljuora-sales";
 import {
+  COMMISSION_INVOICE_ITEM,
   addDays,
+  commissionInvoiceAmounts,
   feeDueRange,
+  feeInvoiceKey,
   isSettlementPeriod,
   monthRange,
   nextMonthKey,
@@ -52,13 +57,16 @@ import { DatabaseError, getDb } from "../_core/db";
 import {
   emptyLedgerRow,
   feeState,
+  invoiceState,
   ledgerBySupplier,
   loadSettlementDirectory,
   payoutState,
   recordState,
   settlementRecords,
+  supplierTaxProfiles,
   type LedgerRow,
-  type SettlementDirectory
+  type SettlementDirectory,
+  type SupplierTaxProfile
 } from "./supplier-settlement";
 import {
   baljuoraBuyers,
@@ -721,7 +729,8 @@ function cleanHometaxSettings(input: unknown, base: HometaxSettings): HometaxSet
     },
     vatIncluded: typeof record.vatIncluded === "boolean" ? record.vatIncluded : base.vatIncluded,
     receiptType: record.receiptType === "01" || record.receiptType === "02" ? record.receiptType : base.receiptType,
-    includeShipping: typeof record.includeShipping === "boolean" ? record.includeShipping : base.includeShipping
+    includeShipping: typeof record.includeShipping === "boolean" ? record.includeShipping : base.includeShipping,
+    commissionVatIncluded: typeof record.commissionVatIncluded === "boolean" ? record.commissionVatIncluded : base.commissionVatIncluded
   };
 }
 
@@ -922,7 +931,7 @@ async function settlementRowsFor(kind: SettlementRecordKind, period: string) {
   const [ledgers, directory, records] = await Promise.all([
     ledgerBySupplier(window.start, window.end),
     loadSettlementDirectory(),
-    settlementRecords(kind === "fee" ? [key, period] : [key])
+    settlementRecords(kind === "fee" ? [key, period, feeInvoiceKey(period)] : [key])
   ]);
   const savedNames = [...records.values()].filter((row) => row.month === key).map((row) => row.supplierName);
   const names = new Set<string>([...savedNames]);
@@ -972,7 +981,9 @@ async function settlementRowsFor(kind: SettlementRecordKind, period: string) {
       updatedAt: state?.updatedAt ?? null,
       updatedBy: row?.updatedBy ?? null,
       recorded,
-      changedAfterRecord: Boolean(recorded && (kind === "fee" ? recorded.commission !== amounts.commission : recorded.payoutAmount !== amounts.payoutAmount))
+      changedAfterRecord: Boolean(recorded && (kind === "fee" ? recorded.commission !== amounts.commission : recorded.payoutAmount !== amounts.payoutAmount)),
+      // 판매 수수료 세금계산서(두고푸드 → 공급사) 발행 기록 — 수수료 탭에서만
+      invoice: kind === "fee" ? invoiceState(records.get(`${supplierName}|${feeInvoiceKey(period)}`)) : null
     };
   });
   return { window, key, rows, otherCycle };
@@ -985,7 +996,19 @@ export async function listSupplierSettlements(input: SettlementListInput) {
     if (!isSettlementPeriod(kind, period)) {
       throw new DatabaseError("DATABASE_QUERY_FAILED", kind === "weekly" ? "정산할 주를 월요일 날짜(YYYY-MM-DD)로 골라 주세요." : "정산할 달을 YYYY-MM 형식으로 골라 주세요.", 400);
     }
-    const { window, rows, otherCycle } = await settlementRowsFor(kind, period);
+    const { window, rows: baseRows, otherCycle } = await settlementRowsFor(kind, period);
+    // 판매 수수료: 세금계산서(두고푸드 → 공급사) 금액·공급받는자 정보 확인을 함께 붙입니다.
+    const hometax = kind === "fee" ? await getHometaxSettings() : null;
+    const profiles = kind === "fee" ? await supplierTaxProfiles() : new Map<string, SupplierTaxProfile>();
+    const rows = baseRows.map((row) => {
+      if (!hometax) return { ...row, invoiceAmounts: null, taxProblems: [] as string[] };
+      const profile = row.supplierId ? profiles.get(row.supplierId) : undefined;
+      return {
+        ...row,
+        invoiceAmounts: commissionInvoiceAmounts(row.commission, hometax.commissionVatIncluded),
+        taxProblems: profile ? hometaxBuyerProblems({ businessNumber: profile.businessNumber, companyName: profile.name, ceoName: profile.representative }) : ["공급사 관리에 없는 이름(공급사로 등록해 주세요)"]
+      };
+    });
     const sorted = rows.sort((first, second) => (kind === "fee" ? second.commission - first.commission : second.payoutAmount - first.payoutAmount) || first.supplierName.localeCompare(second.supplierName, "ko"));
     const owed = (row: (typeof rows)[number]) => (kind === "fee" ? row.commission > 0 : row.payoutAmount > 0);
     const totals = sorted.reduce((sum, row) => ({
@@ -999,6 +1022,16 @@ export async function listSupplierSettlements(input: SettlementListInput) {
       paid: sum.paid + (row.status === "paid" ? 1 : 0),
       pending: sum.pending + (row.status === "pending" && owed(row) ? 1 : 0)
     }), { netAmount: 0, goodsAmount: 0, shippingFee: 0, payoutAmount: 0, commission: 0, doogoProfit: 0, done: 0, paid: 0, pending: 0 });
+    const invoice = hometax ? {
+      vatIncluded: hometax.commissionVatIncluded,
+      item: COMMISSION_INVOICE_ITEM,
+      writeDate: `${period}-${String(lastDayOfMonth(period)).padStart(2, "0")}`,
+      supplierProblems: hometaxSupplierProblems(hometax.supplier),
+      issued: sorted.filter((row) => row.invoice?.issued).length,
+      // 입금 확인했는데 아직 세금계산서를 내지 않은 공급사(홈택스 파일 기본 대상)
+      ready: sorted.filter((row) => row.commission > 0 && row.status === "done" && !row.invoice?.issued && row.taxProblems.length === 0).map((row) => row.supplierName),
+      missingInfo: sorted.filter((row) => row.commission > 0 && row.taxProblems.length > 0).map((row) => ({ supplierName: row.supplierName, supplierId: row.supplierId, problems: row.taxProblems }))
+    } : null;
     return {
       kind,
       period,
@@ -1011,6 +1044,7 @@ export async function listSupplierSettlements(input: SettlementListInput) {
       rows: sorted,
       totals,
       otherCycle,
+      invoice,
       sync: await getSalesSyncState()
     };
   });
@@ -1020,8 +1054,50 @@ const PAYOUT_STATUSES: Record<SettlementRecordKind, SupplierSettlementStatus[]> 
   weekly: ["pending", "paid"],
   // 예전 월 정산 기록의 "정산 완료"(지급 + 수수료 확인)도 그대로 받습니다.
   monthly: ["pending", "paid", "done"],
+  // 판매 수수료: 청구 전 → 청구함(입금 대기) → 입금 확인(정산 완료)
   fee: ["pending", "paid", "done"]
 };
+
+type SettlementContext = { ledgers: Map<string, LedgerRow>; directory: SettlementDirectory };
+
+async function settlementContext(kind: SettlementRecordKind, period: string): Promise<SettlementContext> {
+  const window = settlementWindow(kind, period);
+  const [ledgers, directory] = await Promise.all([ledgerBySupplier(window.start, window.end), loadSettlementDirectory()]);
+  return { ledgers, directory };
+}
+
+/** 정산 기록 하나를 쓰고(있으면 고치고) 저장된 값을 돌려줍니다. 바꾼 때의 금액을 함께 적어 두어 그 뒤 반품 등으로 금액이 바뀌면 화면이 알려 줍니다. */
+async function writeSettlementRecord(
+  context: SettlementContext,
+  supplierName: string,
+  key: string,
+  status: SupplierSettlementStatus,
+  memo: string | null | undefined,
+  updatedBy: string | null
+) {
+  const db = getDb();
+  const existing = (await db.select().from(supplierSettlements).where(and(eq(supplierSettlements.supplierName, supplierName), eq(supplierSettlements.month, key))).limit(1))[0];
+  const settings = context.directory.resolve(supplierName);
+  const amounts = settlementAmounts(context.ledgers.get(supplierName) ?? emptyLedgerRow(), settings);
+  const now = nowIso();
+  const values = {
+    status,
+    saleAmount: amounts.goodsAmount,
+    commissionRate: settings.type === "commission" ? settings.commissionRate : 0,
+    commission: amounts.commission,
+    payoutAmount: amounts.payoutAmount,
+    // 지급(수수료는 청구) 시각은 처음 바꾼 때를 남기고, 대기로 되돌리면 지웁니다.
+    paidAt: status === "pending" ? null : existing?.paidAt ?? now,
+    doneAt: status === "done" ? existing?.doneAt ?? now : null,
+    memo: memo === undefined ? existing?.memo ?? null : cleanText(memo, 500),
+    updatedBy: updatedBy ? updatedBy.slice(0, 120) : null,
+    updatedAt: now
+  };
+  if (existing) await db.update(supplierSettlements).set(values).where(eq(supplierSettlements.id, existing.id));
+  else await db.insert(supplierSettlements).values({ id: randomUUID(), supplierName, month: key, createdAt: now, ...values });
+  const saved = await db.select().from(supplierSettlements).where(and(eq(supplierSettlements.supplierName, supplierName), eq(supplierSettlements.month, key))).limit(1);
+  return saved[0];
+}
 
 export async function updateSupplierSettlement(
   input: { supplierName: string; kind?: string | null; period?: string | null; month?: string | null; status: SupplierSettlementStatus; memo?: string | null },
@@ -1033,35 +1109,100 @@ export async function updateSupplierSettlement(
     const period = input.period ?? input.month ?? "";
     if (!supplierName || !isSettlementPeriod(kind, period)) throw new DatabaseError("DATABASE_QUERY_FAILED", "공급사와 정산 기간을 확인해 주세요.", 400);
     if (!PAYOUT_STATUSES[kind].includes(input.status)) throw new DatabaseError("DATABASE_QUERY_FAILED", "정산 상태가 올바르지 않습니다.", 400);
-    const db = getDb();
-    const window = settlementWindow(kind, period);
+    const context = await settlementContext(kind, period);
+    return recordState(await writeSettlementRecord(context, supplierName, settlementRecordKey(kind, period), input.status, input.memo, updatedBy));
+  });
+}
+
+/** 여러 공급사의 상태를 한 번에(판매 수수료 "한 번에 청구하기"·"입금 확인" 등). 판매 금액은 한 번만 계산합니다. */
+export async function updateSupplierSettlementsBulk(
+  input: { kind?: string | null; period: string; status: SupplierSettlementStatus; supplierNames: string[] },
+  updatedBy: string | null
+) {
+  return guarded(async () => {
+    const kind = settlementKind(input.kind);
+    const period = input.period;
+    if (!isSettlementPeriod(kind, period)) throw new DatabaseError("DATABASE_QUERY_FAILED", "정산 기간을 확인해 주세요.", 400);
+    if (!PAYOUT_STATUSES[kind].includes(input.status)) throw new DatabaseError("DATABASE_QUERY_FAILED", "정산 상태가 올바르지 않습니다.", 400);
+    const names = [...new Set(input.supplierNames.map((name) => cleanText(name, 120)).filter((name): name is string => Boolean(name)))].slice(0, 300);
+    if (names.length === 0) throw new DatabaseError("DATABASE_QUERY_FAILED", "바꿀 공급사를 골라 주세요.", 400);
+    const context = await settlementContext(kind, period);
     const key = settlementRecordKey(kind, period);
-    const [ledgers, directory, existingRows] = await Promise.all([
-      ledgerBySupplier(window.start, window.end),
-      loadSettlementDirectory(),
-      db.select().from(supplierSettlements).where(and(eq(supplierSettlements.supplierName, supplierName), eq(supplierSettlements.month, key))).limit(1)
-    ]);
-    const settings = directory.resolve(supplierName);
-    const amounts = settlementAmounts(ledgers.get(supplierName) ?? emptyLedgerRow(), settings);
-    const existing = existingRows[0];
-    const now = nowIso();
-    const values = {
-      status: input.status,
-      saleAmount: amounts.goodsAmount,
-      commissionRate: settings.type === "commission" ? settings.commissionRate : 0,
-      commission: amounts.commission,
-      payoutAmount: amounts.payoutAmount,
-      // 지급(수수료는 세금계산서 발행) 시각은 처음 바꾼 때를 남기고, 대기로 되돌리면 지웁니다.
-      paidAt: input.status === "pending" ? null : existing?.paidAt ?? now,
-      doneAt: input.status === "done" ? existing?.doneAt ?? now : null,
-      memo: input.memo === undefined ? existing?.memo ?? null : cleanText(input.memo, 500),
-      updatedBy: updatedBy ? updatedBy.slice(0, 120) : null,
-      updatedAt: now
-    };
-    if (existing) await db.update(supplierSettlements).set(values).where(eq(supplierSettlements.id, existing.id));
-    else await db.insert(supplierSettlements).values({ id: randomUUID(), supplierName, month: key, createdAt: now, ...values });
-    const saved = await db.select().from(supplierSettlements).where(and(eq(supplierSettlements.supplierName, supplierName), eq(supplierSettlements.month, key))).limit(1);
-    return recordState(saved[0]);
+    const states = [];
+    for (const name of names) states.push(recordState(await writeSettlementRecord(context, name, key, input.status, undefined, updatedBy)));
+    console.info(`[supplier-settlement] ${kind} ${period} → ${input.status} ×${states.length}`);
+    return { updated: states.length, states };
+  });
+}
+
+// ─── 판매 수수료 세금계산서(두고푸드 → 공급사, 2026-11-25 관리자 요청) ─────────────────────────────
+// 판매수수료 방식 공급사의 한 달 판매 대금(배송비 제외) × 수수료율을 품목 "판매대행·마케팅대행 수수료"로 홈택스 일괄발급 양식
+// (전자세금계산서-일반 59칸, 과세)에 넣습니다. 작성일자 = 그 달 말일(월 합계), 입금 확인한 공급사는 영수(01)·아니면 청구(02).
+// 공급자 = 두고푸드(세금계산서 신고 화면의 공급자 정보), 공급받는자 = 공급사 관리의 매입처명·사업자등록번호·대표자·주소·이메일.
+// 홈택스에 올려 발행한 뒤 "발행 완료로 표시"하면 "inv:YYYY-MM" 기록(status done)이 남고 공급사 센터에도 보입니다.
+function commissionInvoiceFor(month: string, row: { supplierName: string; commission: number; commissionRate: number; netAmount: number }, profile: SupplierTaxProfile, vatIncluded: boolean): HometaxInvoice {
+  const { supply, tax } = commissionInvoiceAmounts(row.commission, vatIncluded);
+  const day = String(lastDayOfMonth(month)).padStart(2, "0");
+  const monthNumber = Number(month.slice(5));
+  return {
+    kind: "taxable",
+    buyerKey: row.supplierName,
+    buyer: { key: row.supplierName, name: row.supplierName, businessNumber: profile.businessNumber, companyName: profile.name, ceoName: profile.representative, address: profile.address, businessType: "", businessItem: "", email: profile.email },
+    writeDate: `${month.replace("-", "")}${day}`,
+    items: [{
+      day,
+      name: truncateHometax(`${COMMISSION_INVOICE_ITEM}(${monthNumber}월분)`, 100),
+      spec: `${row.commissionRate}%`,
+      quantity: null,
+      unitPrice: null,
+      supply,
+      tax,
+      note: truncateHometax(`${monthNumber}월 판매 대금 ${Math.round(row.netAmount).toLocaleString("ko-KR")}원(배송비 제외) × ${row.commissionRate}%`, 100)
+    }],
+    supplyTotal: supply,
+    taxTotal: tax,
+    grossTotal: supply + tax,
+    productCount: 1,
+    shippingTotal: 0
+  };
+}
+
+export async function buildFeeInvoiceFile(month: string, supplierNames: string[] | null) {
+  return guarded(async () => {
+    if (!isMonthKey(month)) throw new DatabaseError("DATABASE_QUERY_FAILED", "세금계산서를 낼 달을 YYYY-MM 형식으로 골라 주세요.", 400);
+    const [hometax, profiles, list] = await Promise.all([getHometaxSettings(), supplierTaxProfiles(), listSupplierSettlements({ kind: "fee", period: month })]);
+    const problems = hometaxSupplierProblems(hometax.supplier);
+    if (problems.length > 0) throw new DatabaseError("DATABASE_QUERY_FAILED", `공급자(두고푸드) 정보를 먼저 채워 주세요(세금계산서 신고 화면): ${problems.join(", ")}`, 400);
+    const wanted = supplierNames && supplierNames.length > 0 ? new Set(supplierNames.map((name) => name.trim())) : null;
+    // 고르지 않으면: 입금 확인했고 아직 세금계산서를 내지 않은 공급사
+    const candidates = list.rows.filter((row) => row.commission > 0 && (wanted ? wanted.has(row.supplierName) : row.status === "done" && !row.invoice?.issued));
+    const ready = candidates.filter((row) => row.taxProblems.length === 0).slice(0, HOMETAX_MAX_ROWS);
+    if (ready.length === 0) {
+      const reasons = candidates.map((row) => `${row.supplierName}: ${row.taxProblems.join(", ")}`).slice(0, 5);
+      throw new DatabaseError("DATABASE_QUERY_FAILED", candidates.length === 0 ? `${month} 판매분에 세금계산서를 낼 공급사가 없습니다(입금 확인한 공급사 중 발행 전).` : `공급사 세금계산서 정보를 먼저 채워 주세요(공급사 관리) — ${reasons.join(" / ")}`, 404);
+    }
+    // taxProblems가 비었다 = 공급사 관리에 등록돼 있고 사업자등록번호·대표자가 있음
+    const prepared = ready.flatMap((row) => {
+      const profile = row.supplierId ? profiles.get(row.supplierId) : undefined;
+      return profile ? [{ row, profile }] : [];
+    });
+    const rows = prepared.map(({ row, profile }) => hometaxRowCells("taxable", commissionInvoiceFor(month, row, profile, hometax.commissionVatIncluded), hometax.supplier, row.status === "done" ? "01" : "02"));
+    const bytes = await hometaxWorkbook("taxable", rows);
+    return { bytes, filename: `홈택스_판매수수료_세금계산서_${month}.xlsx`, suppliers: prepared.map(({ row }) => row.supplierName) };
+  });
+}
+
+/** 홈택스에서 발행한 뒤 "발행 완료로 표시"(issued false면 되돌리기) */
+export async function markFeeInvoices(input: { month: string; supplierNames: string[]; issued: boolean }, updatedBy: string | null) {
+  return guarded(async () => {
+    if (!isMonthKey(input.month)) throw new DatabaseError("DATABASE_QUERY_FAILED", "달을 YYYY-MM 형식으로 골라 주세요.", 400);
+    const names = [...new Set(input.supplierNames.map((name) => cleanText(name, 120)).filter((name): name is string => Boolean(name)))].slice(0, 300);
+    if (names.length === 0) throw new DatabaseError("DATABASE_QUERY_FAILED", "세금계산서를 표시할 공급사를 골라 주세요.", 400);
+    const context = await settlementContext("fee", input.month);
+    const states = [];
+    for (const name of names) states.push(invoiceState(await writeSettlementRecord(context, name, feeInvoiceKey(input.month), input.issued ? "done" : "pending", undefined, updatedBy)));
+    console.info(`[supplier-settlement] fee invoice ${input.month} ${input.issued ? "issued" : "reverted"} ×${states.length}`);
+    return { updated: states.length, states };
   });
 }
 

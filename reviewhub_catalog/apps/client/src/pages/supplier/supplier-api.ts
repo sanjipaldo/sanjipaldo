@@ -148,6 +148,12 @@ export type SupplierFee = {
   payoutEnd: string;
   closed: boolean;
   state: SupplierSettlementState | null;
+  /** 수수료에 부가세가 들어 있는지(두고푸드 설정, 기본 포함) */
+  vatIncluded?: boolean;
+  /** 세금계산서 금액: 공급가액·세액·공급사가 보낼 금액(total) */
+  amounts?: { supply: number; tax: number; total: number };
+  /** 두고푸드 → 공급사 수수료 세금계산서 발행 상태 */
+  invoice?: { issued: boolean; issuedAt: string | null; amount: number | null };
 };
 
 export type SalesMonth = {

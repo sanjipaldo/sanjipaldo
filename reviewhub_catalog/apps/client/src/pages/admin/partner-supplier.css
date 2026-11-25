@@ -1,0 +1,34 @@
+/* 입점 성공 → 공급사 등록·정산 방식·계정(입점 신청 상세의 진행 단계 아래) */
+.partner-supplier-panel { display: grid; gap: 12px; margin-top: 12px; padding: 18px; border: 1px solid #cfe5c0; border-radius: var(--w-radius-lg); background: #f8fcf5; }
+.partner-supplier-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.partner-supplier-steps li { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; padding: 10px 6px; border: 1px solid var(--w-line); border-radius: 12px; color: var(--w-body); background: #fff; font-size: 12.5px; font-weight: 700; text-align: center; word-break: keep-all; }
+.partner-supplier-steps li b { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; color: var(--w-body); background: var(--w-soft-2); font-size: 12px; }
+.partner-supplier-steps li small { max-width: 100%; overflow: hidden; color: var(--w-mute); font-size: 11.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.partner-supplier-steps li.is-done { border-color: #cfe5c0; color: var(--w-positive-deep); }
+.partner-supplier-steps li.is-done b { color: #fff; background: var(--w-positive-deep); }
+.partner-supplier-steps li.is-current { border-color: var(--w-ink); color: var(--w-ink); box-shadow: inset 0 0 0 1px var(--w-ink); }
+.partner-supplier-steps li.is-current b { color: #fff; background: var(--w-ink); }
+.partner-supplier-form, .partner-supplier-linked { display: grid; gap: 10px; }
+.partner-supplier-form .partner-memo-field select { width: 100%; height: 42px; padding: 0 10px; border: 1px solid var(--w-line); border-radius: 10px; color: var(--w-ink); background: #fff; font: inherit; font-size: 14px; font-weight: 500; }
+.partner-supplier-fill { display: flex; flex-wrap: wrap; gap: 2px 6px; margin: 0; color: var(--w-body); font-size: 12.5px; line-height: 1.6; }
+.partner-supplier-fill b { color: var(--w-ink); font-weight: 700; }
+.partner-supplier-fill span { flex: 1 1 100%; color: var(--w-mute); }
+.partner-supplier-note, .partner-supplier-warn { display: flex; align-items: flex-start; gap: 6px; margin: 0; padding: 9px 12px; border-radius: 10px; font-size: 12.5px; font-weight: 600; line-height: 1.5; }
+.partner-supplier-note svg, .partner-supplier-warn svg { flex: 0 0 auto; margin-top: 2px; }
+.partner-supplier-note { color: #1d4f91; background: #eef4fd; }
+.partner-supplier-warn { color: #8a4b00; background: #fff4e5; }
+.partner-supplier-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; font-size: 14px; }
+.partner-supplier-summary b { color: var(--w-ink); font-size: 15px; font-weight: 800; }
+.partner-supplier-summary span { color: var(--w-body); font-weight: 700; }
+.partner-supplier-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.partner-supplier-actions a.primary-action { text-decoration: none; }
+.partner-supplier-actions .secondary-action { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 42px; padding: 0 16px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-ink); background: #fff; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.partner-supplier-actions .secondary-action:disabled { opacity: .5; cursor: default; }
+.partner-supplier-account { display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 14px; border-radius: 999px; color: var(--w-positive-deep); background: #e9f6df; font-size: 13px; font-weight: 800; }
+.partner-supplier-badge { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 2px 8px; border-radius: 999px; color: var(--w-positive-deep); background: #e9f6df; font-size: 11.5px; font-weight: 800; white-space: nowrap; vertical-align: middle; }
+@media (max-width: 720px) {
+  .partner-supplier-panel { padding: 14px; }
+  .partner-supplier-actions { flex-direction: column; align-items: stretch; }
+  .partner-supplier-actions > * { width: 100%; min-height: 44px; }
+  .partner-supplier-account { justify-content: center; }
+}

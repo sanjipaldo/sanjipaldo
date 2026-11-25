@@ -13,7 +13,9 @@ import {
   SUPPLIER_UPDATE_FIELDS,
   SUPPLIER_USERNAME_PATTERN,
   addDays,
+  commissionInvoiceAmounts,
   feeDueRange,
+  feeInvoiceKey,
   monthRange,
   nextMonthKey,
   seoulDateKey,
@@ -53,9 +55,11 @@ import {
   type SupplierRequest
 } from "../db/schema";
 import { createProduct, updateProduct, type ProductInput } from "./catalog";
+import { getHometaxSettings } from "./baljuora-sales";
 import {
   effectiveSettlementFor,
   feeState,
+  invoiceState,
   ledgerBetween,
   payoutState,
   settlementRecords,
@@ -889,8 +893,11 @@ export async function getSupplierSalesMonth(context: SupplierContext, month: str
       ...periods.map(payoutRecordKey),
       ...payoutPeriods.map(payoutRecordKey),
       ...feeMonths.map((feeMonth) => settlementRecordKey("fee", feeMonth)),
+      ...feeMonths.map((feeMonth) => feeInvoiceKey(feeMonth)),
       ...feeMonths
     ], supplierName);
+    // 수수료에 부가세가 들어 있는지(두고푸드 세금계산서 설정, 기본 포함): 공급사가 보낼 금액 = 포함이면 수수료, 별도면 수수료 + 부가세
+    const vatIncluded = feeMonths.length > 0 ? (await getHometaxSettings()).commissionVatIncluded : true;
     const recordOf = (key: string) => records.get(`${supplierName}|${key}`);
     // 지난달은 판매도 기록도 없으면 빼요("0원 · 수수료 청구 전" 줄이 헷갈리지 않게). 이 달 판매분은 늘 보여요.
     const fees = feeMonths.map((feeMonth) => {
@@ -904,7 +911,11 @@ export async function getSupplierSalesMonth(context: SupplierContext, month: str
         commissionRate: rate,
         ...feeDueRange(feeMonth),
         closed: range.end < today,
-        state: feeState(recordOf(settlementRecordKey("fee", feeMonth)), recordOf(feeMonth))
+        state: feeState(recordOf(settlementRecordKey("fee", feeMonth)), recordOf(feeMonth)),
+        // 입금할 금액(부가세 포함/별도 반영)과 두고푸드 세금계산서 발행 상태
+        vatIncluded,
+        amounts: commissionInvoiceAmounts(amounts.commission, vatIncluded),
+        invoice: invoiceState(recordOf(feeInvoiceKey(feeMonth)))
       };
     }).filter((fee) => fee.month === month || fee.netAmount !== 0 || fee.commission !== 0 || fee.state !== null);
 

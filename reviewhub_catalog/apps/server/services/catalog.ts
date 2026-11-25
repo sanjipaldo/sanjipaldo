@@ -4,7 +4,8 @@ import { sendPartnerNotifyMail, sendPartnerProposalMail, sendPartnerReceivedMail
 import { buildPartnerProposalPdf, proposalFileName } from "./partner-proposal";
 import { SUPPLIER_GUIDE_SETTING_KEY, parseSupplierGuide } from "@repo/shared/supplier-guide";
 import { SELLER_GUIDE_SETTING_KEY, parseSellerGuide } from "@repo/shared/seller-guide";
-import { partnerStageToStatus, type PartnerContractType, type PartnerDeal, type PartnerDealHistory, type PartnerStage } from "@repo/shared/partner-deal";
+import { PARTNER_PROFILE_LABELS, partnerStageToStatus, type PartnerContractType, type PartnerDeal, type PartnerDealHistory, type PartnerProfileKey, type PartnerStage, type PartnerSupplierLink } from "@repo/shared/partner-deal";
+import { forgetPartnerSupplierLink, partnerSupplierLinksFor } from "./partner-supplier";
 import {
   catalogActivityLogs,
   categories,
@@ -832,6 +833,16 @@ async function partnerDealsFor(ids: string[]) {
   }
 }
 
+// 입점 신청 → 공급사 연결(이은 공급사·정산 방식·계정). 읽지 못해도 신청 목록은 그대로 보여 줍니다.
+async function safePartnerSupplierLinks(requests: Array<{ id: string; companyName: string | null }>) {
+  try {
+    return await partnerSupplierLinksFor(requests);
+  } catch (error) {
+    console.warn("[partner] supplier links unavailable", error instanceof Error ? error.message : error);
+    return new Map<string, PartnerSupplierLink>();
+  }
+}
+
 export async function getAdminSourcingCatalog() {
   // 입점 신청이 차곡차곡 쌓이도록 최근 2,000건까지 모두 보여 줍니다(예전 200건).
   const rows = await getDb()
@@ -839,15 +850,23 @@ export async function getAdminSourcingCatalog() {
     .from(sourcingRequests)
     .orderBy(desc(sourcingRequests.createdAt))
     .limit(2000);
-  const deals = await partnerDealsFor(rows.filter((row) => row.requestType === "partner").map((row) => row.id));
+  const partners = rows.filter((row) => row.requestType === "partner");
+  const [deals, links] = await Promise.all([partnerDealsFor(partners.map((row) => row.id)), safePartnerSupplierLinks(partners)]);
   return {
     categories: [],
     products: [],
     notices: [],
     priceHistory: [],
-    sourcingRequests: rows.map((row) => (row.requestType === "partner" ? { ...row, deal: deals.get(row.id) ?? null } : row)),
+    sourcingRequests: rows.map((row) => (row.requestType === "partner" ? { ...row, deal: deals.get(row.id) ?? null, supplierLink: links.get(row.id) ?? null } : row)),
     settings: {}
   };
+}
+
+/** 입점 신청 하나(진행 단계·공급사 연결 포함) — 저장·공급사 등록 뒤 화면이 바로 새 값을 받습니다. */
+export async function getPartnerRequestView(id: string) {
+  const request = await partnerRequestById(id);
+  const [deals, links] = await Promise.all([partnerDealsFor([id]), safePartnerSupplierLinks([request])]);
+  return { ...request, deal: deals.get(id) ?? null, supplierLink: links.get(id) ?? null };
 }
 
 export type PartnerDealInput = {
@@ -889,9 +908,7 @@ export async function updatePartnerDeal(id: string, input: PartnerDealInput) {
   };
   await db.insert(partnerDeals).values({ requestId: id, createdAt: now, ...values }).onConflictDoUpdate({ target: partnerDeals.requestId, set: values });
   await db.update(sourcingRequests).set({ status: partnerStageToStatus(input.stage), updatedAt: now }).where(eq(sourcingRequests.id, request.id));
-  const saved = await db.select().from(partnerDeals).where(eq(partnerDeals.requestId, id)).limit(1);
-  const updatedRequest = await partnerRequestById(id);
-  return { ...updatedRequest, deal: saved[0] ? toPartnerDeal(saved[0]) : null };
+  return getPartnerRequestView(id);
 }
 
 export async function getAdminOverview() {
@@ -1498,22 +1515,15 @@ export async function buildPartnerProposal(companyName?: string | null) {
   return { bytes, filename: proposalFileName(companyName) };
 }
 
-const PARTNER_PROFILE_LABELS = {
-  representative: "대표자",
-  businessNumber: "사업자등록번호",
-  shipFrom: "출고지",
-  monthlyVolume: "월 공급 가능 물량",
-  salesChannels: "현재 판매 채널"
-} as const;
-
-type PartnerProfile = Partial<Record<keyof typeof PARTNER_PROFILE_LABELS, string | null>>;
+// 라벨은 공유 모듈(@repo/shared/partner-deal)에 있습니다 — 공급사로 등록할 때 같은 라벨로 다시 읽습니다(parsePartnerProfile).
+type PartnerProfile = Partial<Record<PartnerProfileKey, string | null>>;
 
 // 숨은 칸이 채워진 신청은 관리자 상세 맨 위에 이 안내를 붙입니다.
 const PARTNER_FLAGGED_NOTE = "[확인 필요] 자동 입력 방지 칸이 채워진 채 접수되었습니다(봇이거나 브라우저 자동 완성). 신청자 안내 메일은 보내지 않았습니다 — 진짜 신청이면 아래 '제안서 메일 보내기'를 눌러 주세요.";
 
 // 추가 업체 정보(대표자·사업자번호·출고지 등)는 마이그레이션 없이 details 앞부분에 "[업체 정보]"로 함께 저장합니다.
 function partnerDetails(profile: PartnerProfile, details?: string | null) {
-  const lines = (Object.keys(PARTNER_PROFILE_LABELS) as Array<keyof typeof PARTNER_PROFILE_LABELS>)
+  const lines = (Object.keys(PARTNER_PROFILE_LABELS) as PartnerProfileKey[])
     .map((key) => [PARTNER_PROFILE_LABELS[key], profile[key]?.trim()] as const)
     .filter(([, value]) => Boolean(value))
     .map(([label, value]) => `${label}: ${value}`);
@@ -1642,6 +1652,8 @@ export async function deleteSourcingRequest(id: string) {
       const texts = [error instanceof Error ? error.message : String(error), (error as { cause?: { message?: string } })?.cause?.message ?? ""];
       if (!texts.some((text) => text.includes("no such table"))) throw error;
     }
+    // 공급사와 이은 기록만 지웁니다(공급사·정산 방식·계정은 그대로).
+    await forgetPartnerSupplierLink(id);
   }
   await db.delete(sourcingRequests).where(eq(sourcingRequests.id, id));
   // 개인정보(이름·연락처·이메일)는 로그에 남기지 않습니다.

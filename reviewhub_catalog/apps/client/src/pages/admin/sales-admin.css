@@ -322,3 +322,29 @@
 .ssa-ship { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
 .ssa-total { color: #163300; font-size: 15.5px; }
 .ssa-info { color: #0f2747; background: #eaf2fd; }
+/* 판매 수수료 청구·세금계산서(2026-11-25) */
+.ssa-bulk { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 14px; margin: 0 0 14px; padding: 12px 16px; border: 1px solid #f3d39c; border-radius: 14px; color: #7a4b00; background: #fffbf3; font-size: 14px; }
+.ssa-bulk > span { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ssa-bulk b { color: #4a2d00; font-variant-numeric: tabular-nums; }
+.ssa-invoice { display: inline-flex; align-items: center; gap: 4px; width: fit-content; margin-top: 5px; padding: 2px 8px; border-radius: 999px; color: #6a5a3a; background: #f6f1e6; font-size: 11.5px; font-weight: 700; }
+.ssa-invoice.is-issued { color: #054d28; background: #e2f6d5; }
+.ssa-invoice-undo { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-left: 2px; padding: 0; border: 0; border-radius: 999px; color: inherit; background: transparent; cursor: pointer; }
+.ssa-invoice-undo:hover { background: rgba(0, 0, 0, .06); }
+.ssa-invoice-panel { display: grid; gap: 12px; }
+.ssa-invoice-panel .card-heading { margin-bottom: 0; }
+.ssa-vat { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px 10px; }
+.ssa-vat > span { align-self: center; color: var(--w-body, #454745); font-size: 13px; font-weight: 800; }
+.ssa-vat label { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; align-items: center; min-width: 0; padding: 9px 12px; border: 1.5px solid #e1e6dc; border-radius: 12px; background: #fff; font-size: 13.5px; font-weight: 800; cursor: pointer; }
+.ssa-vat label small { grid-column: 2; color: var(--w-mute, #868685); font-size: 11.5px; font-weight: 500; }
+.ssa-vat label.is-active { border-color: #163300; background: #f6fbf1; }
+.ssa-invoice-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: ssa-step; }
+.ssa-invoice-steps li { position: relative; display: grid; gap: 3px; min-width: 0; padding: 10px 12px 10px 40px; border: 1px solid #edf0eb; border-radius: 12px; background: #fbfcfa; color: var(--w-body, #454745); font-size: 12.5px; line-height: 1.5; counter-increment: ssa-step; }
+.ssa-invoice-steps li::before { content: counter(ssa-step); position: absolute; top: 10px; left: 12px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 999px; color: #fff; background: #163300; font-size: 11.5px; font-weight: 800; }
+.ssa-invoice-steps li b { color: var(--w-ink, #0e0f0c); font-size: 13px; }
+.ssa-invoice-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ssa-invoice-actions button { display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 720px) {
+  .ssa-invoice-steps { grid-template-columns: minmax(0, 1fr); }
+  .ssa-vat label { flex: 1 1 100%; }
+  .ssa-bulk button, .ssa-invoice-actions button { width: 100%; justify-content: center; }
+}

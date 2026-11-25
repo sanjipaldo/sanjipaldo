@@ -85,8 +85,8 @@ function dashboard(type: "commission" | "wholesale") {
     },
     upcomingSettlement: { cycle: "weekly", start: "2026-11-16", end: "2026-11-22", payoutStart: "2026-11-23", payoutEnd: "2026-11-23", netAmount: 160000, goodsAmount: 160000, shippingFee: 3000, payoutAmount: 163000, commission: commission ? 16000 : 0, netIncome: commission ? 147000 : 163000, costMissing: 0, state: null },
     fees: commission ? [
-      { month: "2026-10", netAmount: 500000, commission: 50000, commissionRate: 10, payoutStart: "2026-11-01", payoutEnd: "2026-11-03", closed: true, state: { month: "fee:2026-10", status: "paid", saleAmount: 500000, commission: 50000, payoutAmount: 0, commissionRate: 10, paidAt: "2026-11-02T01:00:00Z", doneAt: null, memo: null, updatedAt: null } },
-      { month: "2026-11", netAmount: 280000, commission: 28000, commissionRate: 10, payoutStart: "2026-12-01", payoutEnd: "2026-12-03", closed: false, state: null }
+      { month: "2026-10", netAmount: 500000, commission: 50000, commissionRate: 10, payoutStart: "2026-11-01", payoutEnd: "2026-11-03", closed: true, state: { month: "fee:2026-10", status: "paid", saleAmount: 500000, commission: 50000, payoutAmount: 0, commissionRate: 10, paidAt: "2026-11-02T01:00:00Z", doneAt: null, memo: null, updatedAt: null }, vatIncluded: true, amounts: { supply: 45455, tax: 4545, total: 50000 }, invoice: { issued: false, issuedAt: null, amount: null } },
+      { month: "2026-11", netAmount: 280000, commission: 28000, commissionRate: 10, payoutStart: "2026-12-01", payoutEnd: "2026-12-03", closed: false, state: null, vatIncluded: true, amounts: { supply: 25455, tax: 2545, total: 28000 }, invoice: { issued: false, issuedAt: null, amount: null } }
     ] : [],
     products: { total: 12, soldOut: 2, hidden: 0 },
     requests: { pending: 1, recent: [] }
@@ -102,7 +102,7 @@ describe("공급사 대시보드: 판매 현황 · 자동 계산 정산 금액",
     const chart = container.querySelector(".sup-dash-chart") as HTMLElement;
     expect(within(chart).getByRole("button", { name: /11월 18일\(수\) 판매 160,000원/ })).toBeTruthy();
     // 달력: 날짜마다 판매 금액, 정산 입금일
-    expect(screen.getByRole("link", { name: "11월 2일(월), 판매 120,000원" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^11월 2일\(월\), 판매 120,000원, 2026년 10월 판매 수수료 50,000원 두고푸드로 입금/ })).toBeTruthy();
     expect(screen.getByRole("link", { name: "11월 23일(월), 판매 없음, 정산 입금 163,000원" })).toBeTruthy();
     // 잘 팔린 상품 썸네일(이미지가 없으면 상자 그림)
     expect(container.querySelector(".sup-rank-list img.sa-thumb")?.getAttribute("src")).toBe("https://img.test/apple.jpg");
@@ -114,10 +114,15 @@ describe("공급사 대시보드: 판매 현황 · 자동 계산 정산 금액",
     expect(within(row(/배송비 \(100%\)/)).getByText("3,000원")).toBeTruthy();
     expect(within(row(/입금 합계/)).getByText("163,000원")).toBeTruthy();
     expect(within(row(/실 수령 예상/)).getByText("147,000원")).toBeTruthy();
-    // 판매 수수료: 다음 달 1~3일 두고푸드로(세금계산서 상태)
+    // 판매 수수료: 두고푸드가 청구 → 1~3일 입금 → 입금 확인 → 세금계산서(판매대행·마케팅대행 수수료)
     expect(within(settle).getByText("2026년 11월 판매분 수수료")).toBeTruthy();
-    expect(within(settle).getByText("수수료 청구 전")).toBeTruthy();
-    expect(within(settle).getByText("세금계산서 발행 · 수수료 입금 대기")).toBeTruthy();
+    expect(within(settle).getByText("청구 전")).toBeTruthy();
+    expect(within(settle).getByText("청구됨 · 두고푸드로 입금해 주세요")).toBeTruthy();
+    const invoiceNotes = [...settle.querySelectorAll(".sup-fee-invoice")].map((node) => node.textContent);
+    expect(invoiceNotes).toEqual(["입금이 확인되면 두고푸드가 '판매대행·마케팅대행 수수료' 세금계산서를 발행해요", "입금이 확인되면 두고푸드가 '판매대행·마케팅대행 수수료' 세금계산서를 발행해요"]);
+    // 달력: 지난달 판매분 수수료 입금일(11월 1~3일, 공급사 → 두고푸드)
+    expect(screen.getByRole("link", { name: /^11월 1일\(일\), 판매 없음, 2026년 10월 판매 수수료 50,000원 두고푸드로 입금/ })).toBeTruthy();
+    expect(container.querySelectorAll(".sup-mini-cell.is-fee")).toHaveLength(3);
     expect(within(settle).getByText(/제품 파손·변질은 공급사가 100% 책임지고 보상/)).toBeTruthy();
     expect(screen.getByText("2026년 11월 판매 금액")).toBeTruthy();
   });
@@ -164,7 +169,8 @@ describe("관리자: 공급사 정산(주 정산 지급 · 월 정산 지급 · 
     vi.setSystemTime(new Date("2026-11-25T03:00:00.000Z"));
   });
 
-  it("주 정산은 지난주 판매분 지급 합계(물품 대금 + 배송비), 판매 수수료 탭은 세금계산서 발행 → 입금 확인", async () => {
+  it("주 정산은 지난주 판매분 지급 합계(물품 대금 + 배송비), 판매 수수료 탭은 청구하기 → 입금 확인 → 세금계산서 파일·발행 표시", async () => {
+    vi.stubGlobal("confirm", () => true);
     const base = { registered: true, hasAccount: false, explicit: true, saleAmount: 0, returnAmount: 0, costAmount: 0, costMissing: 0, quantity: 3, orders: 2, paidAt: null, doneAt: null, memo: null, updatedAt: null, updatedBy: null, recorded: null, changedAfterRecord: false, status: "pending" };
     const weekly = {
       kind: "weekly", period: "2026-11-16", start: "2026-11-16", end: "2026-11-22", payoutFrom: "2026-11-23", payoutTo: "2026-11-23", closed: true,
@@ -176,17 +182,27 @@ describe("관리자: 공급사 정산(주 정산 지급 · 월 정산 지급 · 
       otherCycle: { suppliers: 0, payoutAmount: 0 },
       sync: null
     };
+    const feeRow = { ...base, type: "commission", cycle: "weekly", commissionRate: 10, shippingFee: 0, invoice: { issued: false, issuedAt: null, amount: null }, taxProblems: [] };
     const fee = {
       kind: "fee", period: "2026-10", start: "2026-10-01", end: "2026-10-31", payoutFrom: "2026-11-01", payoutTo: "2026-11-03", closed: true,
-      rows: [{ ...base, supplierName: "봄날농원", supplierId: "sup-a", type: "commission", cycle: "weekly", commissionRate: 10, netAmount: 500000, goodsAmount: 500000, shippingFee: 0, payoutAmount: 500000, commission: 50000, netIncome: 450000, doogoProfit: 50000 }],
-      totals: { netAmount: 500000, goodsAmount: 500000, shippingFee: 0, payoutAmount: 500000, commission: 50000, doogoProfit: 50000, done: 0, paid: 0, pending: 1 },
+      rows: [
+        { ...feeRow, supplierName: "봄날농원", supplierId: "sup-a", netAmount: 500000, goodsAmount: 500000, payoutAmount: 500000, commission: 50000, netIncome: 450000, doogoProfit: 50000, invoiceAmounts: { supply: 45455, tax: 4545, total: 50000 } },
+        { ...feeRow, supplierName: "이웃농장", supplierId: "sup-b", netAmount: 300000, goodsAmount: 300000, payoutAmount: 300000, commission: 30000, netIncome: 270000, doogoProfit: 30000, invoiceAmounts: { supply: 27273, tax: 2727, total: 30000 } },
+        { ...feeRow, supplierName: "다미", supplierId: "sup-d", status: "done", doneAt: "2026-11-02T03:00:00Z", netAmount: 200000, goodsAmount: 200000, payoutAmount: 200000, commission: 20000, netIncome: 180000, doogoProfit: 20000, invoiceAmounts: { supply: 18182, tax: 1818, total: 20000 } }
+      ],
+      totals: { netAmount: 1000000, goodsAmount: 1000000, shippingFee: 0, payoutAmount: 1000000, commission: 100000, doogoProfit: 100000, done: 1, paid: 0, pending: 2 },
+      invoice: { vatIncluded: true, item: "판매대행·마케팅대행 수수료", writeDate: "2026-10-31", supplierProblems: [], issued: 0, ready: ["다미"], missingInfo: [] },
       sync: null
     };
     const calls = stubApi((url, method) => {
+      if (url.includes("/settlements/fee-invoice-file")) return new Response(new Blob(["xlsx"]), { status: 200, headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "X-Doogo-Invoice-Suppliers": encodeURIComponent(JSON.stringify(["다미"])) } });
+      if (url.includes("/settlements/fee-invoices") && method === "POST") return json({ updated: 1, states: [{ issued: true }] });
+      if (url.includes("/settlements/bulk") && method === "PUT") return json({ updated: 2, states: [] });
       if (url.includes("/baljuora/admin/settlements") && method === "GET") return json(url.includes("kind=fee") ? fee : weekly);
       if (url.includes("/baljuora/admin/settlements") && method === "PUT") return json({ state: { status: "paid" } });
       return undefined;
     });
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:test", revokeObjectURL: () => undefined }));
     render(<MemoryRouter><SupplierSettlementsAdmin /></MemoryRouter>);
     expect(await screen.findByText("263,000원")).toBeTruthy();
     expect(calls[0].url).toContain("kind=weekly&period=2026-11-16");
@@ -194,12 +210,25 @@ describe("관리자: 공급사 정산(주 정산 지급 · 월 정산 지급 · 
     expect(screen.getByText("수수료 10%")).toBeTruthy();
     expect(screen.getByText("도매(매입)")).toBeTruthy();
     expect(screen.getByText(/원가 × 수량 · 마진 20,000원/)).toBeTruthy();
-    // 판매 수수료 탭: 지난달 판매분, 세금계산서 발행 버튼
+    // 판매 수수료 탭: 지난달 판매분 — 청구하기(하나) · 한 번에 청구하기(청구 전 모두) · 입금 확인 · 세금계산서
     await act(async () => { fireEvent.click(screen.getByRole("tab", { name: /판매 수수료 청구/ })); });
     expect(await screen.findByText("2026년 10월 판매분")).toBeTruthy();
     await waitFor(() => expect(calls.some((call) => call.url.includes("kind=fee&period=2026-10"))).toBe(true));
-    await act(async () => { fireEvent.click(await screen.findByRole("button", { name: "세금계산서 발행함" })); });
-    const put = calls.find((call) => call.method === "PUT");
+    expect(screen.getByText("판매대행·마케팅대행 수수료 세금계산서 (두고푸드 → 공급사)")).toBeTruthy();
+    const clicks = await screen.findAllByRole("button", { name: "청구하기" });
+    expect(clicks).toHaveLength(2);
+    await act(async () => { fireEvent.click(clicks[0]); });
+    const put = calls.find((call) => call.method === "PUT" && !call.url.includes("/bulk"));
     expect(put?.body).toMatchObject({ supplierName: "봄날농원", kind: "fee", period: "2026-10", status: "paid" });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /한 번에 청구하기/ })); });
+    const bulk = calls.find((call) => call.url.includes("/settlements/bulk"));
+    expect(bulk?.body).toEqual({ kind: "fee", period: "2026-10", status: "paid", supplierNames: ["봄날농원", "이웃농장"] });
+    // 입금 확인한 다미 → 홈택스 일괄발급 파일 → 발행 완료로 표시
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /홈택스 일괄발급 파일 받기 \(1곳\)/ })); });
+    const file = calls.find((call) => call.url.includes("/settlements/fee-invoice-file"));
+    expect(file?.url).toContain("month=2026-10&supplier=%EB%8B%A4%EB%AF%B8");
+    await act(async () => { fireEvent.click(await screen.findByRole("button", { name: /1곳 발행 완료로 표시/ })); });
+    const mark = calls.find((call) => call.url.includes("/settlements/fee-invoices"));
+    expect(mark?.body).toEqual({ month: "2026-10", supplierNames: ["다미"], issued: true });
   });
 });

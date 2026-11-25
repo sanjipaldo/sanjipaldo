@@ -87,7 +87,7 @@ function applyProductPut(product: any, body: any, options: { allowed?: string[];
   return jsonResponse(200, { statusCode: 200, data: { id: product.id } });
 }
 
-function createFake(options: { pricingAllowed?: string[]; validToken?: string; doogoImage?: { type: string; size: number }; ignoreImageUrls?: boolean } = {}) {
+function createFake(options: { pricingAllowed?: string[]; validToken?: string; doogoImage?: { type: string; size: number }; ignoreImageUrls?: boolean; listSuppliers?: boolean } = {}) {
   const products: Record<string, any> = {
     "bj-a": {
       id: "bj-a", code: "BJT-001", name: "봄날 사과 5kg", supplyPrice: 26000, consumerPrice: 39000, purchaseCost: 20000,
@@ -101,7 +101,8 @@ function createFake(options: { pricingAllowed?: string[]; validToken?: string; d
   const calls: Array<{ method: string; url: string; body?: any }> = [];
   const state = { refreshCount: 0, validToken: options.validToken ?? "t1", presigns: [] as any[], uploads: [] as Array<{ headers: Record<string, string>; size: number; type: string }> };
   const pricingAllowed = options.pricingAllowed ?? ["supplyPrice", "consumerPrice", "purchaseCost"];
-  const listView = (product: any) => ({ id: product.id, targetType: "product", code: product.code, name: product.name, supplyPrice: product.supplyPrice, consumerPrice: product.consumerPrice, purchaseCost: product.purchaseCost, imageUrls: product.imageUrls, isVisible: product.isVisible, isSoldOut: product.isSoldOut });
+  // listSuppliers: 목록에 매입처 목록(include=productSuppliers)이 함께 오는 경우(매입처 이름으로 같은 매입처 상품 찾기, 1.8.0)
+  const listView = (product: any) => ({ id: product.id, targetType: "product", code: product.code, name: product.name, supplyPrice: product.supplyPrice, consumerPrice: product.consumerPrice, purchaseCost: product.purchaseCost, imageUrls: product.imageUrls, isVisible: product.isVisible, isSoldOut: product.isSoldOut, ...(options.listSuppliers && product.productSuppliers ? { productSuppliers: product.productSuppliers } : {}) });
   const fetch = async (input: string, init: RequestInit = {}) => {
     const method = (init.method || "GET").toUpperCase();
     const body = typeof init.body === "string" ? JSON.parse(init.body) : init.body;
@@ -930,11 +931,74 @@ describe("보내기", () => {
   it("설정 복사용 상품이 없으면 신규 등록을 하지 않고 이유를 알려 줍니다", async () => {
     const fake = createFake();
     const report = createReport();
-    await runnerFor(fake).runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [pushItem({ action: "create", baljuoraId: null, templateId: null, code: "BJT-NEW" })] }, report, "ABCDE23456");
+    await runnerFor(fake).runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [pushItem({ action: "create", baljuoraId: null, templateId: null, code: "BJT-NEW", supplierName: null })] }, report, "ABCDE23456");
     const [result] = report.posted[0].items;
     expect(result.ok).toBe(false);
     expect(result.error).toContain("설정 복사용 상품코드");
     expect(fake.calls.some((call) => call.method === "POST" && call.url === "https://api.baljuora.com/products")).toBe(false);
+  });
+
+  // 1.8.0(2026-11-25 프로세스 점검): 새 상품은 복사한 상품의 매입처 줄을 그대로 써서, 매입처가 다른 상품을 복사하면 발주가 엉뚱한 매입처로 갑니다.
+  function addDami(fake: ReturnType<typeof createFake>) {
+    fake.products["bj-d"] = {
+      id: "bj-d", code: "DAMI-001", name: "다미 샤인머스캣", supplyPrice: 7700, consumerPrice: null, purchaseCost: 6000, categoryId: "bj-cat-fruit", imageUrls: [], prices: [],
+      supplier: { id: "sup-2", name: "다미농장" }, shippingPolicy: { id: "ship-2", name: "다미 택배" },
+      productSuppliers: [{ id: "ps-d", supplier: { id: "sup-2", companyName: "다미농장" }, shippingPolicy: { id: "pship-2" }, purchaseCost: 6000, materialCost: null, isDefault: true }],
+      isVisible: true, isSoldOut: false, isTaxable: false
+    };
+  }
+  const NEW_GRAPE = { name: "다미 거봉 2kg", supplyPrice: 18000, groupPrice: 18000, consumerPrice: null, purchaseCost: 15000, categoryId: "bj-cat-fruit", imageUrl: null, isTaxable: false };
+
+  it("신규 등록: 설정 복사용 상품의 매입처가 DB센터 매입처와 다르면 발주오라의 같은 매입처 상품을 복사합니다", async () => {
+    const fake = createFake({ listSuppliers: true });
+    addDami(fake);
+    const report = createReport();
+    // 서버는 같은 매입처 연결 상품이 없어 설정 복사용 상품(봄날농원 bj-a)을 골랐음(fallback)
+    await runnerFor(fake).runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [pushItem({ productId: "p-grape", action: "create", baljuoraId: null, templateId: "bj-a", templateMatch: "fallback", code: "DAMI-002", name: "다미 거봉 2kg", supplierName: "다미 농장(주)", fields: ["name", "supplyPrice", "purchaseCost", "category"], values: NEW_GRAPE })] }, report, "ABCDE23456");
+    const create = fake.calls.find((call) => call.method === "POST" && call.url === "https://api.baljuora.com/products");
+    expect(create?.body).toMatchObject({ code: "DAMI-002", name: "다미 거봉 2kg", supplierId: "sup-2", shippingPolicyId: "ship-2" });
+    expect(create?.body.productSuppliers).toEqual([{ supplierId: "sup-2", shippingPolicyId: "pship-2", purchaseCost: 15000, materialCost: 0, isDefault: true }]);
+    expect(report.posted[0].items[0]).toMatchObject({ productId: "p-grape", ok: true, baljuoraId: "bj-new" });
+  });
+
+  it("발주오라에 같은 매입처 상품이 없으면 다른 매입처로 등록하지 않고 멈춥니다", async () => {
+    const fake = createFake({ listSuppliers: true });
+    addDami(fake);
+    const runner = runnerFor(fake);
+    const report = createReport();
+    await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [pushItem({ productId: "p-new-farm", action: "create", baljuoraId: null, templateId: "bj-a", templateMatch: "fallback", code: "NEW-001", name: "햇살 감자", supplierName: "햇살농장", fields: ["name", "supplyPrice"], values: { ...NEW_GRAPE, name: "햇살 감자" } })] }, report, "ABCDE23456");
+    const [result] = report.posted[0].items;
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("발주오라에 '햇살농장' 매입처 상품이 없어 신규 등록을 멈췄습니다(설정 복사용 상품의 매입처는 '봄날농원')");
+    expect(result.error).toContain("첫 상품을 1개 직접 등록");
+    expect(fake.calls.some((call) => call.method === "POST" && call.url === "https://api.baljuora.com/products")).toBe(false);
+    // 설정 복사용 상품도 없고 같은 매입처 상품도 없을 때도 같은 이유로 멈춤
+    const noTemplate = createReport();
+    await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [pushItem({ action: "create", baljuoraId: null, templateId: null, code: "BJT-NEW", supplierName: "햇살농장" })] }, noTemplate, "ABCDE23456");
+    expect(noTemplate.posted[0].items[0].error).toContain("'햇살농장' 매입처 상품이 없어 신규 등록을 멈췄습니다");
+  });
+
+  it("복사할 상품을 발주오라에서 지웠으면 같은 매입처 상품을 찾아 복사합니다", async () => {
+    const fake = createFake({ listSuppliers: true });
+    addDami(fake);
+    const report = createReport();
+    await runnerFor(fake).runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [pushItem({ productId: "p-gone", action: "create", baljuoraId: null, templateId: "bj-deleted", templateMatch: "supplier", code: "DAMI-003", name: "다미 청포도", supplierName: "다미농장", fields: ["name", "supplyPrice"], values: { ...NEW_GRAPE, name: "다미 청포도" } })] }, report, "ABCDE23456");
+    expect(report.posted[0].items[0]).toMatchObject({ ok: true, baljuoraId: "bj-new" });
+    expect(fake.calls.find((call) => call.method === "POST" && call.url === "https://api.baljuora.com/products")?.body).toMatchObject({ supplierId: "sup-2" });
+  });
+
+  it("복사할 상품의 매입처 이름을 읽지 못하면 DB센터에서 같은 매입처로 연결된 상품일 때만 복사합니다", async () => {
+    const fake = createFake();
+    fake.products["bj-x"] = { id: "bj-x", code: "X-1", name: "이름 없는 매입처 상품", supplyPrice: 1000, consumerPrice: null, purchaseCost: 800, categoryId: "bj-cat-farm", imageUrls: [], prices: [], supplier: { id: "sup-x" }, isVisible: true, isSoldOut: false };
+    const item = (templateMatch: string) => pushItem({ productId: `p-${templateMatch}`, action: "create", baljuoraId: null, templateId: "bj-x", templateMatch, code: `X-${templateMatch}`, name: "새 상품", supplierName: "엑스상회", fields: ["name", "supplyPrice"], values: { ...NEW_GRAPE, name: "새 상품" } });
+    const runner = runnerFor(fake);
+    const trusted = createReport();
+    await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [item("supplier")] }, trusted, "ABCDE23456");
+    expect(trusted.posted[0].items[0].ok).toBe(true);
+    expect(fake.calls.filter((call) => call.method === "POST" && call.url === "https://api.baljuora.com/products").map((call) => call.body.supplierId)).toEqual(["sup-x"]);
+    const blocked = createReport();
+    await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [item("fallback")] }, blocked, "ABCDE23456");
+    expect(blocked.posted[0].items[0]).toMatchObject({ ok: false, error: expect.stringContaining("'엑스상회' 매입처 상품이 없어") });
   });
 
   it("로그인 토큰이 만료되면 발주오라 화면처럼 한 번 갱신하고 다시 요청합니다", async () => {
@@ -1357,5 +1421,16 @@ describe("매입원가 보내기(매입처 목록 productSuppliers)", () => {
     expect(body.productSuppliers).toEqual([{ supplierId: "sup-dami", shippingPolicyId: "pship-dami", purchaseCost: 6600, materialCost: 0, isDefault: true }]);
     expect(body).not.toHaveProperty("purchaseCost");
     expect(body).toMatchObject({ code: "NEW-1", name: "새 샤인머스캣", supplyPrice: 7700 });
+  });
+
+  it("매입처 이름: 기본 매입처 줄 → 상품 매입처 칸 순서로 읽고, 띄어쓰기·(주)·기호는 빼고 비교합니다", () => {
+    expect(internals.supplierNameKey("봄날 농원(주)")).toBe(internals.supplierNameKey("봄날농원"));
+    expect(internals.supplierNameKey("㈜ 다미-농장")).toBe("다미농장");
+    expect(internals.supplierNameKey("주식회사 ABC Farm")).toBe("abcfarm");
+    expect(internals.supplierNameKey(null)).toBe("");
+    expect(internals.defaultSupplierName({ productSuppliers: [{ supplier: { id: "a", companyName: "보조매입처" }, isDefault: false }, { supplier: { id: "b", companyName: "기본매입처" }, isDefault: true }] })).toBe("기본매입처");
+    expect(internals.defaultSupplierName({ productSuppliers: [{ supplierName: "하나뿐인 매입처" }] })).toBe("하나뿐인 매입처");
+    expect(internals.defaultSupplierName({ productSuppliers: [{ supplier: { id: "a" } }, { supplier: { id: "b" } }], supplier: { id: "a", name: "상품 매입처" } })).toBe("상품 매입처");
+    expect(internals.defaultSupplierName({ supplier: { id: "a" } })).toBeNull();
   });
 });

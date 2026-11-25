@@ -346,6 +346,107 @@ describe("발주오라 판매·매출처 → 판매 현황·매출처·홈택스
     expect(supplierSales.data.fees.find((fee: any) => fee.month === month)).toMatchObject({ commission: 10200, state: { status: "done" } });
   });
 
+  it("판매 수수료: 한 번에 청구 → 입금 확인 → 홈택스 세금계산서(판매대행·마케팅대행 수수료) 파일 → 발행 완료 표시, 공급사 센터에도 보임", async () => {
+    const admin = await adminToken();
+    await syncSales(admin, LINES);
+    const setSettlement = (id: string, body: unknown) => fetchWithAuth(app, admin, `/api/catalog/admin/suppliers/${id}/settlement`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    expect((await setSettlement("sup-spring", { type: "commission", commissionRate: 10, cycle: "monthly" })).status).toBe(200);
+    expect((await setSettlement("sup-sea", { type: "wholesale", cycle: "weekly" })).status).toBe(200);
+    // 공급받는자(봄날농원) 정보는 공급사 관리에서 채움
+    await executeSql("UPDATE suppliers SET businessNumber = ?, representative = ?, address = ?, email = ? WHERE id = 'sup-spring'", ["222-33-44444", "봄대표", "충북 청주시 1", "spring@example.com"]);
+    await call(admin, "/admin/hometax/settings", "PUT", { supplier: SUPPLIER, receiptType: "01", vatIncluded: true, includeShipping: true });
+    const feeList = () => call<any>(admin, `/admin/settlements?kind=fee&period=${month}`);
+    const lastDay = String(new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).getUTCDate());
+    const monthNumber = Number(month.slice(5));
+
+    // 수수료 = 판매 대금(배송비 제외) × 10% — 기본은 부가세 포함(12,800 = 공급가 11,636 + 세액 1,164)
+    let fees = await feeList();
+    expect(fees.rows.map((item: any) => [item.supplierName, item.commission, item.status])).toEqual([["봄날농원", 12800, "pending"], ["김공장", 2000, "pending"]]);
+    expect(fees.rows[0]).toMatchObject({ netAmount: 128000, invoiceAmounts: { supply: 11636, tax: 1164, total: 12800 }, taxProblems: [], invoice: { issued: false } });
+    expect(fees.rows[1].taxProblems).toEqual(["공급사 관리에 없는 이름(공급사로 등록해 주세요)"]);
+    expect(fees.invoice).toMatchObject({ vatIncluded: true, item: "판매대행·마케팅대행 수수료", writeDate: `${month}-${lastDay}`, supplierProblems: [], issued: 0, ready: [], missingInfo: [{ supplierName: "김공장", supplierId: null }] });
+
+    // 한 번에 청구하기(청구 전 → 청구함 · 입금 대기)
+    const billed = await call<any>(admin, "/admin/settlements/bulk", "PUT", { kind: "fee", period: month, status: "paid", supplierNames: ["봄날농원", "김공장", "봄날농원"] });
+    expect(billed.updated).toBe(2);
+    expect(billed.states.map((state: any) => [state.status, state.commission])).toEqual([["paid", 12800], ["paid", 2000]]);
+    const bulk = (body: unknown) => fetchWithAuth(app, admin, "/api/baljuora/admin/settlements/bulk", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    expect((await bulk({ kind: "weekly", period: weekStartOf(today), status: "done", supplierNames: ["바다상회"] })).status).toBe(400);
+    expect((await bulk({ kind: "fee", period: month, status: "paid", supplierNames: [] })).status).toBe(400);
+    fees = await feeList();
+    expect(fees.totals).toMatchObject({ paid: 2, pending: 0, done: 0 });
+
+    // 입금 확인 전에는 기본 파일 대상이 없음. 골라서 받으면 청구(02)로 만듦
+    const invoiceFile = (query = "") => fetchWithAuth(app, admin, `/api/baljuora/admin/settlements/fee-invoice-file?month=${month}${query}`);
+    expect((await invoiceFile()).status).toBe(404);
+    const readRow = async (res: Response) => {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(await res.arrayBuffer());
+      const sheet = workbook.worksheets[0];
+      expect(sheet.getRow(8).getCell(1).value).toBeNull();
+      return Array.from({ length: 59 }, (_, index) => sheet.getRow(7).getCell(index + 1).value);
+    };
+    const billedFile = await invoiceFile(`&supplier=${encodeURIComponent("봄날농원")}`);
+    expect(billedFile.status).toBe(200);
+    expect((await readRow(billedFile))[58]).toBe("02");
+    // 공급사 관리에 없는 매입처는 이유와 함께 막음
+    const blocked = await invoiceFile(`&supplier=${encodeURIComponent("김공장")}`);
+    expect(blocked.status).toBe(404);
+    expect((await json(blocked)).error?.message).toContain("김공장: 공급사 관리에 없는 이름");
+
+    // 입금 확인 → 정산 완료. 이제 홈택스 파일 기본 대상(입금 확인 + 발행 전)
+    await call(admin, "/admin/settlements", "PUT", { supplierName: "봄날농원", kind: "fee", period: month, status: "done" });
+    fees = await feeList();
+    expect(fees.invoice.ready).toEqual(["봄날농원"]);
+    const file = await invoiceFile();
+    expect(file.status).toBe(200);
+    expect(decodeURIComponent(file.headers.get("Content-Disposition") ?? "")).toContain(`홈택스_판매수수료_세금계산서_${month}.xlsx`);
+    expect(JSON.parse(decodeURIComponent(file.headers.get("X-Doogo-Invoice-Suppliers") ?? "[]"))).toEqual(["봄날농원"]);
+    const values = await readRow(file);
+    expect(values.every((value) => typeof value === "string")).toBe(true);
+    // 공급자 = 두고푸드, 공급받는자 = 공급사, 작성일자 = 그 달 말일, 영수(01)
+    expect(values.slice(0, 6)).toEqual(["01", `${month.replace("-", "")}${lastDay}`, "1112233333", "", "두고푸드", "두대표"]);
+    expect(values.slice(10, 15)).toEqual(["2223344444", "", "봄날농원", "봄대표", "충북 청주시 1"]);
+    expect(values[17]).toBe("spring@example.com");
+    expect(values.slice(19, 21)).toEqual(["11636", "1164"]);
+    expect(values.slice(22, 30)).toEqual([lastDay, `판매대행·마케팅대행 수수료(${monthNumber}월분)`, "10%", "", "", "11636", "1164", `${monthNumber}월 판매 대금 128,000원(배송비 제외) × 10%`]);
+    expect(values[30]).toBe("");
+    expect(values[58]).toBe("01");
+    for (const index of HOMETAX_LAYOUT.taxable.required) expect(values[index], `세금계산서 ${index}`).not.toBe("");
+
+    // 홈택스에서 발행한 뒤 "발행 완료로 표시" → 기본 파일 대상에서 빠지고, 되돌릴 수 있음
+    const marked = await call<any>(admin, "/admin/settlements/fee-invoices", "POST", { month, supplierNames: ["봄날농원"], issued: true });
+    expect(marked.states).toEqual([expect.objectContaining({ issued: true, amount: 12800 })]);
+    fees = await feeList();
+    expect(fees.rows[0]).toMatchObject({ status: "done", invoice: { issued: true, amount: 12800 } });
+    expect(fees.rows.map((item: any) => item.supplierName)).toEqual(["봄날농원", "김공장"]);
+    expect(fees.invoice).toMatchObject({ issued: 1, ready: [] });
+    expect((await invoiceFile()).status).toBe(404);
+    await call(admin, "/admin/settlements/fee-invoices", "POST", { month, supplierNames: ["봄날농원"], issued: false });
+    expect((await feeList()).invoice).toMatchObject({ issued: 0, ready: ["봄날농원"] });
+    await call(admin, "/admin/settlements/fee-invoices", "POST", { month, supplierNames: ["봄날농원"], issued: true });
+
+    // 부가세 별도로 바꾸면 수수료 12,800 + 세액 1,280 = 14,080원을 받음
+    await call(admin, "/admin/hometax/settings", "PUT", { commissionVatIncluded: false });
+    fees = await feeList();
+    expect(fees.invoice.vatIncluded).toBe(false);
+    expect(fees.rows[0].invoiceAmounts).toEqual({ supply: 12800, tax: 1280, total: 14080 });
+    expect((await call<any>(admin, "/admin/hometax/settings")).settings).toMatchObject({ commissionVatIncluded: false, vatIncluded: true, supplier: { companyName: "두고푸드" } });
+
+    // 공급사 센터: 낼 금액(부가세 포함)·입금 확인·세금계산서 발행을 봄
+    expect((await fetchWithAuth(app, admin, "/api/catalog/admin/suppliers/sup-spring/account", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "spring", password: "spring" }) })).status).toBe(201);
+    const signIn = await app.fetch(new Request("http://localhost/api/auth/sign-in/username", { method: "POST", headers: { "content-type": "application/json", origin: "http://localhost:3000" }, body: JSON.stringify({ username: "spring", password: "spring" }) }));
+    const supplierSales = await json<any>(await fetchWithAuth(app, signIn.headers.get("set-auth-token")!, `/api/supplier/sales?month=${month}`));
+    expect(supplierSales.ok).toBe(true);
+    expect(supplierSales.data.fees.find((fee: any) => fee.month === month)).toMatchObject({
+      commission: 12800,
+      vatIncluded: false,
+      amounts: { supply: 12800, tax: 1280, total: 14080 },
+      state: { status: "done" },
+      invoice: { issued: true, amount: 12800 }
+    });
+  });
+
   it("끝까지 읽은 동기화만 기간 안에서 사라진 줄을 지웁니다(중간에 멈추면 그대로 둠)", async () => {
     const admin = await adminToken();
     await syncSales(admin, LINES);

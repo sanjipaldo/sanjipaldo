@@ -157,7 +157,7 @@ describe("발주오라 동기화 API", () => {
     expect(overview.data.group?.id).toBe("grp-1");
     expect(overview.data.linkedCount).toBe(2);
 
-    type Changes = { compared: boolean; groupPriceReadable: boolean; items: Array<{ productId: string; kind: string; diffs: Array<{ field: string; direction: string }> }>; baljuoraOnly: Array<{ id: string }> };
+    type Changes = { compared: boolean; groupPriceReadable: boolean; items: Array<{ productId: string; kind: string; newSupplier?: boolean; diffs: Array<{ field: string; direction: string }> }>; baljuoraOnly: Array<{ id: string }> };
     let changes = await json<Changes>(await fetchWithAuth(app, admin, "/api/baljuora/admin/changes"));
     expect(changes.data.compared).toBe(true);
     expect(changes.data.groupPriceReadable).toBe(true); // 비교 때 매출처 그룹 공급가를 읽은 상품이 있음
@@ -165,6 +165,7 @@ describe("발주오라 동기화 API", () => {
     expect(byId.has("bj-test-1")).toBe(false); // 값이 모두 같음
     expect(byId.get(`baljuora-${BJ_UUID}`)?.diffs.map((diff) => `${diff.field}:${diff.direction}`)).toEqual(["supplyPrice:initial"]);
     expect(byId.get("bj-test-3")?.kind).toBe("new");
+    expect(byId.get("bj-test-3")).toMatchObject({ newSupplier: false }); // 같은 매입처(봄날농원) 상품이 발주오라와 연결돼 있음
     expect(byId.get("bj-test-4")?.kind).toBe("new"); // 숨긴 상품도 목록에는 있고 화면에서 거릅니다
     expect(changes.data.baljuoraOnly.map((item) => item.id)).toEqual(["bj-only"]);
 
@@ -177,12 +178,13 @@ describe("발주오라 동기화 API", () => {
     const push = await json<{ job: { id: string; total: number }; code: string }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "push", productIds: ["bj-test-1", "bj-test-3"] }) }));
     expect(push.ok).toBe(true);
     expect(push.data.job.total).toBe(2);
-    const pushPlan = await json<{ plan: { items: Array<{ productId: string; action: string; fields: string[]; templateId: string | null; baljuoraId: string | null; values: Record<string, unknown> }> } }>(await app.fetch(new Request(`http://localhost/api/baljuora/runner/${push.data.code}`)));
+    const pushPlan = await json<{ plan: { items: Array<{ productId: string; action: string; fields: string[]; templateId: string | null; templateMatch?: string | null; supplierName?: string | null; baljuoraId: string | null; values: Record<string, unknown> }> } }>(await app.fetch(new Request(`http://localhost/api/baljuora/runner/${push.data.code}`)));
     const update = pushPlan.data.plan.items.find((item) => item.productId === "bj-test-1");
     const create = pushPlan.data.plan.items.find((item) => item.productId === "bj-test-3");
     expect(update).toMatchObject({ action: "update", baljuoraId: "bj-a", fields: ["supplyPrice"] });
     expect(create?.action).toBe("create");
     expect(create?.templateId).toBe("bj-a");
+    expect(create).toMatchObject({ templateMatch: "supplier", supplierName: "봄날농원" });
     expect(create?.values).toMatchObject({ supplyPrice: 12000, groupPrice: 11000, categoryId: "bj-cat-farm", isTaxable: false });
 
     // 다른 상품 결과는 받지 않습니다(작업에 든 상품만).
@@ -299,6 +301,30 @@ describe("발주오라 동기화 API", () => {
     const push = await json<{ code: string }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "push", productIds: ["bj-test-3"] }) }));
     const plan = await json<{ plan: { items: Array<{ action: string; baljuoraId: string | null; templateId: string | null }> } }>(await app.fetch(new Request(`http://localhost/api/baljuora/runner/${push.data.code}`)));
     expect(plan.data.plan.items[0]).toMatchObject({ action: "create", baljuoraId: null, templateId: "bj-a" });
+  });
+
+  it("새 매입처 상품(2026-11-25): 같은 매입처 연결 상품이 없으면 '새 매입처'로 알리고, 설정 복사용 상품은 fallback으로 표시합니다", async () => {
+    const admin = await adminToken();
+    await executeSql("INSERT INTO products (id, productCode, name, supplierName, costPrice, aPrice, generalPrice, salePriceMode, shippingType, categoryId, isVisible, isSoldOut, isAlwaysOnSale, displayOrder) VALUES ('bj-test-5', 'BJT-005', '햇살 감자 10kg', '햇살농장', 15000, 17000, 18000, 'autonomous', 'domestic', ?, 1, 0, 1, 5)", [CATEGORY]);
+    const compare = await startCompare(admin);
+    await app.fetch(new Request(`http://localhost/api/baljuora/runner/${compare.code}`));
+    await post(`/api/baljuora/runner/${compare.code}/results`, { final: true, categories: CATEGORY_TREE, snapshots: [snapshot({ id: "bj-a", code: "BJT-001", name: "봄날 사과 5kg", supplyPrice: 26000, consumerPrice: 39000, purchaseCost: 20000, groupPrice: 24000, categoryIds: ["bj-cat-fruit"], imageUrls: ["https://files.baljuora.com/a.jpg"] })] });
+    const changes = await json<{ items: Array<{ productId: string; kind: string; newSupplier?: boolean }> }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/changes"));
+    expect(changes.data.items.find((item) => item.productId === "bj-test-5")).toMatchObject({ kind: "new", newSupplier: true });
+    expect(changes.data.items.find((item) => item.productId === "bj-test-3")).toMatchObject({ kind: "new", newSupplier: false });
+    expect(changes.data.items.find((item) => item.productId === "bj-test-4")).toMatchObject({ kind: "new", newSupplier: false }); // 매입처 없음
+
+    type Plan = { plan: { items: Array<{ productId: string; action: string; templateId: string | null; templateMatch?: string | null; supplierName: string | null }> } };
+    const planFor = async () => {
+      const push = await json<{ code: string }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "push", productIds: ["bj-test-5"] }) }));
+      return (await json<Plan>(await app.fetch(new Request(`http://localhost/api/baljuora/runner/${push.data.code}`)))).data.plan.items[0];
+    };
+    // 설정 복사용 상품도 없으면 비워 보냄(책갈피가 발주오라에서 같은 매입처 상품을 찾고, 없으면 등록하지 않음)
+    expect(await planFor()).toMatchObject({ action: "create", templateId: null, templateMatch: null, supplierName: "햇살농장" });
+    const saved = await fetchWithAuth(app, admin, "/api/baljuora/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateCode: "BJT-001" }) });
+    expect(saved.status).toBe(200);
+    // 설정 복사용 상품(다른 매입처일 수 있음)은 fallback — 책갈피가 매입처를 확인한 뒤에만 복사
+    expect(await planFor()).toMatchObject({ action: "create", templateId: "bj-a", templateMatch: "fallback", supplierName: "햇살농장" });
   });
 
   it("이미지 받기는 작업에 든 상품만 됩니다", async () => {

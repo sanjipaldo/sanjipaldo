@@ -101,6 +101,8 @@ export type PushPlanItem = {
   action: "create" | "update";
   baljuoraId: string | null;
   templateId: string | null;
+  // 신규 등록: 복사할 상품이 같은 매입처 상품인지(supplier) 설정 복사용 상품인지(fallback)
+  templateMatch?: TemplateMatch | null;
   code: string | null;
   name: string;
   supplierName: string | null;
@@ -461,14 +463,21 @@ async function buildSalesPlan(settings: BaljuoraSettings, months: number | undef
   return { type: "sales", ...step };
 }
 
-function pickTemplateId(product: ProductRow, productRows: ProductRow[], linkByProduct: Map<string, LinkRow>, settings: BaljuoraSettings, linkByCode: Map<string, LinkRow>) {
+// 신규 등록 때 매입처·배송정책을 복사할 발주오라 상품: 같은 매입처(DB센터 매입처명)로 연결된 상품 → 설정 복사용 상품코드.
+// match "supplier" = 같은 매입처 상품, "fallback" = 설정 복사용 상품(매입처가 다를 수 있음). 책갈피(1.8.0)는 복사할 상품의
+// 발주오라 기본 매입처가 DB센터 매입처명과 다르면 같은 매입처 상품을 발주오라에서 찾아 쓰고, 없으면 등록하지 않습니다
+// (다른 매입처로 등록되면 발주가 엉뚱한 매입처로 감 — 2026-11-25 프로세스 점검).
+export type TemplateMatch = "supplier" | "fallback";
+
+function pickTemplate(product: ProductRow, productRows: ProductRow[], linkByProduct: Map<string, LinkRow>, settings: BaljuoraSettings, linkByCode: Map<string, LinkRow>): { id: string | null; match: TemplateMatch | null } {
   const supplier = product.supplierName?.trim();
   if (supplier) {
     const sameSupplier = productRows.find((row) => row.id !== product.id && row.supplierName?.trim() === supplier && linkByProduct.has(row.id));
-    if (sameSupplier) return linkByProduct.get(sameSupplier.id)?.externalProductId ?? null;
+    const id = sameSupplier ? linkByProduct.get(sameSupplier.id)?.externalProductId ?? null : null;
+    if (id) return { id, match: "supplier" };
   }
-  if (settings.templateCode) return linkByCode.get(settings.templateCode.trim())?.externalProductId ?? null;
-  return null;
+  const fallback = settings.templateCode ? linkByCode.get(settings.templateCode.trim())?.externalProductId ?? null : null;
+  return fallback ? { id: fallback, match: "fallback" } : { id: null, match: null };
 }
 
 export async function buildPushPlan(input: { productIds: string[]; fieldsByProduct?: Record<string, BaljuoraSyncField[]>; categoryTree?: boolean }, base: BaljuoraSettings): Promise<PushPlan> {
@@ -533,11 +542,13 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
       }
     }
     if (fields.length === 0) continue;
+    const template = link ? { id: null, match: null } : pickTemplate(product, productRows, freshByProduct, settings, linkByCode);
     items.push({
       productId,
       action: link ? "update" : "create",
       baljuoraId: link?.externalProductId ?? null,
-      templateId: link ? null : pickTemplateId(product, productRows, freshByProduct, settings, linkByCode),
+      templateId: template.id,
+      templateMatch: template.match,
       code: values.code,
       name: values.name,
       supplierName: product.supplierName,
@@ -1136,6 +1147,8 @@ export type BaljuoraChangeItem = {
   isVisible: boolean;
   baljuoraId: string | null;
   supplierName: string | null;
+  // 신규 등록인데 같은 매입처로 연결된 상품이 하나도 없음(새 매입처): 발주오라에 그 매입처 상품이 있어야 등록됩니다.
+  newSupplier?: boolean;
   diffs: BaljuoraFieldDiff[];
   syncStatus: string | null;
   lastPushedAt: string | null;
@@ -1152,6 +1165,11 @@ export async function listBaljuoraChanges() {
       getDb().select({ finishedAt: baljuoraSyncJobs.finishedAt }).from(baljuoraSyncJobs).where(and(eq(baljuoraSyncJobs.type, "compare"), eq(baljuoraSyncJobs.status, "done"))).orderBy(desc(baljuoraSyncJobs.finishedAt)).limit(1)
     ]);
     const linkByProduct = new Map(links.map((link) => [link.productId, link]));
+    // 발주오라 상품과 연결된 상품이 있는 매입처(DB센터 매입처명) — 없으면 신규 등록 때 "새 매입처"로 알립니다.
+    const linkedSuppliers = new Set(productRows.filter((row) => {
+      const link = linkByProduct.get(row.id);
+      return Boolean(link && linkState(link) && row.supplierName?.trim());
+    }).map((row) => row.supplierName!.trim()));
     const items: BaljuoraChangeItem[] = [];
     let linkedCount = 0;
     // 연결 상품 중 발주오라 매출처 그룹 공급가를 읽은 상품이 하나라도 있는지(없으면 수강생 단가는 비교·전송하지 못함)
@@ -1162,7 +1180,8 @@ export async function listBaljuoraChanges() {
       const state = link ? linkState(link) : null;
       // 연결이 없거나, 예전 형식 연결만 있는 상품(비교 때 발주오라에서 찾지 못함)은 신규 등록 대상입니다.
       if (!link || !state) {
-        items.push({ productId: product.id, kind: "new", code: values.code, name: values.name, imageUrl: values.imageUrl, categoryId: product.categoryId, isVisible: product.isVisible, baljuoraId: null, supplierName: product.supplierName, diffs: [], syncStatus: link ? "stale" : null, lastPushedAt: null });
+        const supplierName = product.supplierName?.trim();
+        items.push({ productId: product.id, kind: "new", code: values.code, name: values.name, imageUrl: values.imageUrl, categoryId: product.categoryId, isVisible: product.isVisible, baljuoraId: null, supplierName: product.supplierName, newSupplier: Boolean(supplierName && !linkedSuppliers.has(supplierName)), diffs: [], syncStatus: link ? "stale" : null, lastPushedAt: null });
         continue;
       }
       linkedCount += 1;

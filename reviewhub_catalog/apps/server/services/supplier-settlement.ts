@@ -19,6 +19,7 @@ import {
   type SettlementRecordKind,
   type SupplierSettlementSettings,
   type SupplierSettlementState,
+  type FeeInvoiceState,
   type SupplierSettlementStatus
 } from "@repo/shared/supplier-portal";
 import { DatabaseError, getDb } from "../_core/db";
@@ -329,6 +330,24 @@ export async function settlementRecords(keys: string[], supplierName?: string) {
     if (!isMissingTable(error, "supplier_settlements")) throw error;
   }
   return result;
+}
+
+/** 판매 수수료 세금계산서(두고푸드 → 공급사) 발행 기록("inv:YYYY-MM", 발행하면 status "done") */
+export function invoiceState(row: SettlementRecord | undefined): FeeInvoiceState {
+  if (!row || row.status !== "done") return { issued: false, issuedAt: null, amount: null };
+  return { issued: true, issuedAt: row.doneAt ?? row.updatedAt ?? null, amount: row.commission };
+}
+
+/** 공급사 세금계산서 정보(공급받는자): 공급사 관리의 매입처명·사업자등록번호·대표자·주소·이메일 */
+export type SupplierTaxProfile = { id: string; name: string; businessNumber: string; representative: string; address: string; email: string };
+
+export async function supplierTaxProfiles() {
+  const rows = await getDb().select({ id: suppliers.id, name: suppliers.name, businessNumber: suppliers.businessNumber, representative: suppliers.representative, address: suppliers.address, email: suppliers.email }).from(suppliers);
+  const byId = new Map<string, SupplierTaxProfile>();
+  for (const row of rows) {
+    byId.set(row.id, { id: row.id, name: row.name, businessNumber: row.businessNumber ?? "", representative: row.representative ?? "", address: row.address ?? "", email: row.email ?? "" });
+  }
+  return byId;
 }
 
 /** 지급 상태: 예전 월 정산 기록의 "정산 완료"도 지급 완료로 봅니다. */

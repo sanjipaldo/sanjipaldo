@@ -100,6 +100,7 @@
 .bj-diff.is-pull, .bj-diff.is-both { border-color: #f2d6a2; background: #fffaf0; }
 .bj-diff.is-initial { border-color: #e1e4e8; background: #fafbfc; }
 .bj-diff.is-blocked { border-style: dashed; border-color: #e8b4b4; background: #fff7f7; }
+.bj-diff.is-supplier { border-color: #f2d6a2; background: #fff8eb; color: #8a4b00; font-weight: 800; }
 .bj-diff .bj-diff-need { color: #b42318; }
 .bj-diff-thumb { width: 26px; height: 26px; border-radius: 6px; object-fit: cover; }
 .bj-pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 12px; color: #4c5868; font-size: 13px; font-weight: 800; }

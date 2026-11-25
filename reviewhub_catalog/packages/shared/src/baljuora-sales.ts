@@ -252,13 +252,16 @@ export type HometaxSettings = {
   receiptType: "01" | "02";
   /** 매출처가 낸 배송비를 품목 "배송비"로 넣을지 */
   includeShipping: boolean;
+  /** 판매 수수료(두고푸드 → 공급사 세금계산서)에 부가세가 들어 있는지. 기본 true: 수수료 = 공급사가 보낼 금액, 공급가액 = ÷ 1.1 */
+  commissionVatIncluded: boolean;
 };
 
 export const DEFAULT_HOMETAX_SETTINGS: HometaxSettings = {
   supplier: { businessNumber: "", branchNumber: "", companyName: "", ceoName: "", address: "", businessType: "", businessItem: "", email: "" },
   vatIncluded: true,
   receiptType: "01",
-  includeShipping: true
+  includeShipping: true,
+  commissionVatIncluded: true
 };
 
 export type HometaxBuyer = {

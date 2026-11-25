@@ -67,6 +67,8 @@ type ChangeItem = {
   isVisible: boolean;
   baljuoraId: string | null;
   supplierName: string | null;
+  // 신규 등록인데 같은 매입처로 연결된 상품이 하나도 없음(새 매입처, 2026-11-25)
+  newSupplier?: boolean;
   diffs: BaljuoraFieldDiff[];
   syncStatus: string | null;
   lastPushedAt: string | null;
@@ -609,7 +611,11 @@ export function BaljuoraSyncAdmin() {
                       <strong>{item.name}{!item.isVisible && <em className="bj-tag">숨김</em>}{item.syncStatus === "failed" && <em className="bj-tag is-danger">지난 동기화 실패</em>}</strong>
                       <small>{item.code ?? "상품코드 없음(발주오라가 새 코드를 만듭니다)"} · {doogoCategoryName(item.categoryId)}{item.supplierName ? ` · ${item.supplierName}` : ""}</small>
                       {item.kind === "new" ? (
-                        <div className="bj-diffs"><span className="bj-diff is-new">발주오라에 새로 등록</span></div>
+                        <div className="bj-diffs">
+                          <span className="bj-diff is-new">발주오라에 새로 등록</span>
+                          {/* 새 상품은 복사한 상품의 매입처로 등록돼서, 같은 매입처 상품이 발주오라에 없으면 책갈피가 등록을 멈춥니다(1.8.0). */}
+                          {item.newSupplier && <span className="bj-diff is-supplier" title="새 상품은 같은 매입처의 발주오라 상품을 복사해 등록합니다. 발주오라에 이 매입처 상품이 하나도 없으면 다른 매입처로 등록되지 않게 멈춥니다 — 발주오라에서 매입처를 만들고 첫 상품을 1개 직접 등록한 뒤 '발주오라 상품 불러오기(비교)'를 하고 동기화해 주세요.">새 매입처 · 발주오라에 같은 매입처 상품이 있어야 등록돼요</span>}
+                        </div>
                       ) : (
                         <div className="bj-diffs">
                           {shown.map((diff) => {
@@ -653,7 +659,7 @@ export function BaljuoraSyncAdmin() {
             <div className="bj-settings-grid">
               <label><span>발주오라 관리자 주소 이름</span><input value={settingsDraft.merchantSlug} onChange={(event) => setSettingsDraft({ ...settingsDraft, merchantSlug: event.target.value })} placeholder="doogobiz24" /><small>console.baljuora.com/<b>{settingsDraft.merchantSlug || "doogobiz24"}</b>/dashboard</small></label>
               <label><span>수강생 단가 = 이 이름이 들어간 매출처 그룹의 공급가</span><input value={settingsDraft.groupKeyword} onChange={(event) => setSettingsDraft({ ...settingsDraft, groupKeyword: event.target.value })} placeholder="황금농부" /><small>{overview.group ? `찾은 그룹: ${overview.group.name}` : "발주오라 상품 불러오기 후 찾은 그룹이 보입니다."}</small></label>
-              <label><span>신규 상품 설정 복사용 발주오라 상품코드</span><input value={settingsDraft.templateCode ?? ""} onChange={(event) => setSettingsDraft({ ...settingsDraft, templateCode: event.target.value || null })} placeholder="예: PD1794971213122" /><small>새 상품의 매입처·매입/매출 배송정책을 이 상품에서 복사합니다. 같은 매입처의 연결 상품이 있으면 그 상품을 먼저 씁니다.</small></label>
+              <label><span>신규 상품 설정 복사용 발주오라 상품코드</span><input value={settingsDraft.templateCode ?? ""} onChange={(event) => setSettingsDraft({ ...settingsDraft, templateCode: event.target.value || null })} placeholder="예: PD1794971213122" /><small>새 상품의 매입처·매입/매출 배송정책을 이 상품에서 복사합니다. 같은 매입처의 연결 상품이 있으면 그 상품을 먼저 쓰고, 이 상품의 매입처가 새 상품의 매입처와 다르면 발주오라에서 같은 매입처 상품을 찾아 씁니다(없으면 다른 매입처로 등록되지 않게 멈춤).</small></label>
               <label>
                 <span>상품 불러오기(비교) 때 판매·매출처도 함께</span>
                 <select value={settingsDraft.salesOnCompare === false ? "off" : String(settingsDraft.salesMonths ?? 2)} onChange={(event) => setSettingsDraft(event.target.value === "off" ? { ...settingsDraft, salesOnCompare: false } : { ...settingsDraft, salesOnCompare: true, salesMonths: Number(event.target.value) })}>
