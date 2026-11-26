@@ -4,6 +4,10 @@ import './index.css'
 import './catalog.css'
 import './wise-theme.css'
 import { syncAuthTokenFromUrl } from "@/lib/api";
+import { startAppInstallCapture } from "@/lib/app-install";
+
+// 앱(홈 화면에 추가) 설치 창은 화면이 그려지기 전에 올 수 있어 가장 먼저 받아 둡니다.
+startAppInstallCapture();
 
 // Prerender (scripts/prerender.mjs) bakes the home page into #root at build time
 // so crawlers see real content. When that markup is present we hydrate it back

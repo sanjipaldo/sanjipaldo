@@ -1,11 +1,12 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import NotFound from "./pages/not-found/Index";
 import { AdminGuard } from "./components/auth/AdminGuard";
 import { AdminLoginPage, CatalogAdmin } from "./pages/admin/CatalogAdmin";
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
+import { appAreaOf, applyAppHead, registerAppServiceWorker } from "./lib/app-install";
 import { CatalogHome, GuidePage, NewProductsPage, NoticesPage, PageFrame, SoldOutIssuesPage, SourcingPage } from "./pages/catalog/PublicCatalog";
 import { SellerGuidePage, SupplierGuidePage } from "./pages/catalog/UsageGuide";
 import { GuideDemoRender } from "./pages/catalog/GuideDemo";
@@ -40,11 +41,23 @@ function LazySupplierPage({ children }: { children: ReactNode }) {
   return <Suspense fallback={<div className="admin-loading"><div className="spinner" /><span>공급사 센터를 여는 중…</span></div>}>{children}</Suspense>;
 }
 
+// 관리자·공급사 센터 화면이면 앱(홈 화면에 추가)용 manifest와 서비스 워커, 공개 화면이면 예전 manifest(lib/app-install.ts)
+function AppHeadSync() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const area = appAreaOf(pathname);
+    applyAppHead(area);
+    if (area) registerAppServiceWorker(area);
+  }, [pathname]);
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner />
       <BrowserRouter>
+        <AppHeadSync />
         <Routes>
           <Route path="/" element={<CatalogHome />} />
           <Route path="/guide" element={<GuidePage />} />
@@ -92,6 +105,8 @@ const App = () => (
           <Route path="/admin/sourcing" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sourcing" /></AdminGuard>} />
           <Route path="/admin/sync" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sync" /></AdminGuard>} />
           <Route path="/admin/backup" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="backup" /></AdminGuard>} />
+          {/* 마이페이지 · 설정(2026-11-26): 앱으로 설치(홈 화면에 추가) */}
+          <Route path="/admin/settings" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="settings" /></AdminGuard>} />
           <Route path="/supplier" element={<LazySupplierPage><SupplierLoginPage /></LazySupplierPage>} />
           <Route path="/supplier/:section" element={<LazySupplierPage><SupplierCenterRoute /></LazySupplierPage>} />
           {/* 개발 서버 전용: 사용법 안내 영상을 mp4로 뽑을 때 쓰는 화면(scripts/render-guide-videos.mjs) */}

@@ -335,7 +335,7 @@
 
 /* ---------- 내 정보 ---------- */
 .sup-account-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
-.sup-password-card { grid-column: 1 / -1; }
+.sup-password-card, .sup-account-grid > .app-install-card { grid-column: 1 / -1; }
 .sup-info-list { display: grid; margin: 0; }
 .sup-info-list > div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; padding: 11px 0; border-bottom: 1px solid #edf0eb; }
 .sup-info-list > div:last-child { border-bottom: 0; }

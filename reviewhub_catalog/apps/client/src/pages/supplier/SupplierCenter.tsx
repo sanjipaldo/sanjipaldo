@@ -41,6 +41,7 @@ import {
 } from "@repo/shared/supplier-portal";
 import { shortDateTime, supplierGet, supplierPost, type SupplierProfile, type SupplierRequestItem } from "./supplier-api";
 import { SupplierGuideButton } from "./supplier-guide";
+import { AppInstallCard, AppInstallChip } from "@/components/app-install/AppInstall";
 import { forgetSupplierReturn, rememberSupplierReturn } from "./supplier-return";
 import { CreateRequestModal, SupplierProducts } from "./SupplierProducts";
 import { SupplierRequests } from "./SupplierRequests";
@@ -344,7 +345,7 @@ function SupplierShell({ section, profile }: { section: SupplierSection; profile
         <header className="admin-topbar">
           <button className="mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="메뉴 열기"><Menu size={21} /></button>
           <div><strong>{current?.label}</strong><span>DOOGO FOOD 공급사 센터</span></div>
-          <div className="admin-topbar-tools"><SupplierGuideButton /><span className="admin-chip sup-chip"><Store size={15} /> <span className="sup-chip-name">{profile.supplier.name}</span></span></div>
+          <div className="admin-topbar-tools"><AppInstallChip area="supplier" /><SupplierGuideButton /><span className="admin-chip sup-chip"><Store size={15} /> <span className="sup-chip-name">{profile.supplier.name}</span></span></div>
         </header>
         <div className="admin-content">
           {section === "home" && <SupplierHome profile={profile} reloadKey={reloadKey} onCreate={openCreate} />}
@@ -441,6 +442,8 @@ function SupplierAccount({ profile }: { profile: SupplierProfile }) {
           </div>
           <div className="sup-password-actions"><button className="primary-action" type="submit" disabled={saving}><KeyRound size={16} /> {saving ? "바꾸는 중…" : "비밀번호 바꾸기"}</button></div>
         </form>
+        {/* 앱으로 설치(홈 화면에 추가, 2026-11-26) — 위 줄 '앱 설치' 칩이 이 칸(#app)으로 옵니다 */}
+        <AppInstallCard area="supplier" />
       </div>
     </>
   );

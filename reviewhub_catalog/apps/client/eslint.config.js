@@ -54,5 +54,18 @@ export default tseslint.config(
       "no-empty": "off",
       "local/no-direct-api-request": "off"
     }
+  },
+  {
+    // 서비스 워커(public/sw.js, 두고푸드 앱 2026-11-26): 앱 화면 코드가 아니라 브라우저가 따로 돌리는 파일이라 apiFetch를 쓸 수 없습니다.
+    // API를 부르지 않고 화면 이동(navigate) 요청만 그대로 네트워크로 넘깁니다(인터넷이 끊기면 안내 화면).
+    files: ["public/sw.js"],
+    languageOptions: {
+      globals: {
+        ...globals.serviceworker
+      }
+    },
+    rules: {
+      "local/no-direct-api-request": "off"
+    }
   }
 );

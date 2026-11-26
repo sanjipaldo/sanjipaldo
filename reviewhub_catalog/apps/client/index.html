@@ -12,7 +12,7 @@
     <!-- 검색엔진 소유 확인(네이버 서치어드바이저·구글 서치 콘솔): 확인 후에도 지우지 않습니다. -->
     <meta name="naver-site-verification" content="08f58592224e327a336b8c851e1fcacd48a4b65a" />
     <meta name="google-site-verification" content="wvQBLosUEU-nesg3ijDcTErJkgDnJTAOq7yxsQQk3tM" />
-    <!-- 웹 아이콘: 두고푸드 로고의 d 마크(탭 아이콘 16·32, 홈 화면 바로가기 180·192·512) -->
+    <!-- 웹 아이콘(2026-11-26 앱 아이콘): 초록 바탕 + 흰 d 마크(탭 아이콘 16·32, 홈 화면 180·192·512, 안드로이드 마스크 192·512) -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
@@ -20,6 +20,25 @@
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="application-name" content="두고푸드 DB센터" />
     <meta name="apple-mobile-web-app-title" content="두고푸드 DB센터" />
+    <script>
+      // 관리자(/admin)·공급사 센터(/supplier)는 홈 화면에 추가하면 앱처럼 열리는 manifest를 씁니다(공개 화면은 위 그대로).
+      // 화면 이동 뒤에는 src/lib/app-install.ts(applyAppHead)가 같은 규칙으로 바꿉니다.
+      (function () {
+        var p = location.pathname;
+        var area = p === "/admin" || p.indexOf("/admin/") === 0 || p === "/auth" ? "admin" : p === "/supplier" || p.indexOf("/supplier/") === 0 ? "supplier" : "";
+        if (!area) return;
+        var link = document.querySelector('link[rel="manifest"]');
+        if (link) link.setAttribute("href", "/" + area + ".webmanifest");
+        var title = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+        if (title) title.setAttribute("content", area === "admin" ? "두고푸드" : "두고푸드 공급사");
+        [["apple-mobile-web-app-capable", "yes"], ["mobile-web-app-capable", "yes"], ["apple-mobile-web-app-status-bar-style", "default"]].forEach(function (pair) {
+          var meta = document.createElement("meta");
+          meta.name = pair[0];
+          meta.content = pair[1];
+          document.head.appendChild(meta);
+        });
+      })();
+    </script>
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="두고푸드 DB센터" />

@@ -63,7 +63,7 @@ export const textPx = (text: string, size: number) => Array.from(text).reduce((s
 export const whoName = (who: DemoActor) => (who === "supplier" ? "공급사" : who === "seller" ? "셀러" : "두고푸드");
 
 export function Avatar({ size = 24 }: { size?: number }) {
-  return <span className="gd-avatar" style={{ width: size, height: size }}><img src="/icon-192.png" alt="" draggable={false} /></span>;
+  return <span className="gd-avatar" style={{ width: size, height: size }}><img src="/assets/brand/doogo-avatar-192.png" alt="" draggable={false} /></span>;
 }
 
 export function Cursor({ x, y, who, click = 0 }: { x: number; y: number; who: DemoActor; click?: number }) {

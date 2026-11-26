@@ -1,0 +1,90 @@
+/* 두고푸드 앱(홈 화면에 추가, 2026-11-26) — 위 줄 '앱으로 설치' 칩 + 설정 화면 설치 칸(AppInstall.tsx) */
+
+/* 위 줄 칩: 관리자·공급사 센터 머리 줄 오른쪽 버튼들 앞(휴대폰·태블릿에서만 보임) */
+.app-install-chip { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; min-height: 36px; padding: 4px 12px 4px 5px; border: 1px solid #b7dfa0; border-radius: 999px; color: #163300 !important; background: #effbe6; text-decoration: none; white-space: nowrap; box-shadow: 0 1px 2px rgba(22, 51, 0, .06); }
+.app-install-chip:hover { border-color: #163300; background: #e2f6d5; }
+.app-install-chip:focus-visible { outline: 3px solid rgba(75, 154, 47, .45); outline-offset: 2px; }
+.app-install-chip img { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 8px; box-shadow: 0 1px 3px rgba(22, 51, 0, .2); }
+.admin-topbar .app-install-chip .app-install-chip-text,
+.app-install-chip .app-install-chip-text { display: flex; flex-direction: column; margin: 0; color: inherit; font-size: inherit; line-height: 1.1; }
+.app-install-chip b { color: #163300; font-size: 12px; font-weight: 800; }
+.admin-topbar .app-install-chip small,
+.app-install-chip small { margin-top: 2px; color: #3d6b1f; font-size: 10.5px; font-weight: 600; }
+.app-install-chip .is-short { display: none; }
+@media (max-width: 389px) {
+  .app-install-chip { gap: 5px; min-height: 32px; padding: 3px 9px 3px 4px; }
+  .app-install-chip img { width: 22px; height: 22px; border-radius: 6px; }
+  .app-install-chip .is-long { display: none; }
+  .app-install-chip .is-short { display: inline; font-size: 11px; }
+}
+/* 휴대폰 위 줄: 오른쪽 버튼들은 줄이지 않고(예전에는 버튼 묶음이 줄어 오른쪽 이름 칩이 화면 밖으로 잘림) 제목이 …으로 줄어듭니다.
+   설치 칩이 보이는 동안에는 이름 칩(관리자 이름·공급사 이름)을 아이콘 동그라미로 줄여 제목 자리를 남깁니다 —
+   이름 칩도 설치 칩도 설정 화면으로 가고, 앱을 설치하면 설치 칩이 사라지며 이름이 다시 보입니다. */
+@media (max-width: 720px) {
+  .admin-topbar .admin-topbar-tools { flex-shrink: 0; }
+  .admin-topbar .admin-topbar-tools:has(.app-install-chip) .admin-chip {
+    justify-content: center;
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 !important;
+    border-radius: 999px;
+    font-size: 0 !important;
+  }
+  .admin-topbar .admin-topbar-tools:has(.app-install-chip) .admin-chip svg { display: block !important; width: 16px; height: 16px; margin: 0; }
+  .admin-topbar .admin-topbar-tools:has(.app-install-chip) .admin-chip .sup-chip-name { display: none !important; }
+}
+
+/* 설정 화면 설치 칸 */
+.app-install-card { display: grid; gap: 18px; padding: 24px 26px; scroll-margin-top: 84px; }
+.app-install-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; align-items: center; }
+.app-install-preview { display: grid; justify-items: center; gap: 8px; width: 124px; padding: 18px 10px 14px; border-radius: 26px; background: #1d2a17; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), 0 10px 26px rgba(22, 51, 0, .18); }
+.app-install-preview img { width: 68px; height: 68px; border-radius: 17px; box-shadow: 0 8px 18px rgba(0, 0, 0, .35); }
+.app-install-preview span { color: #fff; font-size: 12.5px; font-weight: 600; letter-spacing: -.01em; }
+.app-install-copy { min-width: 0; }
+.app-install-kicker { display: inline-flex; align-items: center; gap: 5px; color: #3d8f2a; font-size: 12.5px; font-weight: 800; }
+.app-install-copy h2 { margin: 6px 0 6px; color: var(--w-ink, #0e0f0c); font-size: 22px !important; font-weight: 800; letter-spacing: -.02em; }
+.app-install-copy p { margin: 0 0 12px; color: var(--w-body, #454745); font-size: 14px; line-height: 1.65; }
+.app-install-status { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 6px 12px; border-radius: 12px; font-size: 13px; font-weight: 700; line-height: 1.45; }
+.app-install-status svg { flex: 0 0 auto; }
+.app-install-status.is-done { color: #054d28; background: #e2f6d5; }
+.app-install-status.is-ready { color: #163300; background: #effbe6; box-shadow: inset 0 0 0 1px #b7dfa0; }
+.app-install-status.is-guide { color: #5c3b00; background: #fff4cc; }
+.app-install-prompt { display: grid; gap: 8px; justify-items: center; }
+.app-install-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: min(420px, 100%); min-height: 54px; padding: 0 22px; border: 0; border-radius: 999px; color: #163300; background: #9fe870; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 22px rgba(75, 154, 47, .28); }
+.app-install-primary:hover:not(:disabled) { background: #8bd65c; }
+.app-install-primary:disabled { opacity: .6; cursor: default; }
+.app-install-primary:focus-visible, .app-install-secondary:focus-visible, .app-install-link:focus-visible { outline: 3px solid rgba(75, 154, 47, .45); outline-offset: 2px; }
+.app-install-prompt small { color: var(--w-mute, #868685); font-size: 12.5px; }
+.app-install-guide { display: grid; gap: 10px; }
+.app-install-steps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: app-step; }
+.app-install-steps li { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 56px; padding: 11px 14px 11px 52px; border: 1px solid #e3e9dc; border-radius: 14px; background: #fbfdf8; counter-increment: app-step; }
+.app-install-steps li::before { content: counter(app-step); position: absolute; top: 50%; left: 14px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; color: #fff; background: #163300; font-size: 13px; font-weight: 800; transform: translateY(-50%); }
+.app-install-step-text { display: grid; gap: 3px; min-width: 0; color: var(--w-ink, #0e0f0c); font-size: 14px; line-height: 1.5; }
+.app-install-step-text b { color: #163300; font-weight: 800; }
+.app-install-step-text small { color: var(--w-mute, #868685); font-size: 12px; line-height: 1.5; }
+.app-install-step-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: #163300; background: #e9f5de; }
+.app-install-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; justify-self: start; min-height: 40px; padding: 0 16px; border: 1px solid #163300; border-radius: 999px; color: #163300; background: #fff; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.app-install-secondary:hover { background: #f6fbf1; }
+.app-install-notes { display: grid; gap: 4px; margin: 0; padding: 12px 14px 12px 30px; border-radius: 12px; color: var(--w-body, #454745); background: #f6f8f4; font-size: 12.5px; line-height: 1.6; }
+.app-install-footer { display: flex; justify-content: flex-end; }
+.app-install-link { padding: 4px 2px; border: 0; color: #3d6b1f; background: none; font: inherit; font-size: 13px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+@media (max-width: 720px) {
+  .app-install-card { gap: 14px; padding: 18px 16px; scroll-margin-top: 72px; }
+  .app-install-hero { grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: start; }
+  .app-install-preview { width: 92px; padding: 14px 6px 10px; border-radius: 20px; }
+  .app-install-preview img { width: 54px; height: 54px; border-radius: 14px; }
+  .app-install-preview span { font-size: 11px; }
+  .app-install-copy h2 { font-size: 18px !important; }
+  .app-install-copy p { font-size: 13.5px; }
+  .app-install-status { font-size: 12.5px; }
+  .app-install-steps li { padding: 10px 12px 10px 46px; }
+  .app-install-steps li::before { left: 12px; width: 24px; height: 24px; font-size: 12px; }
+  .app-install-step-text { font-size: 13.5px; }
+  .app-install-footer { justify-content: center; }
+}
+@media (max-width: 359px) {
+  .app-install-hero { grid-template-columns: minmax(0, 1fr); }
+  .app-install-preview { grid-auto-flow: column; justify-content: start; align-items: center; width: auto; padding: 8px 14px 8px 8px; border-radius: 16px; }
+  .app-install-preview img { width: 40px; height: 40px; border-radius: 11px; }
+}

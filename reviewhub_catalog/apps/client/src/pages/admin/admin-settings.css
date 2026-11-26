@@ -1,0 +1,24 @@
+/* 관리자 > 설정(마이페이지, 2026-11-26, AdminSettingsPage.tsx) + 위 줄 이름 칩(→ 설정) 링크 모양 */
+.admin-settings-page { display: grid; gap: 16px; max-width: 880px; }
+/* 칸 사이는 grid 간격만(카드 위 간격 .admin-card + .admin-card 16px가 더해져 32px가 되지 않게) */
+.admin-settings-page > .admin-card + .admin-card { margin-top: 0; }
+.admin-settings-account { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 20px 24px; }
+.admin-settings-avatar { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; color: #163300; background: #e2f6d5; }
+.admin-settings-who { display: grid; gap: 2px; min-width: 0; }
+.admin-settings-who small { color: #3d8f2a; font-size: 11.5px; font-weight: 800; letter-spacing: .08em; }
+.admin-settings-who strong { overflow: hidden; color: var(--w-ink, #0e0f0c); font-size: 18px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.admin-settings-who span { color: var(--w-mute, #868685); font-size: 13px; }
+.admin-settings-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.admin-settings-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 16px; border: 1px solid #163300; border-radius: 999px; color: #163300; background: #fff; font: inherit; font-size: 13.5px; font-weight: 700; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.admin-settings-button:hover { background: #f6fbf1; }
+.admin-settings-button.is-quiet { border-color: #d8dcd5; color: #454745; }
+.admin-settings-button:focus-visible { outline: 3px solid rgba(75, 154, 47, .45); outline-offset: 2px; }
+a.admin-chip { text-decoration: none; cursor: pointer; }
+a.admin-chip:hover { filter: brightness(.97); }
+a.admin-chip:focus-visible { outline: 3px solid rgba(75, 154, 47, .45); outline-offset: 2px; }
+@media (max-width: 720px) {
+  .admin-settings-account { grid-template-columns: auto minmax(0, 1fr); gap: 12px 14px; padding: 16px; }
+  .admin-settings-avatar { width: 46px; height: 46px; border-radius: 14px; }
+  .admin-settings-actions { grid-column: 1 / -1; }
+  .admin-settings-actions > * { flex: 1 1 0; }
+}

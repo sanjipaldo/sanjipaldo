@@ -26,6 +26,7 @@ import {
   Plus,
   Save,
   Search,
+  Settings,
   ShieldCheck,
   ShoppingCart,
   Store,
@@ -67,6 +68,8 @@ import { PartnerSupplierPanel } from "./PartnerSupplierPanel";
 import { ProductExtrasSection, type ProductExtrasStatus } from "./ProductExtrasSection";
 import { COURIER_SUGGESTIONS, DOMESTIC_REGIONS, ORIGIN_KINDS, emptyProductExtras, hasProductExtras, type ProductExtras } from "@repo/shared/product-extras";
 import { isSupplierAccount } from "@/components/auth/AdminGuard";
+import { AppInstallChip } from "@/components/app-install/AppInstall";
+import { AdminSettingsPage } from "./AdminSettingsPage";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
 import { authClient, clearAuthToken } from "@/lib/auth";
 import { SUPPLY_STATUS_LABELS, supplyStatus, type SupplyStatus } from "@/lib/supply-status";
@@ -77,7 +80,7 @@ import { SELLER_GUIDE_SETTING_KEY, SELLER_VIDEO_GROUPS, hasSellerDemo, parseSell
 import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 import type { AdminCatalogData, AdminHomeData, Category, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
-type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "supplierRequests" | "notices" | "usageGuide" | "encyclopedia" | "history" | "sourcing" | "sync" | "backup" | "sales" | "buyers" | "taxInvoices" | "settlements" | "admins";
+type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "supplierRequests" | "notices" | "usageGuide" | "encyclopedia" | "history" | "sourcing" | "sync" | "backup" | "sales" | "buyers" | "taxInvoices" | "settlements" | "admins" | "settings";
 
 // 공급사 센터 관련 관리자 화면(변경 요청 검토 · 공급사 계정 창)은 처음 열 때만 불러옵니다.
 const SupplierRequestsAdmin = lazy(() => import("./SupplierPortalAdmin").then((module) => ({ default: module.SupplierRequestsAdmin })));
@@ -567,7 +570,7 @@ export function AdminLoginPage() {
           <small>© 2026 DOOGO FOOD</small>
           <div className="login-landing-actions">
             <button type="button" onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/"); }}>← 뒤로가기</button>
-            <Link to="/">공개 상품 DB로 돌아가기</Link>
+            <Link to="/" aria-label="공개 상품 DB로 돌아가기"><span className="login-link-long">공개 상품 DB로 돌아가기</span><span className="login-link-short">공개 DB</span></Link>
           </div>
         </div>
       </section>
@@ -610,7 +613,9 @@ const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes
   { section: "usageGuide", label: "사용방법 관리", icon: BookOpen, group: "operations" },
   { section: "encyclopedia", label: "백과사전 검색량", icon: Search, group: "operations" },
   { section: "backup", label: "DB 백업", icon: DatabaseBackup, group: "operations" },
-  { section: "admins", label: "관리자 계정", icon: UserCog, group: "operations" }
+  { section: "admins", label: "관리자 계정", icon: UserCog, group: "operations" },
+  // 마이페이지 · 설정(2026-11-26): 앱으로 설치(홈 화면에 추가) — 묶음 밖이라 묶음을 접어도 보입니다.
+  { section: "settings", label: "설정", icon: Settings }
 ];
 
 // 왼쪽 메뉴 묶음을 접어 둔 상태는 이 기기에 기억합니다(노트북처럼 화면이 낮으면 잘 안 쓰는 묶음을 접어 한 화면에 맞춤).
@@ -742,7 +747,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
     // Bundles load only their group payload on demand. Fetching the complete
     // 2,347-product catalog here made the bundle list wait for data it never
     // renders.
-    const childOwnsData = new Set<AdminSection>(["bundles", "shippingPolicies", "suppliers", "supplierRequests", "sync", "backup", "encyclopedia", "sales", "buyers", "taxInvoices", "settlements", "admins"]);
+    const childOwnsData = new Set<AdminSection>(["bundles", "shippingPolicies", "suppliers", "supplierRequests", "sync", "backup", "encyclopedia", "sales", "buyers", "taxInvoices", "settlements", "admins", "settings"]);
     if (childOwnsData.has(section)) {
       if (!silent) setLoading(false);
       return;
@@ -915,7 +920,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
       </aside>
       {sidebarOpen && <button className="admin-sidebar-backdrop" type="button" onClick={() => setSidebarOpen(false)} aria-label="관리자 메뉴 닫기" />}
       <main className="admin-main">
-        <header className="admin-topbar"><button className="mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="메뉴 열기"><Menu size={21} /></button><div><strong>{adminNav.find((item) => item.section === section)?.label}</strong><span>DOOGO FOOD 상품 정보 운영</span></div><div className="admin-topbar-tools"><button type="button" className="today-chip" onClick={() => setOperationsOpen(true)}><CalendarDays size={14} /> 오늘 운영</button><span className="admin-chip"><ShieldCheck size={15} /> {adminName}</span></div></header>
+        <header className="admin-topbar"><button className="mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="메뉴 열기"><Menu size={21} /></button><div><strong>{adminNav.find((item) => item.section === section)?.label}</strong><span>DOOGO FOOD 상품 정보 운영</span></div><div className="admin-topbar-tools"><AppInstallChip area="admin" /><button type="button" className="today-chip" onClick={() => setOperationsOpen(true)}><CalendarDays size={14} /> 오늘 운영</button><Link to="/admin/settings" className="admin-chip" title="마이페이지 · 설정" aria-label={`${adminName} · 마이페이지 설정`}><ShieldCheck size={15} /> {adminName}</Link></div></header>
         <div className="admin-content">
           {loading ? <div className="admin-loading inline"><div className="spinner" /><span>데이터 불러오는 중…</span></div> : (
             <>
@@ -936,6 +941,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               {section === "sync" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>발주오라 동기화를 불러오는 중…</span></div>}><BaljuoraSyncAdmin /></Suspense>}
               {section === "backup" && <BackupAdmin />}
               {section === "admins" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>관리자 계정을 불러오는 중…</span></div>}><AdminAccountsAdmin /></Suspense>}
+              {section === "settings" && <AdminSettingsPage name={adminName} username={(adminSession?.user as { username?: string | null } | undefined)?.username ?? null} isPrimary={isPrimaryAdmin} onSignOut={() => void signOut()} />}
               {(section === "sales" || section === "buyers" || section === "taxInvoices" || section === "settlements") && (
                 <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>불러오는 중…</span></div>}>
                   {section === "sales" && <SalesDashboardAdmin />}

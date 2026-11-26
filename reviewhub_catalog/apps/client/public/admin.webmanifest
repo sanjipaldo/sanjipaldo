@@ -1,0 +1,25 @@
+{
+  "id": "/admin",
+  "name": "두고푸드 관리자",
+  "short_name": "두고푸드",
+  "description": "두고푸드 DB센터 관리자 — 상품·가격·판매·공급사 정산을 휴대폰에서 바로 관리해요.",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#159565",
+  "categories": ["business", "food", "productivity"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "운영 홈", "url": "/admin/home", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "공급사 정산", "url": "/admin/settlements", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "판매 현황", "url": "/admin/sales", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}
