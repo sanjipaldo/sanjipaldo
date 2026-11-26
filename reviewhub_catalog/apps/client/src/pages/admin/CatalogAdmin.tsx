@@ -70,6 +70,7 @@ import { COURIER_SUGGESTIONS, DOMESTIC_REGIONS, ORIGIN_KINDS, emptyProductExtras
 import { isSupplierAccount } from "@/components/auth/AdminGuard";
 import { AppInstallChip } from "@/components/app-install/AppInstall";
 import { AdminSettingsPage } from "./AdminSettingsPage";
+import { SupplierProfileAlert, SupplierProfileChangeLog } from "./supplier-profile-alerts";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
 import { authClient, clearAuthToken } from "@/lib/auth";
 import { SUPPLY_STATUS_LABELS, supplyStatus, type SupplyStatus } from "@/lib/supply-status";
@@ -718,6 +719,8 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
   const [clock, setClock] = useState(() => new Date());
   // 공급사 변경 요청 중 승인 대기 건수(왼쪽 메뉴 "변경 요청" 옆 숫자, 1분마다 새로 확인)
   const [supplierPending, setSupplierPending] = useState(0);
+  // 공급사가 사업자등록번호·정산 계좌를 등록·변경했는데 아직 확인하지 않은 알림 수(2026-11-27)
+  const [profileChanges, setProfileChanges] = useState(0);
   const [openNavGroups, setOpenNavGroups] = useState<Record<AdminNavGroup, boolean>>(readAdminNavGroups);
   // 메뉴 목록은 왼쪽 칸 안에서 따로 스크롤됩니다. 위·아래에 메뉴가 더 있으면 그쪽을 흐리게 보여 줍니다.
   const navRef = useRef<HTMLElement>(null);
@@ -848,8 +851,11 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
     try {
       const response = await apiFetch("/catalog/admin/supplier-requests/summary", { silent: true });
       if (!response.ok) return;
-      const payload = (await response.json()) as { ok?: boolean; data?: { pending?: number } };
-      if (payload.ok) setSupplierPending(Number(payload.data?.pending ?? 0));
+      const payload = (await response.json()) as { ok?: boolean; data?: { pending?: number; profileChanges?: number } };
+      if (payload.ok) {
+        setSupplierPending(Number(payload.data?.pending ?? 0));
+        setProfileChanges(Number(payload.data?.profileChanges ?? 0));
+      }
     } catch {
       // 메뉴 숫자만 못 그릴 뿐 화면은 그대로 씁니다.
     }
@@ -912,7 +918,8 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               </button>
               : null;
             const groupOpen = !item.group || openNavGroups[item.group];
-            const badge = item.section === "supplierRequests" && supplierPending > 0 ? <span className="admin-nav-badge" aria-label={`승인 대기 ${supplierPending}건`}>{supplierPending}</span> : null;
+            const badge = item.section === "supplierRequests" && supplierPending > 0 ? <span className="admin-nav-badge" aria-label={`승인 대기 ${supplierPending}건`}>{supplierPending}</span>
+              : item.section === "suppliers" && profileChanges > 0 ? <span className="admin-nav-badge" aria-label={`공급사 정보 변경 알림 ${profileChanges}건`}>{profileChanges}</span> : null;
             return <Fragment key={item.section}>{groupCaption}{groupOpen && <Link to={`/admin/${item.section}`} className={`${section === item.section ? "active" : ""} ${item.group ? "nav-child" : ""}`} data-group={item.group ?? "home"} aria-current={section === item.section ? "page" : undefined} onClick={() => setSidebarOpen(false)}><span className="admin-nav-icon" aria-hidden="true"><Icon size={20} strokeWidth={1.8} /></span><span className="admin-nav-label">{item.label}</span>{badge}</Link>}</Fragment>;
           })}
         </nav>
@@ -931,7 +938,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               {section === "sort" && <ProductsAdmin data={data} refresh={refresh} updateData={setData} sortOnly />}
               {section === "categories" && <CategoriesAdmin data={data} refresh={refresh} />}
               {section === "shippingPolicies" && <ShippingPoliciesAdmin />}
-              {section === "suppliers" && <SuppliersAdmin />}
+              {section === "suppliers" && <SuppliersAdmin onProfileChecked={() => void refreshSupplierPending()} />}
               {section === "supplierRequests" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>변경 요청을 불러오는 중…</span></div>}><SupplierRequestsAdmin onChanged={() => void refreshSupplierPending()} /></Suspense>}
               {section === "notices" && <NoticesAdmin data={data} refresh={refresh} />}
               {section === "usageGuide" && <UsageGuideAdmin data={data} refresh={refresh} />}
@@ -954,6 +961,8 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
           )}
         </div>
       </main>
+      {/* 공급사가 사업자등록번호·정산 계좌를 바꾸면 오른쪽 아래 알림 창(2026-11-27) — 공급사 관리 화면에서는 아래 기록 칸이 대신 */}
+      {section !== "suppliers" && <SupplierProfileAlert count={profileChanges} onChecked={() => void refreshSupplierPending()} />}
       {operationsOpen && (
         <div className="editor-overlay operation-overlay" role="presentation" onMouseDown={() => setOperationsOpen(false)}>
           <section className="operation-detail-modal" role="dialog" aria-modal="true" aria-labelledby="operation-detail-title" onMouseDown={(event) => event.stopPropagation()}>
@@ -2188,7 +2197,7 @@ function ShippingPoliciesAdmin() {
       <div className="editor-actions policy-save">{editing && <button type="button" className="policy-delete" onClick={() => void remove(editing)} disabled={saving || (editing.productCount ?? 0) > 0} title={(editing.productCount ?? 0) > 0 ? "상품이 연결된 정책은 삭제할 수 없습니다." : undefined}>삭제하기</button>}<button type="submit" className="primary-action" disabled={saving}>{saving ? "저장 중…" : "저장하기"}</button></div></form></div>}</>;
 }
 
-function SuppliersAdmin() {
+function SuppliersAdmin({ onProfileChecked }: { onProfileChecked?: () => void }) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   // 공급사 센터 로그인 계정(공급사 id → 계정)·연결된 상품 수(매입처 이름 → 개수). migration 032 전이면 portalReady=false.
   const [accounts, setAccounts] = useState<Record<string, SupplierAccountView>>({});
@@ -2322,6 +2331,8 @@ function SuppliersAdmin() {
         return <tr key={supplier.id}><td data-label="번호">{suppliers.length - index}</td><td data-label="매입처명" className="stack-wide"><strong>{supplier.name}</strong>{supplier.memo && <small>{supplier.memo}</small>}</td><td data-label="사업자등록번호">{supplier.businessNumber || "-"}</td><td data-label="대표자">{supplier.representative || "-"}</td><td data-label="담당자 연락처">{supplier.phone || "-"}</td><td data-label="주소" className="stack-wide">{supplier.address || "-"}</td><td data-label="상품 수"><strong>{(productCounts[supplier.name] ?? 0).toLocaleString("ko-KR")}개</strong></td><td data-label="정산 방식"><SettlementBadge value={settlements[supplier.id]} /></td><td data-label="공급사 센터 계정">{account ? <span className="supplier-account-cell"><strong>{account.username}</strong><span className={`status-pill ${account.isActive ? "active" : "danger"}`}>{account.isActive ? "로그인 가능" : "멈춤"}</span></span> : <span className="supplier-account-none">{portalReady ? "계정 없음" : "운영 배포 후"}</span>}</td><td data-label="상태"><span className={`status-pill ${supplier.isActive ? "active" : "danger"}`}>{supplier.isActive ? "사용" : "중지"}</span></td><td data-label="관리"><div className="row-actions"><button type="button" onClick={() => open(supplier)}><Pencil size={14} /> 수정</button><button type="button" className="supplier-account-button" onClick={() => setAccountTarget(supplier)}><KeyRound size={14} /> {account ? "계정" : "계정 만들기"}</button>{supplier.isActive && <button type="button" className="danger" onClick={() => void remove(supplier)}><Trash2 size={14} /> 중지</button>}</div></td></tr>;
       })}</tbody></table></div>}
     </section>
+    {/* 공급사가 공급사 센터에서 사업자등록번호·정산 계좌를 등록·변경한 기록(2026-11-27) */}
+    <SupplierProfileChangeLog onChecked={onProfileChecked} />
     {formOpen && <div className="editor-overlay" role="presentation" onMouseDown={reset}><form className="editor-panel supplier-editor" onSubmit={save} onMouseDown={(event) => event.stopPropagation()}><div className="editor-header"><div><span>SUPPLIER REGISTER</span><h2>{editing ? "매입처 수정" : "매입처 신규 등록"}</h2><p>상품에서 선택할 매입처 기본정보를 입력합니다.</p></div><button type="button" onClick={reset} aria-label="공급처 등록 닫기"><X size={20} /></button></div><div className="editor-grid"><label>매입처명*<input value={name} onChange={(event) => setName(event.target.value)} placeholder="상호명을 입력해 주세요." required /></label><label>대표자 성함<input value={representative} onChange={(event) => setRepresentative(event.target.value)} placeholder="대표자 성함" /></label><label>사업자등록번호<input value={businessNumber} onChange={(event) => setBusinessNumber(event.target.value)} placeholder="사업자등록번호" /></label><label>담당자 휴대폰번호<input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="010-0000-0000" /></label><label>담당자 이메일<input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="example@company.com" /></label><label className="full">주소<input value={address} onChange={(event) => setAddress(event.target.value)} placeholder="주소를 입력해 주세요." /></label><label className="full">비고<textarea value={memo} onChange={(event) => setMemo(event.target.value)} rows={4} placeholder="배송·정산·연락 가능 시간 등 참고사항" /></label><section className="full ssf-section" aria-label="정산 방식"><h3>정산 방식</h3><p>입점 때 두 가지 중 하나를 골라요. 가능하면 판매수수료 10%로 맞추면 매출의 10%가 바로 두고푸드 수익으로 잡혀요.</p><SupplierSettlementFields value={settlement} onChange={setSettlement} idPrefix={editing ? `sup-${editing.id}` : "sup-new"} /></section></div><div className="editor-footer"><button type="button" onClick={reset}>취소</button><button className="primary-action" type="submit"><Save size={16} /> 저장하기</button></div></form></div>}
     {accountTarget && <Suspense fallback={null}><SupplierAccountModal supplier={accountTarget} account={accounts[accountTarget.id] ?? null} settlement={settlements[accountTarget.id] ?? null} portalReady={portalReady} productCount={productCounts[accountTarget.name] ?? 0} onClose={() => setAccountTarget(null)} onChanged={() => void load(true)} /></Suspense>}
   </>;

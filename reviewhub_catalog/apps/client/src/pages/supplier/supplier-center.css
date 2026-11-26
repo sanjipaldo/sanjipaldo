@@ -551,3 +551,53 @@
 /* ---------- 위 줄 "공급사 안내" 버튼(설명서 PDF, 2026-11-26) — 관리자 "오늘 운영" 버튼(.today-chip)과 같은 모양 ---------- */
 .supplier-shell .admin-topbar .sup-guide-chip { flex: 0 0 auto; font-family: inherit; text-decoration: none; white-space: nowrap; cursor: pointer; }
 .supplier-shell .admin-topbar .sup-guide-chip svg { flex: 0 0 auto; }
+
+/* 사업자등록번호 · 정산 계좌(2026-11-27): 로그인 직후 닫을 수 없는 입력 팝업 + 내 정보 칸 */
+.sup-payout-overlay { position: fixed; z-index: 80; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px 16px; overflow-y: auto; background: rgba(14, 26, 10, .58); backdrop-filter: blur(3px); }
+.sup-payout-modal { width: min(540px, 100%); max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px); overflow-y: auto; padding: 26px 26px 18px; border-radius: 24px; background: var(--w-canvas, #fff); box-shadow: 0 30px 90px rgba(11, 23, 43, .32); }
+.sup-payout-head { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 14px; align-items: start; margin-bottom: 18px; }
+.sup-payout-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 15px; color: #163300; background: var(--w-primary, #9fe870); }
+.sup-payout-kicker { display: inline-block; margin-bottom: 4px; color: #137b57; font-size: 12px; font-weight: 800; letter-spacing: .02em; }
+.sup-payout-head h2 { margin: 0; color: var(--w-ink); font-size: 21px; line-height: 1.3; letter-spacing: -.03em; }
+.sup-payout-head p { margin: 8px 0 0; color: var(--w-body); font-size: 13.5px; line-height: 1.65; }
+.sup-payout-head p b { color: var(--w-ink); }
+.sup-payout-head .sup-payout-warn { padding: 8px 11px; border-radius: 10px; color: #8a3b00; background: #fff4e5; font-size: 12.5px; }
+.sup-payout-form { display: grid; gap: 14px; }
+.sup-payout-group { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 14px 14px 12px; border: 1px solid #e3eadf; border-radius: 16px; background: #fafcf8; }
+.sup-payout-group legend { display: inline-flex; align-items: center; gap: 6px; padding: 0 6px; color: var(--w-ink); font-size: 13.5px; font-weight: 800; }
+.sup-payout-group legend svg { color: #137b57; }
+.sup-payout-bank { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.sup-payout-field { display: grid; gap: 5px; min-width: 0; color: var(--w-ink); font-size: 13px; font-weight: 700; }
+.sup-payout-field > label { color: var(--w-body); font-size: 12.5px; font-weight: 700; }
+/* 묶음 제목(사업자등록번호)과 같은 칸 이름은 화면에서만 숨김 */
+.sup-payout-field.is-solo > label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sup-payout-field input { width: 100%; min-width: 0; height: 48px; padding: 0 14px; border: 1px solid #d6dfd1; border-radius: 12px; color: var(--w-ink); background: #fff; font-size: 16px; font-weight: 600; }
+.sup-payout-field input:focus { border-color: #137b57; outline: 0; box-shadow: 0 0 0 3px rgba(21, 149, 101, .16); }
+.sup-payout-field > small { color: var(--w-mute); font-size: 12px; font-weight: 500; line-height: 1.5; }
+.sup-payout-field.has-error input { border-color: #d24b4b; box-shadow: 0 0 0 3px rgba(210, 75, 75, .12); }
+.sup-payout-field > small.sup-payout-error { color: #c23a3a; font-weight: 700; }
+.sup-payout-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.sup-payout-actions .primary-action { min-height: 50px; padding: 0 22px; font-size: 15px; }
+.sup-payout-modal .sup-payout-submit { width: 100%; }
+.sup-payout-cancel { min-height: 50px; padding: 0 18px; border: 1px solid #d6dfd1; border-radius: 999px; color: var(--w-ink); background: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
+.sup-payout-signout { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 12px auto 0; padding: 8px 12px; border: 0; color: var(--w-mute); background: transparent; font-size: 12.5px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.sup-payout-card .card-heading { align-items: flex-start; }
+.sup-payout-edit { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; margin-left: auto; min-height: 36px; padding: 0 14px; border: 1px solid #cfdcc8; border-radius: 999px; color: var(--w-ink); background: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+.sup-payout-edit:hover { background: var(--w-soft-2); }
+.sup-payout-card .sup-info-list dd.is-missing { color: #c23a3a; }
+.sup-payout-card .sup-payout-form { margin-top: 4px; }
+
+@media (max-width: 720px) {
+  .sup-payout-overlay { align-items: flex-end; padding: 12px 0 0; }
+  .sup-payout-modal { width: 100%; max-height: calc(100vh - 12px); max-height: calc(100dvh - 12px); padding: 22px 16px max(16px, env(safe-area-inset-bottom)); border-radius: 24px 24px 0 0; }
+  .sup-payout-head { grid-template-columns: 42px minmax(0, 1fr); gap: 12px; margin-bottom: 14px; }
+  .sup-payout-icon { width: 42px; height: 42px; border-radius: 13px; }
+  .sup-payout-head h2 { font-size: 19px; }
+  .sup-payout-head p { font-size: 13px; }
+  .sup-payout-group { padding: 12px 12px 10px; }
+  .sup-payout-actions .primary-action { flex: 1; }
+}
+
+@media (max-width: 340px) {
+  .sup-payout-bank { grid-template-columns: minmax(0, 1fr); }
+}

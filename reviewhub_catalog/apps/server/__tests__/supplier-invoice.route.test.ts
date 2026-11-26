@@ -6,6 +6,7 @@ import { join } from "node:path";
 import ExcelJS from "exceljs";
 import { PDFDocument } from "pdf-lib";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { orderNumberOf } from "@repo/shared/supplier-invoice";
 
 process.env.SKYBASE_DB_ENDPOINT = `file:${join(mkdtempSync(join(tmpdir(), "supplier-invoice-")), "test.db")}`;
 const { default: app } = await import("../_core/create-app");
@@ -99,6 +100,11 @@ describe("공급사 거래명세서", () => {
       ["2026-11-18", "하루마켓", "W-PEAR", "신고배 7.5kg", "ORD-w3", 1, 1, 0, 30000, 30000, 3500, 33500, false],
       ["2026-11-19", "봄상회", null, "모르는 상품", "ORD-w4", 1, 1, 0, null, 0, 0, 0, true]
     ]);
+    // 문서용 주문번호(2026-11-27): 긴 주문 코드로 만든 6자리(헷갈리는 I·L·O·U 없음), 주문마다 다르고 언제 받아도 같음
+    const orderNumbers = invoice.lines.map((line: any) => line.orderNumber);
+    expect(orderNumbers).toEqual(["w1", "w2", "w3", "w4"].map((id) => orderNumberOf(`ORD-${id}`)));
+    for (const number of orderNumbers) expect(number).toMatch(/^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{6}$/);
+    expect(new Set(orderNumbers).size).toBe(4);
     expect(invoice.days).toEqual([
       { date: "2026-11-16", lines: 2, orders: 2, quantity: 3, goodsAmount: 61000, shippingFee: 4000, total: 65000 },
       { date: "2026-11-18", lines: 1, orders: 1, quantity: 1, goodsAmount: 30000, shippingFee: 3500, total: 33500 },
@@ -112,8 +118,8 @@ describe("공급사 거래명세서", () => {
     expect([row.goodsAmount, row.shippingFee, row.payoutAmount]).toEqual([91000, 7500, 98500]);
     expect(invoice.settlement).toEqual({ goodsAmount: 91000, shippingFee: 7500, payoutAmount: 98500, matches: true });
     expect(invoice.warnings).toEqual([
-      "공급사 사업자등록번호가 비어 있어요. 공급사 관리에서 넣어 주세요.",
-      "공급사 입금 계좌가 없어요. 아래 '입금 계좌'에서 넣어 주세요.",
+      "공급사 사업자등록번호가 비어 있어요. 공급사가 공급사 센터에 로그인하면 바로 넣게 돼요(공급사 관리에서 직접 넣어도 돼요).",
+      "공급사 입금 계좌가 없어요. 공급사가 공급사 센터에 로그인하면 바로 넣게 돼요(아래 '입금 계좌'에서 직접 넣어도 돼요).",
       "공급가(원가)를 모르는 줄 1개는 0원으로 셌어요. 상품 원가를 채운 뒤 다시 받아 주세요."
     ]);
     expect(invoice.notes[1]).toContain("일반 도매(매입): 공급가(원가) × 판매 수량과 배송비 100%를 입금합니다.");
@@ -132,7 +138,7 @@ describe("공급사 거래명세서", () => {
     expect(document.getPageCount()).toBe(1);
     expect(document.getTitle()).toBe(`두고푸드 거래명세서 ${invoice.number} - ${WHOLESALE}`);
 
-    // 엑셀: 발주서 예시와 같은 칸 + 수식 + 합계, 판매가 없음
+    // 엑셀: 발주서 예시와 같은 칸(2026-11-27 상품 관리 코드 뺌 · 상품주문코드 → 주문번호 6자리) + 수식 + 합계, 판매가 없음
     const xlsx = await fetchWithAuth(app, admin, `/api/baljuora${invoicePath("weekly", "2026-11-16", WHOLESALE)}`.replace("/invoice?", "/invoice/file?") + "&format=xlsx");
     expect(xlsx.status).toBe(200);
     expect(xlsx.headers.get("content-type")).toBe("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -140,16 +146,21 @@ describe("공급사 거래명세서", () => {
     await workbook.xlsx.load(await xlsx.arrayBuffer());
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(["거래명세서", "날짜별 합계"]);
     const sheet = workbook.getWorksheet("거래명세서")!;
-    expect(sheet.getRow(11).values).toEqual([undefined, "No", "판매일시(발주일자)", "주문자(업체명·매출처)", "상품 관리 코드", "상품명", "수량", "상품주문코드", "비고", "상품단가(공급가)", "상품단가합", "택배비(배송비)", "합계"]);
-    expect([sheet.getCell("B12").value, sheet.getCell("C12").value, sheet.getCell("F12").value, sheet.getCell("H12").value, sheet.getCell("I12").value]).toEqual(["2026-11-16 11:00", "하루마켓", 2, "반품 1개(주문 3개)", 20000]);
-    expect(sheet.getCell("J12").value).toEqual({ formula: "I12*F12", result: 40000 });
-    expect(sheet.getCell("L12").value).toEqual({ formula: "J12+K12", result: 44000 });
-    expect(sheet.getCell("H15").value).toBe("공급가 확인 필요");
-    expect([sheet.getCell("J16").value, sheet.getCell("K16").value, sheet.getCell("L16").value]).toEqual(["상품대금합계", "택배비합계", "총합계"]);
-    expect(sheet.getCell("L17").value).toEqual({ formula: "SUM(L12:L15)", result: 98500 });
+    expect(sheet.getRow(11).values).toEqual([undefined, "No", "판매일시(발주일자)", "주문자(업체명·매출처)", "상품명", "수량", "주문번호", "비고", "상품단가(공급가)", "상품단가합", "택배비(배송비)", "합계"]);
+    expect([sheet.getCell("B12").value, sheet.getCell("C12").value, sheet.getCell("D12").value, sheet.getCell("E12").value, sheet.getCell("F12").value, sheet.getCell("G12").value, sheet.getCell("H12").value]).toEqual(["2026-11-16 11:00", "하루마켓", "청송 사과 5kg", 2, orderNumbers[0], "반품 1개(주문 3개)", 20000]);
+    expect(sheet.getCell("I12").value).toEqual({ formula: "H12*E12", result: 40000 });
+    expect(sheet.getCell("K12").value).toEqual({ formula: "I12+J12", result: 44000 });
+    expect(sheet.getCell("G15").value).toBe("공급가 확인 필요");
+    expect([sheet.getCell("I16").value, sheet.getCell("J16").value, sheet.getCell("K16").value]).toEqual(["상품대금합계", "택배비합계", "총합계"]);
+    expect(sheet.getCell("K17").value).toEqual({ formula: "SUM(K12:K15)", result: 98500 });
+    expect(sheet.getCell("L11").value).toBeNull();
     const cells: unknown[] = [];
     for (const each of workbook.worksheets) each.eachRow((sheetRow) => sheetRow.eachCell((cell) => cells.push(cell.value)));
     for (const price of SALE_PRICES) expect(numbersIn(cells)).not.toContain(price);
+    // 상품 코드·긴 주문 코드는 엑셀에 없음
+    const cellTexts = cells.filter((value): value is string => typeof value === "string").join("\n");
+    expect(cellTexts).not.toContain("W-APPLE");
+    expect(cellTexts).not.toContain("ORD-w1");
     const days = workbook.getWorksheet("날짜별 합계")!;
     expect(days.getCell("H6").value).toEqual({ formula: "SUM(H3:H5)", result: 98500 });
   });
@@ -196,10 +207,10 @@ describe("공급사 거래명세서", () => {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(await xlsx.arrayBuffer());
     const sheet = workbook.getWorksheet("거래명세서")!;
-    expect(sheet.getCell("I11").value).toBe("상품단가");
-    expect(sheet.getCell("H14").value).toBe("전량 반품(주문 1개)");
-    // To 칸(G5~G9): 연락처가 없으면 한 줄 위로 올라와 빈 줄 없이 이어짐
-    expect([5, 6, 7, 8, 9].map((row) => sheet.getCell(`G${row}`).value)).toEqual([COMMISSION, "사업자등록번호 222-33-44444 · 대표 수대표", "주소 세종시 2", "입금 계좌 농협은행 301-1234-5678-91 (예금주 수수료농원)", ""]);
+    expect(sheet.getCell("H11").value).toBe("상품단가");
+    expect(sheet.getCell("G14").value).toBe("전량 반품(주문 1개)");
+    // To 칸(F5~F9): 연락처가 없으면 한 줄 위로 올라와 빈 줄 없이 이어짐
+    expect([5, 6, 7, 8, 9].map((row) => sheet.getCell(`F${row}`).value)).toEqual([COMMISSION, "사업자등록번호 222-33-44444 · 대표 수대표", "주소 세종시 2", "입금 계좌 농협은행 301-1234-5678-91 (예금주 수수료농원)", ""]);
     const texts: string[] = [];
     sheet.eachRow((sheetRow) => sheetRow.eachCell((cell) => { if (typeof cell.value === "string") texts.push(cell.value); }));
     expect(texts).toContain("ACCOUNT NUMBER · 계좌번호 : 301-1234-5678-91");

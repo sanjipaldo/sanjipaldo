@@ -99,6 +99,7 @@ import {
   renameSupplierLinks,
   updateSupplierAccount
 } from "../services/supplier-portal";
+import { checkSupplierProfileChanges, countUncheckedProfileChanges, listSupplierProfileChanges } from "../services/supplier-profile";
 
 const ProductOptionSchema = z.object({
   id: z.string().trim().min(1).optional(),
@@ -791,7 +792,34 @@ catalogRouter.delete("/admin/suppliers/:id/account", adminRoute, async (c) => {
 // 공급사 변경 요청(상품 수정·신규 등록): 승인하면 상품에 반영합니다.
 catalogRouter.get("/admin/supplier-requests/summary", adminRoute, async (c) => {
   c.header("Cache-Control", "no-store");
-  return c.json(apiSuccess(await pendingSupplierRequestCount()));
+  // profileChanges = 공급사가 사업자등록번호·정산 계좌를 등록·변경했는데 관리자가 아직 확인하지 않은 알림 수(2026-11-27)
+  const [pending, profileChanges] = await Promise.all([pendingSupplierRequestCount(), countUncheckedProfileChanges()]);
+  return c.json(apiSuccess({ ...pending, profileChanges }));
+});
+
+// 공급사 정보 변경 알림(2026-11-27 관리자 요청 "공급사가 사업자등록번호·정산 계좌를 바꾸면 관리자에게 '공급사가 변경했다' 알림 로그"):
+// scope=unchecked(확인 전만, 기본) · all(최근 기록). 계좌는 끝 4자리만 남아 있습니다. migration 038 전에는 available false.
+const ProfileChangeScope = z.enum(["unchecked", "all"]);
+
+catalogRouter.get("/admin/supplier-profile-changes", adminRoute, async (c) => {
+  const scope = ProfileChangeScope.safeParse(c.req.query("scope") || "unchecked");
+  if (!scope.success) return c.json(apiFailure("INVALID_INPUT", "보기 방식을 확인해 주세요."), 400);
+  const limit = Number(c.req.query("limit") || 30);
+  c.header("Cache-Control", "no-store");
+  return c.json(apiSuccess(await listSupplierProfileChanges({ scope: scope.data, limit })));
+});
+
+const ProfileChangeCheckSchema = z.object({ ids: z.array(z.string().trim().min(1).max(80)).max(200).optional() });
+
+catalogRouter.post("/admin/supplier-profile-changes/check", adminRoute, async (c) => {
+  const parsed = ProfileChangeCheckSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "확인할 알림을 다시 골라 주세요."), 400);
+  try {
+    const user = c.var.currentUser;
+    return c.json(apiSuccess(await checkSupplierProfileChanges(parsed.data.ids ?? null, user.username || user.email || null)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
 });
 
 catalogRouter.get("/admin/supplier-requests", adminRoute, async (c) => {

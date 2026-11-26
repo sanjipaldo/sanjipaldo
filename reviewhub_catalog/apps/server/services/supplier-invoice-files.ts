@@ -2,9 +2,10 @@
 // - PDF(A4 세로): 왼쪽 위 두고푸드 로고 + From(두고홀딩스), 오른쪽 위 INVOICE · 거래명세서 번호 · 지급 합계(Balance Due),
 //   To(공급사 사업자 정보 · 입금 계좌)와 발행일·거래 기간·지급 예정일, 판매 줄 표(날짜별 소계), 합계, 메모, 입금 계좌, 쪽 번호.
 //   줄이 많으면 다음 쪽에 표 머리를 다시 그립니다. 글꼴은 제안서 PDF와 같은 두고푸드 글꼴(글꼴에 없는 드문 글자는 뺌).
-// - 엑셀: 관리자가 보내 준 발주서 예시와 같은 칸(발주일자 · 업체명 · 상품 관리 코드 · 상품명 · 수량 · 상품주문코드 · 비고 ·
+// - 엑셀: 관리자가 보내 준 발주서 예시와 같은 칸(발주일자 · 업체명 · 상품명 · 수량 · 주문번호 · 비고 ·
 //   상품단가 · 상품단가합(=단가×수량) · 택배비 · 합계(=단가합+택배비)) + 맨 아래 상품대금합계 · 택배비합계 · 총합계(SUM),
 //   위에는 From/To·기간, 둘째 시트는 날짜별 합계.
+// - 2026-11-27 관리자 요청: 긴 주문 코드 대신 "주문번호 : 6자리"(orderNumberOf), 상품 코드는 PDF·엑셀·팝업 모두에서 뺌.
 import ExcelJS from "exceljs";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from "pdf-lib";
@@ -17,6 +18,7 @@ import {
   invoiceReference,
   invoiceSettingsLabel,
   invoiceStatusLabel,
+  orderNumberLabel,
   type InvoiceParty,
   type SupplierInvoice,
   type SupplierInvoiceLine
@@ -200,7 +202,7 @@ function columnsFor(invoice: SupplierInvoice) {
   const columns: Column[] = [
     { key: "date", label: "판매일", width: 42, align: "left" },
     { key: "buyer", label: "주문자(매출처)", width: 86, align: "left" },
-    { key: "product", label: "상품명 · 코드 · 주문번호", width: 157, align: "left" },
+    { key: "product", label: "상품명 · 주문번호", width: 157, align: "left" },
     { key: "qty", label: "수량", width: 36, align: "right" },
     { key: "unit", label: invoice.settings.type === "wholesale" ? "공급가" : "단가", width: 50, align: "right" },
     { key: "amount", label: "금액", width: 56, align: "right" },
@@ -245,10 +247,9 @@ function prepareRow(pdf: InvoicePdf, line: SupplierInvoiceLine, columns: PlacedC
   const width = (key: Column["key"]) => (columns.find((column) => column.key === key)?.width ?? 50) - PAD * 2;
   const buyer = pdf.wrap(line.buyer, TEXT, width("buyer"), 2);
   const product = pdf.wrap(line.productName, TEXT, width("product"), 2);
-  // 상품 코드 · 주문번호: 한 줄에 들어가면 한 줄, 아니면 코드와 주문번호를 한 줄씩(주문번호가 "주문"과 떨어지지 않게)
-  const parts = [line.productCode ?? "", line.orderId ? `주문 ${line.orderId}` : ""].map((text) => pdf.clean(text)).filter(Boolean);
-  const joined = parts.join(" · ");
-  const meta = !joined ? [] : pdf.width(joined, META) <= width("product") ? [joined] : parts.map((text) => pdf.ellipsize(text, META, width("product")));
+  // 상품명 아래 한 줄: "주문번호 : 7K2Q9M"(2026-11-27 — 긴 주문 코드·상품 코드는 넣지 않음)
+  const label = pdf.clean(orderNumberLabel(line));
+  const meta = label ? [pdf.ellipsize(label, META, width("product"))] : [];
   const content = Math.max(LINE + META_LINE, buyer.length * LINE, product.length * LINE + meta.length * META_LINE, line.returnQuantity > 0 ? LINE + META_LINE : LINE);
   return { line, height: content + 11, buyer, product, meta };
 }
@@ -475,7 +476,7 @@ export async function buildSupplierInvoicePdf(invoice: SupplierInvoice) {
         { text: `ACCOUNT NUMBER · 계좌번호 : ${bank.accountNumber}`, bold: true, color: COLOR.deep },
         { text: `입금하는 곳 : ${invoice.from.name} (${invoice.from.brand}) → ${invoice.to.name}` }
       ]
-    : [{ text: "공급사 입금 계좌가 아직 등록되지 않았습니다. 두고푸드 담당자에게 입금 받을 계좌를 알려 주세요.", color: COLOR.red }]);
+    : [{ text: "공급사 입금 계좌가 아직 등록되지 않았습니다. 공급사 센터에 로그인해 정산 계좌를 등록해 주세요(두고푸드 담당자에게 알려 주셔도 돼요).", color: COLOR.red }]);
   drawFooters(pdf);
 
   doc.setTitle(`두고푸드 거래명세서 ${invoice.number} - ${invoice.supplierName}`);
@@ -539,11 +540,12 @@ export async function buildSupplierInvoiceXlsx(invoice: SupplierInvoice) {
     pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 } },
     properties: { defaultRowHeight: 18 }
   });
-  sheet.columns = [6, 17, 20, 15, 38, 8, 24, 20, 12, 13, 11, 14].map((width) => ({ width }));
+  // A No · B 판매일시 · C 주문자 · D 상품명 · E 수량 · F 주문번호 · G 비고 · H 단가 · I 단가합 · J 택배비 · K 합계
+  sheet.columns = [6, 17, 20, 40, 8, 14, 20, 12, 13, 11, 14].map((width) => ({ width }));
   sheet.pageSetup.printTitlesRow = `${SHEET_HEADER_ROW}:${SHEET_HEADER_ROW}`;
 
-  mergedText(sheet, "A1:L1", "DOOGO FOOD  거래명세서 (INVOICE)", { size: 16, bold: true, color: { argb: XL.deep } }, { fill: XL.title, height: 34 });
-  mergedText(sheet, "A2:L2", [
+  mergedText(sheet, "A1:K1", "DOOGO FOOD  거래명세서 (INVOICE)", { size: 16, bold: true, color: { argb: XL.deep } }, { fill: XL.title, height: 34 });
+  mergedText(sheet, "A2:K2", [
     `No. ${invoice.number}`,
     `발행일 ${invoiceDate(invoice.issueDate)}`,
     `거래 기간 ${invoicePeriodLabel(invoice)}`,
@@ -553,24 +555,24 @@ export async function buildSupplierInvoiceXlsx(invoice: SupplierInvoice) {
     "단위: 원"
   ].join("   ·   "), { size: 10, color: { argb: XL.body } }, { height: 22 });
   sheet.getRow(3).height = 6;
-  mergedText(sheet, "A4:F4", "FROM (보내는 곳)", { bold: true, color: { argb: XL.deep } }, { fill: XL.soft, height: 20 });
-  mergedText(sheet, "G4:L4", "TO (받는 곳 · 공급사)", { bold: true, color: { argb: XL.deep } }, { fill: XL.soft });
+  mergedText(sheet, "A4:E4", "FROM (보내는 곳)", { bold: true, color: { argb: XL.deep } }, { fill: XL.soft, height: 20 });
+  mergedText(sheet, "F4:K4", "TO (받는 곳 · 공급사)", { bold: true, color: { argb: XL.deep } }, { fill: XL.soft });
   const fromLines = [[invoice.from.name, invoice.from.brand].filter(Boolean).join(" · "), ...partyLines(invoice.from, "from")];
   const toLines = [invoice.to.name, ...partyLines(invoice.to, "to", bankAccountLabel(invoice.bank))];
   for (let index = 0; index < 5; index += 1) {
     const row = 5 + index;
-    mergedText(sheet, `A${row}:F${row}`, fromLines[index] ?? "", { bold: index === 0, size: index === 0 ? 11 : 10, color: { argb: index === 0 ? XL.ink : XL.body } });
+    mergedText(sheet, `A${row}:E${row}`, fromLines[index] ?? "", { bold: index === 0, size: index === 0 ? 11 : 10, color: { argb: index === 0 ? XL.ink : XL.body } });
     const toText = toLines[index] ?? "";
-    mergedText(sheet, `G${row}:L${row}`, toText, { bold: index === 0 || toText.startsWith("입금 계좌"), size: index === 0 ? 11 : 10, color: { argb: toText.startsWith("입금 계좌") ? (invoice.bank ? XL.deep : XL.red) : index === 0 ? XL.ink : XL.body } });
+    mergedText(sheet, `F${row}:K${row}`, toText, { bold: index === 0 || toText.startsWith("입금 계좌"), size: index === 0 ? 11 : 10, color: { argb: toText.startsWith("입금 계좌") ? (invoice.bank ? XL.deep : XL.red) : index === 0 ? XL.ink : XL.body } });
     sheet.getRow(row).height = 18;
   }
   // 5줄보다 많으면(주소·계좌가 모두 있는 경우) 마지막 줄에 이어 붙입니다.
-  if (toLines.length > 5) sheet.getCell("G9").value = toLines.slice(4).join("  ·  ");
+  if (toLines.length > 5) sheet.getCell("F9").value = toLines.slice(4).join("  ·  ");
   if (fromLines.length > 5) sheet.getCell("A9").value = fromLines.slice(4).join("  ·  ");
   sheet.getRow(10).height = 8;
 
   const header = sheet.getRow(SHEET_HEADER_ROW);
-  header.values = ["No", "판매일시(발주일자)", "주문자(업체명·매출처)", "상품 관리 코드", "상품명", "수량", "상품주문코드", "비고", wholesale ? "상품단가(공급가)" : "상품단가", "상품단가합", "택배비(배송비)", "합계"];
+  header.values = ["No", "판매일시(발주일자)", "주문자(업체명·매출처)", "상품명", "수량", "주문번호", "비고", wholesale ? "상품단가(공급가)" : "상품단가", "상품단가합", "택배비(배송비)", "합계"];
   header.height = 30;
   header.eachCell((cell) => {
     cell.font = { name: "맑은 고딕", size: 10, bold: true, color: { argb: XL.white } };
@@ -589,27 +591,26 @@ export async function buildSupplierInvoiceXlsx(invoice: SupplierInvoice) {
       index + 1,
       seoulDateTimeLabel(line.orderedAt, line.date),
       line.buyer,
-      line.productCode ?? "",
       line.productName,
       line.quantity,
-      line.orderId ?? "",
+      line.orderNumber,
       lineNote(line),
       unit ?? null,
-      formulaAmount ? { formula: `I${rowNumber}*F${rowNumber}`, result: line.amount } : line.amount,
+      formulaAmount ? { formula: `H${rowNumber}*E${rowNumber}`, result: line.amount } : line.amount,
       line.shippingFee,
-      { formula: `J${rowNumber}+K${rowNumber}`, result: line.total }
+      { formula: `I${rowNumber}+J${rowNumber}`, result: line.total }
     ];
     row.eachCell({ includeEmpty: true }, (cell, column) => {
-      cell.font = { name: "맑은 고딕", size: 10, color: { argb: column === 8 && cell.value ? XL.red : XL.ink }, bold: column === 12 };
+      cell.font = { name: "맑은 고딕", size: 10, color: { argb: column === 7 && cell.value ? XL.red : XL.ink }, bold: column === 11 };
       cell.border = box;
-      cell.alignment = { vertical: "middle", horizontal: column === 1 ? "center" : column >= 9 || column === 6 ? "right" : "left", wrapText: column === 5 || column === 3 };
-      if (column >= 9 || column === 6) cell.numFmt = MONEY;
+      cell.alignment = { vertical: "middle", horizontal: column === 1 || column === 6 ? "center" : column >= 8 || column === 5 ? "right" : "left", wrapText: column === 4 || column === 3 };
+      if (column >= 8 || column === 5) cell.numFmt = MONEY;
     });
   });
   const last = first + invoice.lines.length - 1;
   const has = invoice.lines.length > 0;
   if (!has) {
-    mergedText(sheet, `A${first}:L${first}`, "이 기간에는 판매가 없습니다.", { color: { argb: XL.mute } });
+    mergedText(sheet, `A${first}:K${first}`, "이 기간에는 판매가 없습니다.", { color: { argb: XL.mute } });
   }
   const labelRowNumber = has ? last + 1 : first + 1;
   const sumRowNumber = labelRowNumber + 1;
@@ -617,10 +618,10 @@ export async function buildSupplierInvoiceXlsx(invoice: SupplierInvoice) {
   const sums = sheet.getRow(sumRowNumber);
   const sum = (column: string, result: number) => (has ? { formula: `SUM(${column}${first}:${column}${last})`, result } : result);
   const summary: Array<[string, string, ExcelJS.CellValue]> = [
-    ["F", "수량합계", sum("F", invoice.totals.quantity)],
-    ["J", "상품대금합계", sum("J", invoice.totals.goodsAmount)],
-    ["K", "택배비합계", sum("K", invoice.totals.shippingFee)],
-    ["L", "총합계", sum("L", invoice.totals.total)]
+    ["E", "수량합계", sum("E", invoice.totals.quantity)],
+    ["I", "상품대금합계", sum("I", invoice.totals.goodsAmount)],
+    ["J", "택배비합계", sum("J", invoice.totals.shippingFee)],
+    ["K", "총합계", sum("K", invoice.totals.total)]
   ];
   for (const [column, label, value] of summary) {
     const labelCell = labels.getCell(column);
@@ -632,17 +633,17 @@ export async function buildSupplierInvoiceXlsx(invoice: SupplierInvoice) {
     const valueCell = sums.getCell(column);
     valueCell.value = value;
     valueCell.numFmt = MONEY;
-    valueCell.font = { name: "맑은 고딕", size: column === "L" ? 12 : 10.5, bold: true, color: { argb: column === "L" ? XL.deep : XL.ink } };
+    valueCell.font = { name: "맑은 고딕", size: column === "K" ? 12 : 10.5, bold: true, color: { argb: column === "K" ? XL.deep : XL.ink } };
     valueCell.alignment = { vertical: "middle", horizontal: "right" };
     valueCell.border = box;
-    if (column === "L") valueCell.fill = fill(XL.title);
+    if (column === "K") valueCell.fill = fill(XL.title);
   }
   labels.height = 20;
   sums.height = 24;
 
   let row = sumRowNumber + 2;
   const paragraph = (text: string, font: Partial<ExcelJS.Font> = {}) => {
-    mergedText(sheet, `A${row}:L${row}`, text, { color: { argb: XL.body }, ...font }, { wrap: true, height: text.length > 110 ? 32 : 18 });
+    mergedText(sheet, `A${row}:K${row}`, text, { color: { argb: XL.body }, ...font }, { wrap: true, height: text.length > 110 ? 32 : 18 });
     row += 1;
   };
   paragraph("메모 (Memo)", { bold: true, size: 11, color: { argb: XL.ink } });
@@ -656,9 +657,9 @@ export async function buildSupplierInvoiceXlsx(invoice: SupplierInvoice) {
     paragraph(`ACCOUNT NUMBER · 계좌번호 : ${invoice.bank.accountNumber}`, { bold: true, color: { argb: XL.deep } });
     paragraph(`입금하는 곳 : ${invoice.from.name} (${invoice.from.brand}) → ${invoice.to.name}`);
   } else {
-    paragraph("공급사 입금 계좌가 아직 등록되지 않았습니다. 두고푸드 담당자에게 입금 받을 계좌를 알려 주세요.", { color: { argb: XL.red } });
+    paragraph("공급사 입금 계좌가 아직 등록되지 않았습니다. 공급사 센터에 로그인해 정산 계좌를 등록해 주세요(두고푸드 담당자에게 알려 주셔도 돼요).", { color: { argb: XL.red } });
   }
-  if (has) sheet.autoFilter = { from: { row: SHEET_HEADER_ROW, column: 1 }, to: { row: last, column: 12 } };
+  if (has) sheet.autoFilter = { from: { row: SHEET_HEADER_ROW, column: 1 }, to: { row: last, column: 11 } };
 
   // 둘째 시트: 날짜별 합계
   const days = workbook.addWorksheet("날짜별 합계", { views: [{ state: "frozen", ySplit: 2 }] });

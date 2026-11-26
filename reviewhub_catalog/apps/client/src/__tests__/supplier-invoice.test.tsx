@@ -97,8 +97,8 @@ function invoiceData(bank: SupplierInvoice["bank"]): SupplierInvoice {
     to: { ...party, name: "주식회사 대현에벤에셀", businessNumber: "123-45-67890", ceoName: "홍대표", supplierId: "sup-d", registered: true },
     bank,
     lines: [
-      { id: "l1", date: "2026-11-16", orderedAt: "2026-11-16T01:00:00Z", orderId: "ORD-1", buyer: "하루마켓", productCode: "P-1", productName: "청송 사과 5kg", orderedQuantity: 2, quantity: 2, returnQuantity: 0, unitPrice: 20000, amount: 40000, shippingFee: 3500, total: 43500, costMissing: false },
-      { id: "l2", date: "2026-11-18", orderedAt: null, orderId: "ORD-2", buyer: "봄상회", productCode: null, productName: "신고배 7.5kg", orderedQuantity: 2, quantity: 1, returnQuantity: 1, unitPrice: 20000, amount: 20000, shippingFee: 0, total: 20000, costMissing: false }
+      { id: "l1", date: "2026-11-16", orderedAt: "2026-11-16T01:00:00Z", orderId: "ORD-1", orderNumber: "7K2Q9M", buyer: "하루마켓", productCode: "P-1", productName: "청송 사과 5kg", orderedQuantity: 2, quantity: 2, returnQuantity: 0, unitPrice: 20000, amount: 40000, shippingFee: 3500, total: 43500, costMissing: false },
+      { id: "l2", date: "2026-11-18", orderedAt: null, orderId: "ORD-2", orderNumber: "A3XN8P", buyer: "봄상회", productCode: null, productName: "신고배 7.5kg", orderedQuantity: 2, quantity: 1, returnQuantity: 1, unitPrice: 20000, amount: 20000, shippingFee: 0, total: 20000, costMissing: false }
     ],
     days: [
       { date: "2026-11-16", lines: 1, orders: 1, quantity: 2, goodsAmount: 40000, shippingFee: 3500, total: 43500 },
@@ -148,7 +148,12 @@ describe("관리자 공급사 정산: 거래명세서 팝업", () => {
     expect(within(dialog).getAllByText("₩63,500").length).toBe(3); // 머리 지급 합계 · 총합계 · 지급 합계
     expect(within(dialog).getByText("하루마켓")).toBeTruthy();
     expect(within(dialog).getByText("청송 사과 5kg")).toBeTruthy();
-    expect(within(dialog).getByText("P-1 · 주문 ORD-1")).toBeTruthy();
+    // 2026-11-27: 상품 코드·긴 주문 코드 대신 "주문번호 : 6자리"(긴 코드는 마우스를 올리면만)
+    const orderNumber = within(dialog).getByText("주문번호 : 7K2Q9M");
+    expect(orderNumber.getAttribute("title")).toBe("주문 코드 ORD-1");
+    expect(within(dialog).queryByText(/P-1/)).toBeNull();
+    expect(within(dialog).queryByText(/주문 ORD-1/)).toBeNull();
+    expect(within(dialog).getByRole("columnheader", { name: "상품명 · 주문번호" })).toBeTruthy();
     expect(within(dialog).getByText("반품 1")).toBeTruthy();
     expect(within(dialog).getByText("11.16(월) 소계 · 주문 1건")).toBeTruthy();
     expect(within(dialog).getByText("11.18(수) 소계 · 주문 1건")).toBeTruthy();

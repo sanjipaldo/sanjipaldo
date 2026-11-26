@@ -24,6 +24,7 @@ import {
   type SupplierContext
 } from "../services/supplier-portal";
 import { StorageError, storagePut } from "../services/s3_storage";
+import { saveSupplierPayoutProfile, supplierPayoutProfile } from "../services/supplier-profile";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -62,7 +63,30 @@ supplierRouter.get("/me", supplierAuth, async (c) => {
   const context = c.var.supplierContext;
   await touchSupplierLogin(context.account.id).catch(() => undefined);
   // 정산 방식(판매수수료 · 일반 도매)과 지급 주기: 두고푸드 관리자가 공급사 관리에서 정합니다.
-  return c.json(apiSuccess({ ...supplierProfile(context), settlement: await supplierSettlementSettings(context) }));
+  // payout = 사업자등록번호 · 정산 계좌 · 빠진 칸(2026-11-27): 빠진 칸이 있으면 화면이 닫을 수 없는 입력 팝업을 띄웁니다.
+  try {
+    return c.json(apiSuccess({ ...supplierProfile(context), settlement: await supplierSettlementSettings(context), payout: await supplierPayoutProfile(context) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 사업자등록번호 · 정산 계좌 저장(필수 정보 팝업 · 내 정보, 2026-11-27). 바뀌면 관리자 화면에 '공급사가 변경' 알림이 남습니다.
+const PayoutSchema = z.object({
+  businessNumber: z.string().max(40),
+  bankName: z.string().max(60),
+  accountNumber: z.string().max(60),
+  accountHolder: z.string().max(80)
+});
+
+supplierRouter.put("/payout", supplierAuth, async (c) => {
+  const parsed = PayoutSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "사업자등록번호와 정산 계좌(은행·계좌번호·예금주)를 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess({ payout: await saveSupplierPayoutProfile(c.var.supplierContext, parsed.data) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
 });
 
 supplierRouter.get("/dashboard", supplierAuth, async (c) => {

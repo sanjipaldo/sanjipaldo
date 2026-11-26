@@ -787,3 +787,27 @@ export const supplierSettlements = sqliteTable(
 export type BaljuoraSalesLine = typeof baljuoraSalesLines.$inferSelect;
 export type BaljuoraBuyer = typeof baljuoraBuyers.$inferSelect;
 export type SupplierSettlement = typeof supplierSettlements.$inferSelect;
+
+// 공급사 필수 정보 변경 기록(migration 038, 2026-11-27): 공급사가 공급사 센터에서 사업자등록번호·정산 계좌를 등록·변경할 때마다 1행.
+// fields = 바뀐 칸 JSON 배열("businessNumber" · "bank"), summary = 전 → 후 JSON(계좌는 끝 4자리만). checkedAt이 비면 관리자 화면에 새 알림.
+export const supplierProfileChanges = sqliteTable(
+  "supplier_profile_changes",
+  {
+    id: text("id").primaryKey(),
+    supplierId: text("supplierId").notNull(),
+    supplierName: text("supplierName").notNull(),
+    changedBy: text("changedBy"),
+    fields: text("fields").notNull().default("[]"),
+    summary: text("summary").notNull().default("{}"),
+    checkedAt: text("checkedAt"),
+    checkedBy: text("checkedBy"),
+    createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    index("idx_supplier_profile_changes_created").on(table.createdAt),
+    index("idx_supplier_profile_changes_unchecked").on(table.checkedAt, table.createdAt),
+    index("idx_supplier_profile_changes_supplier").on(table.supplierId, table.createdAt)
+  ]
+);
+
+export type SupplierProfileChangeRow = typeof supplierProfileChanges.$inferSelect;

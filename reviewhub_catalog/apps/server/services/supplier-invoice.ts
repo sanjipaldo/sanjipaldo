@@ -15,6 +15,7 @@ import {
   invoiceNotes,
   invoiceNumber,
   invoiceWindow,
+  orderNumberOf,
   parseBankAccount,
   type InvoiceKind,
   type InvoiceParty,
@@ -68,6 +69,11 @@ async function writeBankStore(value: Record<string, StoredBankAccount>) {
 function bankOf(stored: StoredBankAccount | undefined): SupplierBankAccount | null {
   const { value } = parseBankAccount(stored);
   return value;
+}
+
+/** 공급사 한 곳의 입금(정산) 계좌 — 공급사 센터 내 정보·필수 정보 팝업(2026-11-27)도 같은 값을 씁니다. */
+export async function getSupplierBankAccount(supplierId: string): Promise<SupplierBankAccount | null> {
+  return bankOf((await readBankStore())[supplierId]);
 }
 
 /** 공급사 입금 계좌 저장(세 칸을 모두 비우면 지움). 공급사 관리에 등록된 공급사만. */
@@ -125,11 +131,14 @@ async function invoiceLines(supplierName: string, start: string, end: string, wh
     if (orderedQuantity <= 0 && quantity === 0 && shippingFee === 0) continue;
     const unitPrice = row.unit === null || row.unit === undefined ? null : Number(row.unit);
     const amount = wholesale ? (unitPrice ?? 0) * quantity : Number(row.lineAmount ?? (unitPrice ?? 0) * quantity);
+    const orderId = row.orderId?.trim() || null;
     lines.push({
       id: row.id,
       date: row.saleDate,
       orderedAt: isoTime(row.orderedAt),
-      orderId: row.orderId?.trim() || null,
+      orderId,
+      // 문서용 주문번호: 긴 주문 코드로 만든 6자리(코드가 없는 줄은 줄 번호로) — 2026-11-27
+      orderNumber: orderNumberOf(orderId ?? row.id),
       buyer: row.sellerName?.trim() || "(매출처 미지정)",
       productCode: row.productCode?.trim() || null,
       productName: row.productName,
@@ -236,8 +245,9 @@ export async function getSupplierInvoice(input: { kind: InvoiceKind; period: str
     if (lines.length === 0) warnings.push("이 기간에는 판매가 없어요.");
     if (!registered) warnings.push("공급사 관리에 없는 이름이에요. 공급사로 등록하면 사업자 정보와 입금 계좌를 넣을 수 있어요.");
     else {
-      if (!to.businessNumber) warnings.push("공급사 사업자등록번호가 비어 있어요. 공급사 관리에서 넣어 주세요.");
-      if (!bank) warnings.push("공급사 입금 계좌가 없어요. 아래 '입금 계좌'에서 넣어 주세요.");
+      // 2026-11-27부터 공급사가 공급사 센터에 로그인하면 두 칸을 꼭 넣어야 해서(필수 정보 팝업) 보통은 비어 있지 않습니다.
+      if (!to.businessNumber) warnings.push("공급사 사업자등록번호가 비어 있어요. 공급사가 공급사 센터에 로그인하면 바로 넣게 돼요(공급사 관리에서 직접 넣어도 돼요).");
+      if (!bank) warnings.push("공급사 입금 계좌가 없어요. 공급사가 공급사 센터에 로그인하면 바로 넣게 돼요(아래 '입금 계좌'에서 직접 넣어도 돼요).");
     }
     if (totals.costMissing > 0) warnings.push(`공급가(원가)를 모르는 줄 ${totals.costMissing}개는 0원으로 셌어요. 상품 원가를 채운 뒤 다시 받아 주세요.`);
     if (!matches) warnings.push("정산 화면 금액과 줄 합계가 달라요. 화면을 새로 고친 뒤 다시 열어 주세요.");

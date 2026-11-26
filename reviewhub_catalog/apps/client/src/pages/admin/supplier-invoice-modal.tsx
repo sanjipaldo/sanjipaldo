@@ -16,6 +16,7 @@ import {
   invoiceReference,
   invoiceSettingsLabel,
   invoiceStatusLabel,
+  orderNumberLabel,
   parseBankAccount,
   type InvoiceKind,
   type InvoiceParty,
@@ -107,7 +108,8 @@ function LineRow({ line, wholesale }: { line: SupplierInvoiceLine; wholesale: bo
       <td className="inv-c-buyer">{line.buyer}</td>
       <td className="inv-c-product">
         <span>{line.productName}</span>
-        {(line.productCode || line.orderId) && <small>{[line.productCode, line.orderId && `주문 ${line.orderId}`].filter(Boolean).join(" · ")}</small>}
+        {/* 2026-11-27: 긴 주문 코드·상품 코드 대신 "주문번호 : 6자리"(긴 코드는 마우스를 올리면 관리자만 봄) */}
+        {line.orderNumber && <small className="inv-order-number" title={line.orderId ? `주문 코드 ${line.orderId}` : undefined}>{orderNumberLabel(line)}</small>}
       </td>
       <td className="inv-c-num inv-c-qty" data-label="수량">{num(line.quantity)}{line.returnQuantity > 0 && <small className="is-return">반품 {num(line.returnQuantity)}</small>}</td>
       <td className="inv-c-num inv-c-unit" data-label={wholesale ? "공급가" : "단가"}>{line.unitPrice === null ? <small className="is-return">확인 필요</small> : num(line.unitPrice)}</td>
@@ -182,7 +184,7 @@ function InvoicePaper({ invoice, onBankSaved }: { invoice: SupplierInvoice; onBa
         <table className="inv-table">
           <thead>
             <tr>
-              <th>판매일</th><th>주문자(매출처)</th><th>상품명 · 코드 · 주문번호</th>
+              <th>판매일</th><th>주문자(매출처)</th><th>상품명 · 주문번호</th>
               <th className="inv-c-num">수량</th><th className="inv-c-num">{wholesale ? "공급가" : "단가"}</th><th className="inv-c-num">금액</th><th className="inv-c-num">배송비</th><th className="inv-c-num">합계</th>
             </tr>
           </thead>
@@ -239,7 +241,7 @@ function InvoicePaper({ invoice, onBankSaved }: { invoice: SupplierInvoice; onBa
             <p>ACCOUNT NAME · 예금주 : {invoice.bank.accountHolder}</p>
             <p><b>ACCOUNT NUMBER · 계좌번호 : {invoice.bank.accountNumber}</b></p>
           </>
-        ) : <p className="is-warn">공급사 입금 계좌가 아직 등록되지 않았습니다.</p>}
+        ) : <p className="is-warn">공급사 입금 계좌가 아직 등록되지 않았습니다. 공급사가 공급사 센터에 로그인하면 바로 등록하게 돼요.</p>}
       </section>
       <footer className="inv-paper-foot">(주) 두고홀딩스 · DOOGO FOOD · doogofood.site — 두고푸드 공급사 정산 거래명세서</footer>
     </article>

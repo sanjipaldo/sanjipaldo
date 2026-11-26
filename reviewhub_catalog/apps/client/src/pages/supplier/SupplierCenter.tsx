@@ -3,6 +3,7 @@
 // - 화면 틀은 마스터 관리자와 같은 모양(왼쪽 메뉴 · 위 제목 줄 · 카드)입니다.
 // - 메뉴: 대시보드 · 내 상품 · 변경 요청 내역 · 판매·정산 · 내 정보, 왼쪽 위 "상품 등록 요청".
 // - 위 줄 오른쪽: "공급사 안내"(두고푸드 공급사 설명서 PDF, supplier-guide.tsx) · 공급사 이름.
+// - 사업자등록번호 · 정산 계좌가 없으면 들어오자마자 닫을 수 없는 입력 팝업(supplier-payout.tsx, 2026-11-27), 내 정보에서 수정.
 // - 왼쪽 아래 "공급사 사용방법"·"공개 단가표 보기"로 공개 화면에 가면 그 화면 맨 위에 "공급사 화면으로 돌아가기"가 생깁니다(supplier-return.tsx).
 // 공급사에게 보이는 화면이라 주문 프로그램 이름(도매몰 시스템)은 쓰지 않습니다.
 import { type FormEvent, useCallback, useEffect, useState } from "react";
@@ -39,7 +40,7 @@ import {
   SUPPLIER_SETTLEMENT_TYPE_LABELS,
   settlementPlanText
 } from "@repo/shared/supplier-portal";
-import { shortDateTime, supplierGet, supplierPost, type SupplierProfile, type SupplierRequestItem } from "./supplier-api";
+import { shortDateTime, supplierGet, supplierPost, type SupplierPayout, type SupplierProfile, type SupplierRequestItem } from "./supplier-api";
 import { SupplierGuideButton } from "./supplier-guide";
 import { AppInstallCard, AppInstallChip } from "@/components/app-install/AppInstall";
 import { forgetSupplierReturn, rememberSupplierReturn } from "./supplier-return";
@@ -47,6 +48,7 @@ import { CreateRequestModal, SupplierProducts } from "./SupplierProducts";
 import { SupplierRequests } from "./SupplierRequests";
 import { SupplierSales } from "./SupplierSales";
 import { SupplierHome, settlementOf } from "./supplier-dashboard";
+import { SupplierPayoutCard, SupplierPayoutGate } from "./supplier-payout";
 import "./supplier-center.css";
 
 export const SUPPLIER_SECTIONS = ["home", "products", "requests", "sales", "account"] as const;
@@ -281,11 +283,16 @@ function SupplierAccessGate({ section }: { section: SupplierSection }) {
       </main>
     );
   }
-  return <SupplierShell section={section} profile={state.profile} />;
+  return <SupplierShell section={section} profile={state.profile} onPayoutSaved={(payout) => setState((current) => current.status === "ok" ? { status: "ok", profile: withPayout(current.profile, payout) } : current)} />;
+}
+
+/** 저장한 사업자등록번호 · 정산 계좌를 화면 정보에 반영(공급사 정보의 사업자등록번호도 같이) */
+function withPayout(profile: SupplierProfile, payout: SupplierPayout): SupplierProfile {
+  return { ...profile, supplier: { ...profile.supplier, businessNumber: payout.businessNumber }, payout };
 }
 
 // ── 화면 틀(마스터 관리자와 같은 모양) ──────────────────────────────────
-function SupplierShell({ section, profile }: { section: SupplierSection; profile: SupplierProfile }) {
+function SupplierShell({ section, profile, onPayoutSaved }: { section: SupplierSection; profile: SupplierProfile; onPayoutSaved: (payout: SupplierPayout) => void }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -352,9 +359,11 @@ function SupplierShell({ section, profile }: { section: SupplierSection; profile
           {section === "products" && <SupplierProducts reloadKey={reloadKey} onCreate={openCreate} onChanged={changed} />}
           {section === "requests" && <SupplierRequests reloadKey={reloadKey} onChanged={changed} />}
           {section === "sales" && <SupplierSales />}
-          {section === "account" && <SupplierAccount profile={profile} />}
+          {section === "account" && <SupplierAccount profile={profile} onPayoutSaved={onPayoutSaved} />}
         </div>
       </main>
+      {/* 사업자등록번호 · 정산 계좌가 없으면(또는 사업자등록번호가 틀리면) 저장할 때까지 닫을 수 없는 팝업 */}
+      {(profile.payout?.missing.length ?? 0) > 0 && <SupplierPayoutGate profile={profile} onSaved={onPayoutSaved} onSignOut={() => void signOut()} />}
       {createOpen && (
         <CreateRequestModal
           onClose={() => setCreateOpen(false)}
@@ -371,7 +380,7 @@ function SupplierShell({ section, profile }: { section: SupplierSection; profile
 
 // ── 대시보드 ────────────────────────────────────────────────────────────
 // ── 내 정보 ─────────────────────────────────────────────────────────────
-function SupplierAccount({ profile }: { profile: SupplierProfile }) {
+function SupplierAccount({ profile, onPayoutSaved }: { profile: SupplierProfile; onPayoutSaved: (payout: SupplierPayout) => void }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -381,7 +390,8 @@ function SupplierAccount({ profile }: { profile: SupplierProfile }) {
   const infoRows: Array<[string, string | null]> = [
     ["업체명", supplier.name],
     ["대표자", supplier.representative],
-    ["사업자등록번호", supplier.businessNumber],
+    // 사업자등록번호는 아래 '사업자등록번호 · 정산 계좌' 칸에서 공급사가 직접 고칩니다(2026-11-27). 예전 서버면 여기 그대로.
+    ...(profile.payout ? [] : [["사업자등록번호", supplier.businessNumber] as [string, string | null]]),
     ["담당자 연락처", supplier.phone],
     ["담당자 이메일", supplier.email],
     ["주소", supplier.address]
@@ -414,9 +424,10 @@ function SupplierAccount({ profile }: { profile: SupplierProfile }) {
   return (
     <>
       <div className="admin-page-heading">
-        <div><span>MY ACCOUNT</span><h1>내 정보</h1><p>공급사 정보와 정산 방식, 로그인 비밀번호를 관리합니다.</p></div>
+        <div><span>MY ACCOUNT</span><h1>내 정보</h1><p>사업자등록번호·정산 계좌, 공급사 정보와 정산 방식, 로그인 비밀번호를 관리합니다.</p></div>
       </div>
       <div className="sup-account-grid">
+        {profile.payout && <SupplierPayoutCard profile={profile} onSaved={onPayoutSaved} />}
         <section className="admin-card">
           <div className="card-heading"><Store size={19} aria-hidden="true" /><div><h2>공급사 정보</h2><p>정보가 바뀌었으면 두고푸드 담당자에게 알려 주세요.</p></div></div>
           <dl className="sup-info-list">{infoRows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "-"}</dd></div>)}</dl>

@@ -12,6 +12,11 @@ import {
   type SupplierSettlementState,
   type SupplierSettlementType
 } from "@repo/shared/supplier-portal";
+import type { SupplierBankAccount } from "@repo/shared/supplier-invoice";
+import type { SupplierProfileField } from "@repo/shared/supplier-profile";
+
+/** 사업자등록번호 · 정산 계좌(2026-11-27). missing이 비어 있지 않으면 공급사 센터가 닫을 수 없는 입력 팝업을 띄웁니다. */
+export type SupplierPayout = { businessNumber: string | null; bank: SupplierBankAccount | null; missing: SupplierProfileField[] };
 
 export type SupplierProfile = {
   supplier: {
@@ -34,6 +39,8 @@ export type SupplierProfile = {
   };
   // 정산 방식(판매수수료 · 일반 도매)과 지급 주기(2026-11-25, 두고푸드 관리자가 정함). 예전 서버면 없음.
   settlement?: SupplierSettlementSettings;
+  // 사업자등록번호 · 정산 계좌(2026-11-27). 예전 서버면 없음(팝업 없음).
+  payout?: SupplierPayout;
 };
 
 export type SupplierProduct = {
@@ -229,6 +236,15 @@ export async function supplierGet<T>(path: string) {
 export async function supplierPost<T>(path: string, body: unknown) {
   return supplierRead<T>(await apiFetch(`/supplier${path}`, {
     method: "POST",
+    silent: true,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  }));
+}
+
+export async function supplierPut<T>(path: string, body: unknown) {
+  return supplierRead<T>(await apiFetch(`/supplier${path}`, {
+    method: "PUT",
     silent: true,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)

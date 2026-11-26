@@ -2,7 +2,8 @@
 // 이 금액이 됐는지 인보이스처럼 — 팝업으로 보고 엑셀·PDF로 받아 카카오톡·이메일로 공급사에 보냄").
 // - From = (주) 두고홀딩스(DOOGO FOOD), To = 공급사(사업자등록번호·대표·연락처·주소·입금 계좌).
 // - 줄 = 그 지급 기간(주 정산 월~일 · 월 정산 1일~말일 · 매일 정산 하루)의 판매 줄 하나하나:
-//   판매일 · 주문자(매출처 = 위탁셀러·수강생) · 상품 코드·상품명 · 수량(반품 뺌) · 단가 · 금액(단가 × 수량) · 배송비 · 합계.
+//   판매일 · 주문자(매출처 = 위탁셀러·수강생) · 상품명 · 주문번호 · 수량(반품 뺌) · 단가 · 금액(단가 × 수량) · 배송비 · 합계.
+//   (2026-11-27 관리자 요청: 긴 주문 코드 대신 "주문번호 : 6자리", 상품 코드는 뺌 — orderNumberOf)
 //   일반 도매(매입) 공급사는 단가 = 공급가(원가)이고 두고푸드 판매가는 넣지 않습니다. 판매수수료 공급사는 단가 = 판매 단가.
 // - 맨 아래 합계 = 물품 대금 합계 + 배송비 합계 = 관리자 공급사 정산 화면의 '지급 합계'와 같은 금액.
 // - 공급사 입금 계좌는 마이그레이션 없이 baljuora_sync_store "supplier_bank_accounts" = { [공급사 id]: 계좌 }에 둡니다.
@@ -91,7 +92,8 @@ export type SupplierInvoiceLine = {
   id: string;
   date: string; // 판매일(한국 날짜)
   orderedAt: string | null; // 주문 시각(ISO)
-  orderId: string | null; // 주문 번호(상품주문코드)
+  orderId: string | null; // 주문 프로그램의 긴 주문 코드(UUID, 관리자 화면에서만 참고)
+  orderNumber: string; // 문서에 쓰는 주문번호(긴 코드로 만든 6자리, 같은 주문은 늘 같은 번호)
   buyer: string; // 주문자 = 매출처(위탁셀러·수강생)
   productCode: string | null;
   productName: string;
@@ -174,6 +176,40 @@ function shortKey(value: string) {
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }
   return hash.toString(36).toUpperCase().padStart(5, "0").slice(-5);
+}
+
+// 주문번호(2026-11-27 관리자 요청 "주문번호가 이상하게(긴 코드) 나와요 — '주문번호 : OOOOO'처럼 깔끔하게"):
+// 주문 프로그램에는 짧은 주문번호가 따로 없고(주문 목록에도 주문번호 칸이 없음) 긴 내부 코드(UUID)만 있어서,
+// 그 코드로 6자리 주문번호를 만듭니다. 같은 주문(한 주문의 여러 상품 줄 포함)은 언제·어느 문서에서나 같은 번호이고,
+// 헷갈리는 I·L·O·U 없이 숫자·영문 대문자만 씁니다(32가지 × 6자리 ≈ 10억 가지).
+const ORDER_NUMBER_CHARS = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+/** 긴 주문 코드 → "7K2Q9M"(코드가 없으면 빈칸) */
+export function orderNumberOf(orderId: string | null | undefined) {
+  const text = (orderId ?? "").trim().toLowerCase();
+  if (!text) return "";
+  // FNV-1a(32비트) + 섞기(murmur3 마무리)로 고르게 → 아래 30비트를 5비트씩 6글자
+  let hash = 0x811c9dc5;
+  for (const char of text) {
+    hash ^= char.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x85ebca6b) >>> 0;
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 0xc2b2ae35) >>> 0;
+  hash ^= hash >>> 16;
+  let code = "";
+  for (let index = 0; index < 6; index += 1) {
+    code = ORDER_NUMBER_CHARS[hash & 31] + code;
+    hash >>>= 5;
+  }
+  return code;
+}
+
+/** 문서에 쓰는 주문번호 글: "주문번호 : 7K2Q9M" */
+export function orderNumberLabel(line: Pick<SupplierInvoiceLine, "orderNumber">) {
+  return line.orderNumber ? `주문번호 : ${line.orderNumber}` : "";
 }
 
 /** 거래명세서 번호: DF-W261116-XXXXX(주 정산: 판매 주 월요일) · DF-M2611-XXXXX(월 정산) · DF-D261126-XXXXX(매일 정산) */
