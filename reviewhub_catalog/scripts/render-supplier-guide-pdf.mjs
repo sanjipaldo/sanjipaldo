@@ -100,10 +100,12 @@ try {
     brokenImages: [...document.images].filter((img) => !img.complete || img.naturalWidth === 0).map((img) => img.src.split("/").pop()),
     overflow: [...document.querySelectorAll(".page")].map((section, index) => {
       const box = section.getBoundingClientRect();
+      // data-bleed는 오른쪽으로만 넘칠 수 있습니다. 쪽 아래로 넘친 그림은 PDF에서 통째로 빠지므로(화면 그림에는 보여도) 늘 걸러 냅니다.
       const over = [...section.querySelectorAll("*")].filter((el) => {
-        if (el.closest(".shot") || el.closest("svg") || el.closest("[data-bleed]")) return false;
+        if (el.closest(".shot") || el.closest("svg")) return false;
         const r = el.getBoundingClientRect();
-        return r.width > 0 && (r.bottom > box.bottom + 0.5 || r.right > box.right + 0.5);
+        if (r.width <= 0) return false;
+        return r.bottom > box.bottom + 0.5 || (!el.closest("[data-bleed]") && r.right > box.right + 0.5);
       }).length;
       return over ? `${index + 1}쪽: 넘친 요소 ${over}개` : null;
     }).filter(Boolean)

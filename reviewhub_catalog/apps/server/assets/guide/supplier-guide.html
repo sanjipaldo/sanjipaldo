@@ -142,7 +142,9 @@ b { font-weight: 700; }
 
 /* 1. 표지 */
 .cover::before { display: none; }
-.cover .cover-bg { position: absolute; z-index: 0; left: 520px; top: 0; width: 760px; height: 720px; }
+.cover .cover-bg { position: absolute; z-index: 0; left: 520px; top: 0; width: 760px; height: 720px; object-fit: cover; }
+/* 농장 사진은 또렷하게 두고, 글 쪽(왼쪽 끝)만 바탕색으로 부드럽게 이어 줍니다. */
+.cover .cover-fade { position: absolute; z-index: 1; left: 518px; top: 0; width: 240px; height: 720px; background: linear-gradient(90deg, var(--bg) 0%, rgba(251, 252, 249, .82) 30%, rgba(251, 252, 249, 0) 100%); }
 .cover .frame, .cover .phone { z-index: 2; }
 .cover .cover-logo { position: absolute; z-index: 2; left: 64px; top: 52px; height: 56px; }
 .cover .cover-top { position: absolute; z-index: 2; right: 64px; top: 62px; padding: 8px 15px; border-radius: 999px; background: rgba(255, 255, 255, .88); box-shadow: 0 6px 18px rgba(22, 51, 0, .08); font-size: 12.5px; font-weight: 800; letter-spacing: .2em; color: var(--g); }
@@ -280,7 +282,8 @@ b { font-weight: 700; }
 
 <!-- 1. 표지 -->
 <section class="page cover" id="p-cover">
-  <img class="cover-bg" src="{{ASSET_DIR}}/cover-produce.jpg" alt="" />
+  <img class="cover-bg" src="{{ASSET_DIR}}/cover-farm.jpg" alt="" />
+  <div class="cover-fade"></div>
   <img class="cover-logo" src="{{BRAND_DIR}}/doogo-food-logo-color.png" alt="DOOGO FOOD" />
   <p class="cover-top">SUPPLIER CENTER GUIDE · 2026</p>
   <div class="cover-text">
@@ -292,12 +295,12 @@ b { font-weight: 700; }
       <span class="chip line"><i class="ic" data-icon="monitor"></i>PC · 휴대폰 모두 사용</span>
     </div>
   </div>
-  <figure class="frame" data-bleed style="left:612px; top:150px; width:700px;">
+  <figure class="frame" data-bleed style="left:650px; top:260px; width:650px;">
     <div class="bar">공급사 센터 · 대시보드<u>doogofood.site/supplier/home</u></div>
     <div class="shot"><img src="{{ASSET_DIR}}/shots/home.jpg" alt="" /></div>
   </figure>
-  <figure class="phone" style="left:1010px; top:300px; width:206px;"><img src="{{ASSET_DIR}}/shots/m-home.jpg" alt="" /></figure>
-  <p class="cover-foot"><b>(주)두고홀딩스 · DOOGO FOOD</b> · 공급사 전용 설명서 · ※ 화면은 예시 계정(봄날농원)입니다.</p>
+  <figure class="phone" style="left:1050px; top:366px; width:190px;"><img src="{{ASSET_DIR}}/shots/m-home.jpg" alt="" /></figure>
+  <p class="cover-foot"><b>(주) 두고홀딩스 · DOOGO FOOD</b> · 공급사 전용 설명서 · ※ 화면은 예시 계정(봄날농원)입니다.</p>
 </section>
 
 <!-- 2. 차례 -->
@@ -915,7 +918,7 @@ b { font-weight: 700; }
       <div class="pale"><small><i class="ic" data-icon="message-circle"></i>계약한 공급사</small><strong>카카오톡 단톡방</strong><p>두고푸드 팀원과 함께 있는 단톡방에서<br />반품·CS·배송·정산을 바로 이야기해요.</p></div>
       <div><small><i class="ic" data-icon="headset"></i>카카오톡 채널</small><strong>1:1 상담</strong><p>pf.kakao.com/_NyuVn<br />오른쪽 QR을 휴대폰 카메라로 찍어 주세요.</p></div>
       <div><small><i class="ic" data-icon="link"></i>공급사 센터</small><strong>doogofood.site/supplier</strong><p>PC·휴대폰 어디서나 같은 주소로 들어와요.</p></div>
-      <div><small><i class="ic" data-icon="building-2"></i>운영 본사</small><strong>(주)두고홀딩스</strong><p>대표 문원오 · 세종 갈매로 353 제5층 5023호</p></div>
+      <div><small><i class="ic" data-icon="building-2"></i>운영 본사</small><strong>(주) 두고홀딩스</strong><p>대표 문원오 · 세종 갈매로 353 제5층 5023호</p></div>
     </div>
     <p class="biz">사업자등록번호 726-87-03167 · 통신판매업 제2024-세종아름-0878호<br />※ 이 설명서의 화면·금액은 이해를 돕기 위한 예시(봄날농원)이며, 실제 정산 조건은 공급사 계약을 따릅니다.</p>
   </div>
