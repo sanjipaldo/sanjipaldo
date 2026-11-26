@@ -80,6 +80,8 @@ const html = readFileSync(path.join(assetDir, "supplier-guide.html"), "utf8")
   .replace(/<i class="ic" data-icon="([a-z0-9-]+)"><\/i>/g, (_, name) => iconSvg(name));
 if (/\{\{[A-Z_]+\}\}/.test(html)) throw new Error("바꾸지 못한 자리 표시가 남아 있습니다.");
 if (html.includes("발주오라")) throw new Error("공급사에게 보이는 설명서에는 주문 프로그램 이름을 쓰지 않습니다.");
+// 그라데이션은 일부 PDF 뷰어(휴대폰 등)가 분홍색으로 잘못 그립니다(2026-11-26 관리자 화면에서 표지·쪽 모서리가 분홍으로 보임). 단색·그림자로만 꾸밉니다.
+if (/gradient\(/i.test(html)) throw new Error("설명서에는 그라데이션(linear/radial-gradient)을 쓰지 않습니다. 단색이나 그림자로 바꿔 주세요.");
 const workDir = path.join(tmpdir(), "doogo-supplier-guide-render");
 mkdirSync(workDir, { recursive: true });
 const htmlPath = path.join(workDir, "supplier-guide.html");
@@ -116,7 +118,9 @@ try {
   mkdirSync(path.dirname(outPdf), { recursive: true });
   await page.pdf({ path: outPdf, preferCSSPageSize: true, printBackground: true });
   const bytes = readFileSync(outPdf);
-  console.log(`PDF ${check.pages}쪽 · ${(bytes.length / 1024 / 1024).toFixed(1)}MB → ${outPdf}`);
+  const shadings = (bytes.toString("latin1").match(/\/ShadingType/g) ?? []).length;
+  if (shadings) throw new Error(`PDF에 그라데이션(shading) ${shadings}개가 들어 있습니다. 일부 뷰어에서 분홍색으로 보이니 없애 주세요.`);
+  console.log(`PDF ${check.pages}쪽 · ${(bytes.length / 1024 / 1024).toFixed(1)}MB · 그라데이션 없음 → ${outPdf}`);
   if (pngDir) {
     mkdirSync(pngDir, { recursive: true });
     const sections = await page.locator(".page").all();
