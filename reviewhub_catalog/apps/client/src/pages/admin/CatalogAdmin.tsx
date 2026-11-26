@@ -919,7 +919,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
         <div className="admin-content">
           {loading ? <div className="admin-loading inline"><div className="spinner" /><span>데이터 불러오는 중…</span></div> : (
             <>
-              {section === "home" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>운영 홈을 불러오는 중…</span></div>}><AdminHomeBoard overview={homeData} /></Suspense>}
+              {section === "home" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>운영 홈을 불러오는 중…</span></div>}><AdminHomeBoard overview={homeData} onRefresh={() => void refresh(true)} /></Suspense>}
               {section === "products" && <ProductsAdmin data={data} refresh={refresh} updateData={setData} />}
               {section === "bundles" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>옵션 묶음을 불러오는 중…</span></div>}><ProductGroupsAdmin /></Suspense>}
               {section === "newProducts" && <NewProductsAdmin data={data} refresh={refresh} />}

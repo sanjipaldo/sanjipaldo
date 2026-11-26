@@ -19,6 +19,7 @@ import {
   BuyerRankList, CategoryRankList, DailySalesChart, ProfitBreakdownCards, SalesKpiCards, SupplierRankList, TodayTopList, TopProductsTable,
   salesRangeFor, type SalesSummary
 } from "./sales-widgets";
+import { DailySyncButton, DailySyncPanel, useDailySync } from "./DailySync";
 import "./sales-admin.css";
 import "./admin-home-board.css";
 
@@ -201,7 +202,7 @@ function BaljuoraWidget({ data }: { data: AdminHomeData }) {
     <section className="admin-card admin-home-panel">
       <div className="card-heading"><RefreshCw size={19} /><div><h2>발주오라 동기화</h2><p>DB센터에서 고친 상품을 발주오라 도매몰에 반영합니다.</p></div><Link to="/admin/sync">동기화하기 <ChevronRight size={14} /></Link></div>
       {baljuora.ready ? (
-        <div className="admin-home-connection-meta"><div><span>연결 상품</span><b>{count(baljuora.linkedCount)}개</b></div><div><span>마지막 동기화</span><b>{baljuora.lastPushAt ? formatStamp(baljuora.lastPushAt) : "아직 없음"}</b></div></div>
+        <div className="admin-home-connection-meta"><div><span>연결 상품</span><b>{count(baljuora.linkedCount)}개</b></div><div><span>마지막 보내기(DB센터 → 발주오라)</span><b>{baljuora.lastPushAt ? formatStamp(baljuora.lastPushAt) : "아직 없음"}</b></div></div>
       ) : <div className="admin-home-unavailable"><Info size={18} /><span>DB 업데이트(034)가 적용되면 사용할 수 있습니다.</span></div>}
     </section>
   );
@@ -236,7 +237,8 @@ function SalesCard({ icon, title, subtitle, link, children }: { icon: ReactNode;
 
 // ── 운영 홈 ──────────────────────────────────────────────────────────
 
-export function AdminHomeBoard({ overview }: { overview: AdminHomeData | null }) {
+// onRefresh: 운영 홈 숫자(상품 현황·요청 등)를 다시 불러옵니다(아침 동기화가 끝났을 때).
+export function AdminHomeBoard({ overview, onRefresh }: { overview: AdminHomeData | null; onRefresh?: () => void }) {
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const userId = session?.user?.id;
   const [layout, setLayout] = useState<LayoutState>(() => readCachedLayout(userId) ?? { visible: [...DEFAULT_HOME_LAYOUT], sizes: {} });
@@ -307,6 +309,12 @@ export function AdminHomeBoard({ overview }: { overview: AdminHomeData | null })
   }, []);
 
   useEffect(() => { if (needsSales) void loadSales(); }, [needsSales, loadSales]);
+  // 발주오라 → DB센터 동기화(아침 동기화): 끝나면 판매·매출처·상품 숫자를 새로 불러옵니다.
+  const daily = useDailySync(() => {
+    void loadSales();
+    void loadMembers();
+    onRefresh?.();
+  });
   useEffect(() => { if (needsMembers && !members) void loadMembers(); }, [needsMembers, members, loadMembers]);
   useEffect(() => () => window.clearTimeout(saveTimer.current), []);
 
@@ -455,15 +463,20 @@ export function AdminHomeBoard({ overview }: { overview: AdminHomeData | null })
           <h1>운영 홈</h1>
           <p>판매·매출처·공급사·상품과 요청을 한 화면에서 봅니다. 칸에 마우스를 올리면 옮기거나 뺄 수 있어요.</p>
         </div>
-        <div className="ahb-actions">
-          <div className="sa-period ahb-period" role="group" aria-label="판매 기간">
-            {PERIODS.map((item) => <button key={item.key} type="button" className={period === item.key ? "is-active" : ""} aria-pressed={period === item.key} onClick={() => changePeriod(item.key)}>{item.label}</button>)}
+        <div className="ahb-side">
+          <DailySyncButton state={daily} />
+          <div className="ahb-actions">
+            <div className="sa-period ahb-period" role="group" aria-label="판매 기간">
+              {PERIODS.map((item) => <button key={item.key} type="button" className={period === item.key ? "is-active" : ""} aria-pressed={period === item.key} onClick={() => changePeriod(item.key)}>{item.label}</button>)}
+            </div>
+            <button type="button" className={`ahb-edit-toggle${editing ? " is-on" : ""}`} aria-pressed={editing} onClick={() => { setEditing((value) => !value); setAddOpen(false); }}>
+              <LayoutGrid size={16} aria-hidden="true" /> {editing ? "편집 끝내기" : "화면 편집"}
+            </button>
           </div>
-          <button type="button" className={`ahb-edit-toggle${editing ? " is-on" : ""}`} aria-pressed={editing} onClick={() => { setEditing((value) => !value); setAddOpen(false); }}>
-            <LayoutGrid size={16} aria-hidden="true" /> {editing ? "편집 끝내기" : "화면 편집"}
-          </button>
         </div>
       </div>
+
+      <DailySyncPanel state={daily} />
 
       {editing && (
         <div className="ahb-editbar" role="status">

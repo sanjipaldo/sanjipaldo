@@ -43,6 +43,7 @@ import {
 import { BUYER_OVERRIDE_FIELDS } from "@repo/shared/baljuora-sales";
 import { SUPPLIER_SETTLEMENT_STATUSES } from "@repo/shared/supplier-portal";
 import { catalogRevisionMiddleware } from "../services/catalog-version";
+import { applyDailySync, getDailySyncStatus } from "../services/baljuora-daily";
 
 export const baljuoraRouter = new Hono();
 // 관리자 저장·책갈피 결과가 성공하면 공개 단가표 "바뀜 표시"를 새로 적습니다(services/catalog-version.ts).
@@ -100,7 +101,8 @@ baljuoraRouter.put("/admin/settings", adminRoute, async (c) => {
     categoryTreeExclude: z.array(z.string().trim().min(1).max(50)).max(10).optional(),
     templateCode: z.string().trim().max(80).nullable().optional(),
     salesOnCompare: z.boolean().optional(),
-    salesMonths: z.number().int().min(1).max(12).optional()
+    salesMonths: z.number().int().min(1).max(12).optional(),
+    dailyRegisterNew: z.boolean().optional()
   }).safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "동기화 설정 값을 확인해 주세요."), 400);
   try {
@@ -113,7 +115,7 @@ baljuoraRouter.put("/admin/settings", adminRoute, async (c) => {
 baljuoraRouter.post("/admin/jobs", adminRoute, async (c) => {
   const parsed = z.discriminatedUnion("type", [
     // sales: 비교 때 판매·매출처도 함께 읽을지(없으면 동기화 설정을 따름)
-    z.object({ type: z.literal("compare"), sales: z.boolean().optional() }),
+    z.object({ type: z.literal("compare"), sales: z.boolean().optional(), daily: z.boolean().optional() }),
     // 판매·매출처만 읽기(이번 달 포함 최근 months개월)
     z.object({ type: z.literal("sales"), months: z.number().int().min(1).max(12).optional() }),
     z.object({
@@ -128,11 +130,40 @@ baljuoraRouter.post("/admin/jobs", adminRoute, async (c) => {
   try {
     const user = c.var.currentUser;
     const input = parsed.data.type === "compare"
-      ? { type: "compare" as const, sales: parsed.data.sales }
+      ? { type: "compare" as const, sales: parsed.data.sales, daily: parsed.data.daily }
       : parsed.data.type === "sales"
         ? { type: "sales" as const, months: parsed.data.months }
         : { type: "push" as const, productIds: parsed.data.productIds, fieldsByProduct: parsed.data.fieldsByProduct as Record<string, Array<(typeof BALJUORA_SYNC_FIELDS)[number]>> | undefined, categoryTree: parsed.data.categoryTree };
     return c.json(apiSuccess(await createBaljuoraJob(input, user?.username || user?.email || null)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 아침 동기화(운영 홈 '발주오라 → DB센터 동기화', 2026-11-26): 상태(마지막 동기화 시각·지금 작업) · 시작(판매·주문·매출처 포함 비교 작업) · 반영(25개씩)
+baljuoraRouter.get("/admin/daily", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess(await getDailySyncStatus()));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+baljuoraRouter.post("/admin/daily/start", adminRoute, async (c) => {
+  try {
+    const status = await getDailySyncStatus();
+    if (status.job && status.job.status === "running") return c.json(apiFailure("CONFLICT", "발주오라 창에서 이미 읽는 중이에요. 끝나면 DB센터에 이어서 반영해요."), 409);
+    const user = c.var.currentUser;
+    return c.json(apiSuccess(await createBaljuoraJob({ type: "compare", daily: true }, user?.username || user?.email || null)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+baljuoraRouter.post("/admin/daily/apply", adminRoute, async (c) => {
+  try {
+    const user = c.var.currentUser;
+    return c.json(apiSuccess(await applyDailySync(user?.username || user?.email || "아침 동기화")));
   } catch (error) {
     return errorResponse(c, error);
   }

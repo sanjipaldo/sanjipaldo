@@ -52,9 +52,9 @@ export async function getCatalogVersion(now = Date.now()): Promise<string> {
 }
 
 // 관리자(/admin/*)·동기화 결과(/runner/:code/results) 라우터에 붙입니다. 저장(GET·HEAD·OPTIONS가 아닌 요청)이 성공하면 바뀜 표시를 새로 적습니다.
-// 운영 홈 화면 배치·관리자 계정·공급사 정산 기록·공급사 정산 방식·공급사 센터 계정·발주오라 작업 만들기/코드/취소처럼 공개 단가표와 상관없는 저장은
+// 운영 홈 화면 배치·관리자 계정·공급사 정산 기록·공급사 정산 방식·공급사 센터 계정·발주오라 작업 만들기/코드/취소·아침 동기화 시작처럼 공개 단가표와 상관없는 저장은
 // 바뀜 표시를 적지 않습니다(공개 화면이 괜히 전체를 다시 받지 않게).
-const NON_CATALOG_ADMIN_PATH = /\/admin\/(home-layout|admins|settlements|jobs|suppliers\/[^/]+\/(settlement|account))(\/|$)/;
+const NON_CATALOG_ADMIN_PATH = /\/admin\/(home-layout|admins|settlements|jobs|daily\/start|suppliers\/[^/]+\/(settlement|account))(\/|$)/;
 
 export const catalogRevisionMiddleware: MiddlewareHandler = async (c, next) => {
   await next();

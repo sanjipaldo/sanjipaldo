@@ -93,6 +93,8 @@ export type BaljuoraSettings = {
   // 발주오라 상품 불러오기(비교) 때 판매·매출처도 함께 불러올지(migration 036, 기본 켬)와 불러올 기간(이번 달 포함 최근 N개월)
   salesOnCompare: boolean;
   salesMonths: number;
+  // 아침 동기화(운영 홈) 때 발주오라에만 있는 새 상품도 DB센터에 숨김으로 등록할지(기본 켬)
+  dailyRegisterNew: boolean;
 };
 
 const DEFAULT_SETTINGS: BaljuoraSettings = {
@@ -105,7 +107,8 @@ const DEFAULT_SETTINGS: BaljuoraSettings = {
   subcategoryMap: {},
   categoryTreeExclude: DEFAULT_CATEGORY_TREE_EXCLUDE,
   salesOnCompare: true,
-  salesMonths: 2
+  salesMonths: 2,
+  dailyRegisterNew: true
 };
 
 export type BaljuoraJobType = "compare" | "push" | "sales";
@@ -142,7 +145,8 @@ export type PushPlanItem = {
 
 // 판매·매출처 읽기(책갈피): start~end(주문일, 한국 날짜) 주문 상품 줄 + 매출처 회원. knownTax = 과세 여부를 이미 아는 발주오라 상품 id.
 export type SalesStep = { start: string; end: string; buyers: boolean; knownTax: string[] };
-export type ComparePlan = { type: "compare"; groupKeyword: string; detailIds: string[]; sales?: SalesStep | null };
+// daily: 운영 홈 '발주오라 → DB센터 동기화'(아침 동기화, 2026-11-26) — 판매·매출처를 늘 함께 읽고, 끝나면 운영 홈이 발주오라 변경을 DB센터에 반영합니다.
+export type ComparePlan = { type: "compare"; groupKeyword: string; detailIds: string[]; sales?: SalesStep | null; daily?: boolean };
 export type SalesPlan = { type: "sales" } & SalesStep;
 export type PushPlan = {
   type: "push";
@@ -265,7 +269,8 @@ function cleanSettings(input: Partial<BaljuoraSettings>, base: BaljuoraSettings)
   const salesOnCompare = typeof input.salesOnCompare === "boolean" ? input.salesOnCompare : base.salesOnCompare !== false;
   const months = typeof input.salesMonths === "number" && Number.isFinite(input.salesMonths) ? input.salesMonths : base.salesMonths;
   const salesMonths = Math.min(12, Math.max(1, Math.round(Number(months) || DEFAULT_SETTINGS.salesMonths)));
-  return { merchantSlug: slug || DEFAULT_SETTINGS.merchantSlug, groupKeyword: keyword || DEFAULT_SETTINGS.groupKeyword, categoryMap, baljuoraCategoryMap, shippingPolicyMap, templateCode, subcategoryMap, categoryTreeExclude, salesOnCompare, salesMonths };
+  const dailyRegisterNew = typeof input.dailyRegisterNew === "boolean" ? input.dailyRegisterNew : base.dailyRegisterNew !== false;
+  return { merchantSlug: slug || DEFAULT_SETTINGS.merchantSlug, groupKeyword: keyword || DEFAULT_SETTINGS.groupKeyword, categoryMap, baljuoraCategoryMap, shippingPolicyMap, templateCode, subcategoryMap, categoryTreeExclude, salesOnCompare, salesMonths, dailyRegisterNew };
 }
 
 export async function getBaljuoraSettings(): Promise<BaljuoraSettings> {
@@ -331,6 +336,7 @@ export function jobView(row: BaljuoraSyncJob, withDetails = false) {
     finishedAt: row.finishedAt,
     expiresAt: row.expiresAt,
     total: plan?.type === "push" ? plan.items.length : null,
+    daily: plan?.type === "compare" && plan.daily === true,
     salesRange: plan && plan.type !== "push" && (plan.type === "sales" ? plan : plan.sales) ? { start: (plan.type === "sales" ? plan : plan.sales as SalesStep).start, end: (plan.type === "sales" ? plan : plan.sales as SalesStep).end } : null,
     progress: parseJson<{ done: number; total: number; message: string } | null>(row.progress, null),
     summary: parseJson<Record<string, unknown> | null>(row.summary, null),
@@ -339,7 +345,7 @@ export function jobView(row: BaljuoraSyncJob, withDetails = false) {
   };
 }
 
-async function expireStaleJobs() {
+export async function expireStaleJobs() {
   await getDb().update(baljuoraSyncJobs)
     .set({ status: "expired", finishedAt: nowIso() })
     .where(and(inArray(baljuoraSyncJobs.status, ["waiting", "running"]), lt(baljuoraSyncJobs.expiresAt, nowIso())));
@@ -467,7 +473,7 @@ async function loadCategoryTree(settings: BaljuoraSettings) {
 // ─── 작업 만들기 ────────────────────────────────────────────────────────────────
 
 export type CreateJobInput =
-  | { type: "compare"; sales?: boolean }
+  | { type: "compare"; sales?: boolean; daily?: boolean }
   | { type: "push"; productIds: string[]; fieldsByProduct?: Record<string, BaljuoraSyncField[]>; categoryTree?: boolean }
   | { type: "sales"; months?: number };
 
@@ -492,13 +498,13 @@ async function salesTablesReady() {
   }
 }
 
-async function buildComparePlan(settings: BaljuoraSettings, withSales: boolean): Promise<ComparePlan> {
+async function buildComparePlan(settings: BaljuoraSettings, withSales: boolean, daily = false): Promise<ComparePlan> {
   const [links, productRows] = await Promise.all([loadLinks(), getDb().select({ id: products.id }).from(products).where(sql`${products.deletedAt} IS NULL`)]);
   const ids = new Set(links.map((link) => link.externalProductId));
   // 예전에 발주오라 엑셀로 가져온 상품은 DB센터 id가 "baljuora-<발주오라 상품 id>"입니다.
   for (const row of productRows) if (row.id.startsWith("baljuora-")) ids.add(row.id.slice("baljuora-".length));
   const sales = withSales && await salesTablesReady() ? await buildSalesStep(settings.salesMonths) : null;
-  return { type: "compare", groupKeyword: settings.groupKeyword, detailIds: [...ids].slice(0, 6000), sales };
+  return { type: "compare", groupKeyword: settings.groupKeyword, detailIds: [...ids].slice(0, 6000), sales, ...(daily ? { daily: true } : {}) };
 }
 
 async function buildSalesPlan(settings: BaljuoraSettings, months: number | undefined): Promise<SalesPlan> {
@@ -642,8 +648,9 @@ export async function createBaljuoraJob(input: CreateJobInput, createdBy: string
     const db = getDb();
     const settings = await getBaljuoraSettings();
     await expireStaleJobs();
+    // 아침 동기화(daily)는 판매·주문·매출처를 늘 함께 읽습니다(설정에서 꺼 두었어도).
     const plan: BaljuoraPlan = input.type === "compare"
-      ? await buildComparePlan(settings, input.sales ?? settings.salesOnCompare)
+      ? await buildComparePlan(settings, input.daily ? true : input.sales ?? settings.salesOnCompare, Boolean(input.daily))
       : input.type === "sales"
         ? await buildSalesPlan(settings, input.months)
         : await buildPushPlan(input, settings);
@@ -1180,7 +1187,9 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
       if (plan.type === "compare") {
         await writeStore(STORE_ONLY, results.unmatched.filter((snapshot) => snapshot.kind !== "bundle").slice(0, 5000));
         update.summary = JSON.stringify({ received: results.received, linked: results.linked, baljuoraOnly: results.unmatched.filter((snapshot) => snapshot.kind !== "bundle").length, bundles: results.bundles ?? 0, sales: salesSummary, error: fatal });
-        update.progress = JSON.stringify({ done: results.received, total: results.received, message: fatal ? `중단: ${fatal}` : `발주오라 상품 ${results.received.toLocaleString("ko-KR")}개를 읽고 ${results.linked.toLocaleString("ko-KR")}개를 연결했습니다.${salesText}` });
+        // 아침 동기화(운영 홈 버튼)면 DB센터 반영은 운영 홈이 이어서 한다고 알려 줍니다(책갈피 창·운영 홈 진행 칸에 보임).
+        const dailyText = plan.daily && !fatal ? " DB센터 운영 홈에서 발주오라 변경을 반영해요." : "";
+        update.progress = JSON.stringify({ done: results.received, total: results.received, message: fatal ? `중단: ${fatal}` : `발주오라 상품 ${results.received.toLocaleString("ko-KR")}개를 읽고 ${results.linked.toLocaleString("ko-KR")}개를 연결했습니다.${salesText}${dailyText}` });
       } else if (plan.type === "sales") {
         update.summary = JSON.stringify({ ...(salesSummary ?? { lines: 0, buyers: 0, complete: false, error: null }), start: plan.start, end: plan.end, error: fatal ?? salesSummary?.error ?? null });
         const lines = results.sales?.lines ?? 0;
@@ -1526,7 +1535,8 @@ function extrasPatchFromSnapshot(snapshot: BaljuoraProductSnapshot, fields: Balj
 
 // 발주오라 → DB센터: 고른 상품에서 지금 발주오라와 다른 칸만 발주오라 값으로 바꿉니다(같은 칸은 그대로).
 // onlyPulled: '가져올 변경' 탭처럼 발주오라에서 바뀐 칸(pull·both)만. 없으면 '발주오라 기준 맞추기'처럼 다른 칸 전부(fields로 고름).
-export async function pullFromBaljuora(input: { productIds?: string[]; fields?: BaljuoraSyncField[]; baljuoraIds?: string[]; onlyPulled?: boolean }, changedBy: string) {
+// skipConflicts: 양쪽에서 바뀐 칸(both)은 건드리지 않습니다(아침 동기화가 저절로 반영할 때 — 관리자가 동기화 화면에서 고름).
+export async function pullFromBaljuora(input: { productIds?: string[]; fields?: BaljuoraSyncField[]; baljuoraIds?: string[]; onlyPulled?: boolean; skipConflicts?: boolean }, changedBy: string) {
   return guard(async () => {
     const settings = await getBaljuoraSettings();
     const [{ doogoCategories, baljuoraCategories }, onlyList, catalog] = await Promise.all([
@@ -1556,7 +1566,7 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
         // '이대로 두기'로 뺀 칸은 화면 목록과 같게 건너뜁니다(보여 준 칸만 바꿈). 상품 정보 칸은 발주오라가 비어 있으면 DB센터 값을 지우지 않습니다
         // (발주오라에서 직접 지운 경우만 — canPullDiff). onlyPulled('발주오라에서 바뀜' 탭)는 발주오라에서 바뀐 칸만.
         const before = syncValues(product, settings, context);
-        const pullable = diffBaljuoraProduct(before, state, baljuoraCategories).filter((diff) => fields.includes(diff.field) && canPullDiff(diff, !input.onlyPulled));
+        const pullable = diffBaljuoraProduct(before, state, baljuoraCategories).filter((diff) => fields.includes(diff.field) && canPullDiff(diff, !input.onlyPulled) && !(input.skipConflicts && diff.direction === "both"));
         const wanted = new Set(pullable.map((diff) => diff.field));
         const wants = (field: BaljuoraSyncField) => wanted.has(field);
         if (wanted.size === 0) {
@@ -1575,7 +1585,15 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
           productChanged = true;
         };
         if (wants("name") && snapshot.name) change(() => { next.name = snapshot.name; });
-        if (wants("supplyPrice") && snapshot.supplyPrice !== null) change(() => { next.generalPrice = snapshot.supplyPrice as number; });
+        // 공급가: 수강생 단가가 일반공급가와 같이 움직이던 상품(따로 정한 단가 없음)은 발주오라에 그룹 공급가가 없으면 수강생 단가도 따라갑니다
+        // (발주오라는 그룹 공급가가 없으면 수강생도 공급가로 삼 — 엑셀 올리기와 같은 규칙, 안 따라가면 다음 비교에 가짜 '수강생 단가' 차이가 생김).
+        if (wants("supplyPrice") && snapshot.supplyPrice !== null) {
+          change(() => {
+            const followed = !next.aPrice || next.aPrice === next.generalPrice;
+            next.generalPrice = snapshot.supplyPrice as number;
+            if (followed && !wants("groupPrice") && (snapshot.groupPrice === null || snapshot.groupPrice === undefined)) next.aPrice = snapshot.supplyPrice as number;
+          });
+        }
         if (wants("groupPrice") && snapshot.groupPrice !== undefined) change(() => { next.aPrice = snapshot.groupPrice ?? next.generalPrice; });
         if (wants("consumerPrice")) {
           change(() => {

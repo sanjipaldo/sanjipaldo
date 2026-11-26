@@ -30,7 +30,8 @@ import { clearJobCode, loadJobCode, saveJobCode } from "@/lib/baljuora-job-code"
 import "./baljuora-sync-admin.css";
 
 // salesOnCompare·salesMonths(2026-11-23): 발주오라 상품 불러오기(비교) 때 판매·매출처도 함께 불러올지, 기간(이번 달 포함 최근 N개월)
-type Settings = { merchantSlug: string; groupKeyword: string; categoryMap: Record<string, string>; baljuoraCategoryMap: Record<string, string>; shippingPolicyMap: Record<string, string>; templateCode: string | null; salesOnCompare?: boolean; salesMonths?: number };
+// dailyRegisterNew(2026-11-26): 운영 홈 아침 동기화 때 발주오라에만 있는 새 상품도 DB센터에 숨김으로 등록할지(기본 켬)
+type Settings = { merchantSlug: string; groupKeyword: string; categoryMap: Record<string, string>; baljuoraCategoryMap: Record<string, string>; shippingPolicyMap: Record<string, string>; templateCode: string | null; salesOnCompare?: boolean; salesMonths?: number; dailyRegisterNew?: boolean };
 type JobView = {
   id: string;
   type: "compare" | "push" | "sales";
@@ -718,6 +719,11 @@ export function BaljuoraSyncAdmin() {
                   <option value="off">불러오지 않기</option>
                 </select>
                 <small>주문(주문일 기준)과 매출처 회원을 읽어 판매 현황·매출처·세금계산서·공급사 정산에 씁니다. 판매만 따로 불러오려면 <a href="/admin/sales">판매 현황</a>에서 하세요.</small>
+              </label>
+              <label className="bj-settings-check">
+                <span>운영 홈 아침 동기화(발주오라 → DB센터)</span>
+                <span className="bj-check"><input type="checkbox" checked={settingsDraft.dailyRegisterNew !== false} onChange={(event) => setSettingsDraft({ ...settingsDraft, dailyRegisterNew: event.target.checked })} /> 발주오라에만 있는 새 상품도 DB센터에 숨김으로 등록</span>
+                <small>아침 동기화는 판매·주문·매출처를 늘 함께 읽고(위 기간), 발주오라에서 바뀐 칸만 DB센터에 반영해요. 양쪽에서 바뀐 칸·처음부터 다른 칸은 이 화면에서 골라 맞춰요.</small>
               </label>
             </div>
             <h3>카테고리 연결 <small>DB센터 카테고리 → 발주오라 카테고리 (보낼 곳 · 이름이 같으면 자동으로 연결)</small></h3>
