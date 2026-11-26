@@ -1,7 +1,8 @@
 // 두고푸드 앱(홈 화면에 추가) 화면 조각 — 2026-11-26 관리자 요청.
 // - AppInstallChip: 관리자·공급사 센터 위 줄(제목과 '오늘 운영' 사이). 휴대폰·태블릿에서 앱으로 열지 않았고 설치 기록이 없을 때만
 //   "앱으로 설치할 수 있어요" → 누르면 설정(관리자 /admin/settings · 공급사 /supplier/account)의 설치 칸으로.
-// - AppInstallCard: 설정 화면의 "앱으로 설치" 칸. 안드로이드는 설치 창 버튼, 아이폰·설치 창이 없는 브라우저는 순서 안내,
+// - AppInstallCard: 설정 화면의 "앱으로 설치" 칸. 안드로이드·PC 크롬/엣지는 '설치하기' 한 번으로 브라우저 설치 창(셈처럼 "앱스 화면에 이 웹페이지를
+//   추가할까요? 취소/추가"), 설치 창이 아직 없으면 한 번 새로고침해 받고, 그래도 없으면 순서 안내. 아이폰은 순서 안내,
 //   카카오톡 같은 앱 안 브라우저는 다른 브라우저로 여는 법 + 주소 복사, 이미 설치했으면 완료 표시.
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
@@ -12,6 +13,7 @@ import {
   clearAppInstalled,
   markAppInstalled,
   promptAppInstall,
+  retryInstallWithReload,
   shouldShowInstallChip,
   useAppInstall,
   type AppArea,
@@ -77,8 +79,8 @@ export function installSteps(state: Pick<AppInstallState, "platform">, areaName:
         copyLink: false,
         steps: [
           { key: "menu", title: <>아래쪽 <b>메뉴(≡)</b>를 눌러요.</>, detail: "주소창에 설치(+) 아이콘이 보이면 그걸 눌러도 돼요.", icon: <Menu size={18} /> },
-          { key: "add", title: <><b>현재 페이지 추가 › 홈 화면</b>을 눌러요.</>, icon: <SquarePlus size={18} /> },
-          { key: "done", title: <><b>추가</b>를 누르면 홈 화면에 {areaName} 아이콘이 생겨요.</>, icon: <CheckCircle2 size={18} /> }
+          { key: "add", title: <><b>현재 페이지 추가 › 앱스 화면</b>(또는 홈 화면)을 눌러요.</>, icon: <SquarePlus size={18} /> },
+          { key: "done", title: <><b>추가</b>를 누르면 앱스 화면·홈 화면에 {areaName} 아이콘이 생겨요.</>, icon: <CheckCircle2 size={18} /> }
         ]
       };
     }
@@ -124,9 +126,15 @@ async function copyText(text: string) {
 export function AppInstallCard({ area }: { area: AppArea }) {
   const state = useAppInstall(area);
   const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<"" | "dismissed" | "unavailable">("");
+  const [showSteps, setShowSteps] = useState(false);
   const app = APP_AREAS[area];
   const place = area === "admin" ? "관리자 화면이" : "공급사 센터가";
   const guide = installSteps(state, app.title);
+  // 버튼 한 번으로 설치(셈처럼): 설치 창을 주는 브라우저(안드로이드 크롬·삼성 인터넷·엣지, PC 크롬·엣지)
+  const oneClick = state.promptSupported && !state.installed;
+  const unavailable = result === "unavailable" || state.retriedNoPrompt;
+  const stepsOpen = oneClick ? showSteps || unavailable : true;
 
   // 위 줄 칩(…/settings#app)으로 들어오면 이 칸으로 내려 줍니다.
   useEffect(() => {
@@ -136,15 +144,31 @@ export function AppInstallCard({ area }: { area: AppArea }) {
   }, []);
 
   const install = async () => {
-    setBusy(true);
-    try {
-      const outcome = await promptAppInstall(area);
-      if (outcome === "accepted") toast.success(`홈 화면에 ${app.title} 아이콘을 만들고 있어요. 잠시 뒤 홈 화면을 확인해 주세요.`);
-      else if (outcome === "dismissed") toast("설치를 취소했어요. 언제든 다시 설치할 수 있어요.");
-      else toast("이 브라우저에서는 설치 창을 띄울 수 없어요. 아래 순서대로 추가해 주세요.");
-    } finally {
-      setBusy(false);
+    if (state.canPrompt) {
+      setBusy(true);
+      try {
+        const outcome = await promptAppInstall(area);
+        if (outcome === "accepted") {
+          setResult("");
+          toast.success(`${app.title} 앱을 설치하고 있어요. 잠시 뒤 홈 화면(앱스 화면)을 확인해 주세요.`);
+        } else if (outcome === "dismissed") setResult("dismissed");
+        else {
+          setResult("unavailable");
+          setShowSteps(true);
+        }
+      } finally {
+        setBusy(false);
+      }
+      return;
     }
+    // 처음 방문이라 서비스 워커가 페이지를 맡기 전이거나, 설치 창에서 취소해 설치 창을 다 쓴 뒤: 한 번 새로고침하면 브라우저가 설치 창을 다시 줍니다.
+    if (state.canRetry || (result === "dismissed" && state.retryAllowed)) {
+      setBusy(true);
+      retryInstallWithReload();
+      return;
+    }
+    setResult("unavailable");
+    setShowSteps(true);
   };
 
   const copyLink = async () => {
@@ -157,9 +181,21 @@ export function AppInstallCard({ area }: { area: AppArea }) {
     ? { tone: "done", text: "지금 앱으로 열려 있어요" }
     : state.installed
       ? { tone: "done", text: state.justInstalled ? "설치했어요 · 홈 화면을 확인해 주세요" : "이 기기에 설치했어요" }
-      : state.canPrompt
-        ? { tone: "ready", text: "이 기기에 바로 설치할 수 있어요" }
+      : oneClick
+        ? null
         : { tone: "guide", text: guide.lead };
+
+  const buttonLabel = busy ? (state.canPrompt ? "설치 창을 여는 중…" : "설치 준비 중…") : state.waitingPrompt ? "설치 준비 중…" : "설치하기";
+  const resultText =
+    result === "dismissed"
+      ? "설치를 취소했어요. 다음에 다시 설치할 수 있어요."
+      : unavailable
+        ? "이 브라우저가 설치 창을 열지 않았어요. 아래 순서대로 추가해 주세요."
+        : state.waitingPrompt
+          ? "설치 준비 중이에요. 잠시만 기다려 주세요."
+          : state.canPrompt
+            ? "누르면 바로 설치 창이 떠요. 추가(설치)를 누르면 끝이에요."
+            : "";
 
   return (
     <section id="app" className="admin-card app-install-card" aria-labelledby={`app-install-title-${area}`}>
@@ -172,20 +208,21 @@ export function AppInstallCard({ area }: { area: AppArea }) {
           <span className="app-install-kicker"><Smartphone size={14} aria-hidden="true" /> 홈 화면에 추가</span>
           <h2 id={`app-install-title-${area}`}>{app.title}를 앱처럼 쓰세요</h2>
           <p>휴대폰 홈 화면에 {app.title} 아이콘을 만들어 두면, 누르자마자 {place} 열려요. 주소를 치거나 북마크를 찾을 필요가 없어요.</p>
-          <span className={`app-install-status is-${status.tone}`} role="status">{status.tone === "done" && <CheckCircle2 size={15} aria-hidden="true" />}{status.text}</span>
+          {status && <span className={`app-install-status is-${status.tone}`} role="status">{status.tone === "done" && <CheckCircle2 size={15} aria-hidden="true" />}{status.text}</span>}
         </div>
       </div>
 
-      {!state.installed && state.canPrompt && (
+      {oneClick && (
         <div className="app-install-prompt">
-          <button type="button" className="app-install-primary" onClick={() => void install()} disabled={busy}>
-            <Download size={18} aria-hidden="true" /> {busy ? "설치 창을 여는 중…" : "앱으로 설치하기"}
+          <button type="button" className="app-install-primary" onClick={() => void install()} disabled={busy || state.waitingPrompt} aria-describedby={resultText ? `app-install-result-${area}` : undefined}>
+            <Download size={19} aria-hidden="true" /> {buttonLabel}
           </button>
-          <small>설치 창이 뜨면 <b>설치</b>를 눌러 주세요.</small>
+          {resultText && <p id={`app-install-result-${area}`} className={`app-install-result${result === "dismissed" || unavailable ? " is-notice" : ""}`} role="status">{resultText}</p>}
+          {!stepsOpen && guide.steps.length > 0 && <button type="button" className="app-install-link" onClick={() => setShowSteps(true)}>직접 추가하는 방법 보기</button>}
         </div>
       )}
 
-      {!state.installed && !state.canPrompt && (guide.steps.length > 0 || guide.copyLink) && (
+      {!state.installed && stepsOpen && (guide.steps.length > 0 || guide.copyLink) && (
         <div className="app-install-guide">
           {guide.steps.length > 0 && (
             <ol className="app-install-steps">

@@ -52,7 +52,8 @@ self.addEventListener("fetch", (event) => {
       if (preloaded) return preloaded;
       return await fetch(event.request);
     } catch {
-      return new Response(OFFLINE_PAGE, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+      // 상태 200: 브라우저가 "앱 시작 주소를 인터넷 없이 열 수 있는지" 확인할 때도 앱으로 인정되게(안내 화면이라 저장하지 않음)
+      return new Response(OFFLINE_PAGE, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
     }
   })());
 });

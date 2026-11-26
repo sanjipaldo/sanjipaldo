@@ -4,6 +4,9 @@
 //   공개 화면(단가표 등)은 예전 site.webmanifest(브라우저로 열기) 그대로라 셀러의 홈 화면 바로가기는 바뀌지 않습니다.
 // - 안드로이드(크롬·삼성 인터넷 등)는 브라우저가 주는 설치 창(beforeinstallprompt)을 받아 두었다가 버튼으로 띄우고,
 //   아이폰은 설치 창이 없어 Safari 공유 → 홈 화면에 추가 안내를 보여 줍니다.
+// - 원클릭 설치(2026-11-26 관리자 요청 "셈처럼 설치하기를 누르면 바로 '앱스 화면에 이 웹페이지를 추가할까요? 취소/추가'가 뜨게"):
+//   삼성 인터넷은 서비스 워커가 페이지를 열 때부터 있어야 설치할 수 있는 앱으로 보므로 index.html 첫 스크립트에서 바로 등록하고,
+//   설치 창이 아직 없으면(처음 방문이라 서비스 워커가 페이지를 맡기 전) '설치하기'가 한 번만 새로고침해 설치 창을 받습니다.
 // - 설치했는지: 앱으로 열려 있으면(display-mode standalone) 확실하고, 브라우저로 열었을 때는 이 기기에 남긴 기록
 //   (설치 완료 이벤트·앱으로 연 적 있음·"이미 추가했어요")으로 봅니다. 설치 창이 다시 오면(크롬은 설치된 앱이면 보내지 않음) 기록을 지웁니다.
 import { useEffect, useState } from "react";
@@ -142,6 +145,40 @@ let installedNow: AppArea | null = null;
 let capturing = false;
 const listeners = new Set<() => void>();
 
+/** 설치 창(beforeinstallprompt)을 주는 브라우저: 안드로이드 크롬·삼성 인터넷·엣지·웨일 등, PC 크롬·엣지·웨일(앱 안 브라우저·파이어폭스·Safari는 없음) */
+export function supportsInstallPrompt(platform: InstallPlatform) {
+  if (platform.inApp || platform.os === "ios") return false;
+  if (platform.os === "android") return platform.browser !== "firefox";
+  return platform.browser === "chrome" || platform.browser === "edge" || platform.browser === "whale";
+}
+
+// 설치 창이 없을 때 한 번만 새로고침해 다시 받기(이 탭에서 한 번, sessionStorage)
+const RETRY_KEY = "doogo:app-install-retry";
+/** 새로고침한 뒤 설치 창을 기다리는 시간 */
+export const PROMPT_WAIT_MS = 5000;
+let controlledAtStart = false;
+let retriedAt = 0;
+let waitUntil = 0;
+let reloadPage = () => window.location.reload();
+
+function session(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+/** 설치 창이 없을 때: 표시를 남기고 한 번 새로고침(서비스 워커가 처음부터 페이지를 맡은 상태로 브라우저가 다시 확인) */
+export function retryInstallWithReload() {
+  try {
+    session()?.setItem(RETRY_KEY, String(Date.now()));
+  } catch {
+    // 저장이 막힌 브라우저: 그래도 한 번 새로고침
+  }
+  reloadPage();
+}
+
 function emit() {
   for (const listener of listeners) listener();
 }
@@ -171,6 +208,17 @@ export function startAppInstallCapture(win: Window = window) {
   // 앱으로 열었으면 그 영역은 설치된 것으로 기록(브라우저와 저장 공간을 같이 쓰는 안드로이드에서 위 칩이 안 보이게)
   const area = appAreaOf(win.location.pathname);
   if (area && isStandaloneDisplay(win)) writeInstalled(area, true);
+  // 이 페이지를 열 때 이미 서비스 워커가 맡고 있었는지(처음 방문이면 아님 → 설치하기가 한 번 새로고침)
+  controlledAtStart = Boolean((win.navigator as Navigator | undefined)?.serviceWorker?.controller);
+  try {
+    retriedAt = Number(session()?.getItem(RETRY_KEY) || 0) || 0;
+  } catch {
+    retriedAt = 0;
+  }
+  if (retriedAt && Date.now() - retriedAt < 30_000) {
+    waitUntil = Date.now() + PROMPT_WAIT_MS;
+    setTimeout(emit, PROMPT_WAIT_MS + 30);
+  }
 }
 
 export type AppInstallState = {
@@ -178,19 +226,41 @@ export type AppInstallState = {
   platform: InstallPlatform;
   standalone: boolean;
   installed: boolean;
+  /** 지금 누르면 브라우저 설치 창이 뜸 */
   canPrompt: boolean;
   justInstalled: boolean;
+  /** 이 브라우저는 설치 창을 주는 종류(버튼 한 번으로 설치하는 화면) */
+  promptSupported: boolean;
+  /** 새로고침 직후 설치 창을 기다리는 중 */
+  waitingPrompt: boolean;
+  /** 새로고침 직후인데 설치 창이 오지 않음(순서 안내로) */
+  retriedNoPrompt: boolean;
+  /** 설치 창이 없을 때 한 번 새로고침해 볼 수 있음(처음 방문이라 서비스 워커가 페이지를 맡기 전) */
+  canRetry: boolean;
+  /** 이 탭에서 아직 새로고침 재시도를 하지 않음(설치 창에서 취소한 뒤 다시 누르면 새로고침해 설치 창을 다시 받음) */
+  retryAllowed: boolean;
 };
 
 export function readAppInstallState(area: AppArea): AppInstallState {
   const standalone = typeof window !== "undefined" && isStandaloneDisplay(window);
+  const platform = detectInstallPlatform();
+  const promptSupported = supportsInstallPrompt(platform);
+  const canPrompt = deferred?.area === area;
+  const justRetried = Boolean(retriedAt) && Date.now() - retriedAt < 60_000;
+  const waitingPrompt = promptSupported && !canPrompt && Date.now() < waitUntil;
+  const hasWorkerApi = typeof navigator !== "undefined" && "serviceWorker" in navigator;
   return {
     area,
-    platform: detectInstallPlatform(),
+    platform,
     standalone,
     installed: standalone || readInstalled(area),
-    canPrompt: deferred?.area === area,
-    justInstalled: installedNow === area
+    canPrompt,
+    justInstalled: installedNow === area,
+    promptSupported,
+    waitingPrompt,
+    retriedNoPrompt: promptSupported && !canPrompt && justRetried && !waitingPrompt,
+    canRetry: promptSupported && !canPrompt && hasWorkerApi && !controlledAtStart && !retriedAt,
+    retryAllowed: promptSupported && !canPrompt && !retriedAt
   };
 }
 
@@ -243,10 +313,14 @@ export function useAppInstall(area: AppArea): AppInstallState {
 }
 
 /** 테스트 전용: 모듈 상태 비우기 */
-export function resetAppInstallForTest() {
+export function resetAppInstallForTest(reload?: () => void) {
   deferred = null;
   installedNow = null;
   capturing = false;
+  controlledAtStart = false;
+  retriedAt = 0;
+  waitUntil = 0;
+  reloadPage = reload ?? (() => window.location.reload());
   registered.clear();
   listeners.clear();
 }

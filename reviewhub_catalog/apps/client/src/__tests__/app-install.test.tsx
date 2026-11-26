@@ -91,6 +91,7 @@ const originalMatchMedia = window.matchMedia;
 beforeEach(() => {
   resetAppInstallForTest();
   window.localStorage.clear();
+  window.sessionStorage.clear();
   toastMock.mockClear();
   toastMock.success.mockClear();
   toastMock.error.mockClear();
@@ -140,24 +141,31 @@ describe("앱 영역 · manifest 바꾸기", () => {
     expect(meta("mobile-web-app-capable")).toBeNull();
   });
 
-  it("index.html 첫 스크립트도 같은 규칙으로 처음 연 주소의 manifest를 고릅니다(아이폰은 홈 화면에 추가할 때 처음 HTML을 봄)", () => {
+  it("index.html 첫 스크립트도 같은 규칙으로 처음 연 주소의 manifest를 고르고, 서비스 워커를 그 영역 범위로 바로 등록합니다(삼성 인터넷 원클릭 설치)", () => {
     const html = readFileSync(projectFile("index.html"), "utf8");
     const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]).find((body) => body.includes(".webmanifest"));
     expect(script).toBeTruthy();
     const run = (pathname: string) => {
       document.head.innerHTML = '<link rel="manifest" href="/site.webmanifest" /><meta name="apple-mobile-web-app-title" content="두고푸드 DB센터" />';
-      new Function("location", "document", script as string)({ pathname }, document);
+      const register = vi.fn().mockResolvedValue({});
+      new Function("location", "document", "navigator", script as string)({ pathname }, document, { serviceWorker: { register } });
       return {
         manifest: document.head.querySelector('link[rel="manifest"]')?.getAttribute("href"),
         title: document.head.querySelector('meta[name="apple-mobile-web-app-title"]')?.getAttribute("content"),
-        capable: document.head.querySelector('meta[name="apple-mobile-web-app-capable"]')?.getAttribute("content") ?? null
+        capable: document.head.querySelector('meta[name="apple-mobile-web-app-capable"]')?.getAttribute("content") ?? null,
+        worker: register.mock.calls[0] ?? null
       };
     };
-    expect(run("/admin")).toEqual({ manifest: "/admin.webmanifest", title: "두고푸드", capable: "yes" });
-    expect(run("/admin/home")).toEqual({ manifest: "/admin.webmanifest", title: "두고푸드", capable: "yes" });
-    expect(run("/supplier/home")).toEqual({ manifest: "/supplier.webmanifest", title: "두고푸드 공급사", capable: "yes" });
-    expect(run("/")).toEqual({ manifest: "/site.webmanifest", title: "두고푸드 DB센터", capable: null });
-    expect(run("/administrator")).toEqual({ manifest: "/site.webmanifest", title: "두고푸드 DB센터", capable: null });
+    const adminWorker = ["/sw.js", { scope: "/admin" }];
+    expect(run("/admin")).toEqual({ manifest: "/admin.webmanifest", title: "두고푸드", capable: "yes", worker: adminWorker });
+    expect(run("/admin/home")).toEqual({ manifest: "/admin.webmanifest", title: "두고푸드", capable: "yes", worker: adminWorker });
+    expect(run("/supplier/home")).toEqual({ manifest: "/supplier.webmanifest", title: "두고푸드 공급사", capable: "yes", worker: ["/sw.js", { scope: "/supplier" }] });
+    expect(run("/")).toEqual({ manifest: "/site.webmanifest", title: "두고푸드 DB센터", capable: null, worker: null });
+    expect(run("/administrator")).toEqual({ manifest: "/site.webmanifest", title: "두고푸드 DB센터", capable: null, worker: null });
+    // 서비스 워커가 없는 브라우저도 오류 없이 manifest만 바꿈
+    document.head.innerHTML = '<link rel="manifest" href="/site.webmanifest" />';
+    expect(() => new Function("location", "document", "navigator", script as string)({ pathname: "/admin" }, document, {})).not.toThrow();
+    expect(document.head.querySelector('link[rel="manifest"]')?.getAttribute("href")).toBe("/admin.webmanifest");
   });
 
   it("서비스 워커는 영역마다 한 번, 그 영역 범위로만 등록합니다(서비스 워커가 없는 브라우저는 건너뜀)", async () => {
@@ -321,29 +329,104 @@ describe("설정 화면 '앱으로 설치' 칸", () => {
     expect(steps()).toHaveLength(3);
   });
 
-  it("갤럭시(크롬): 설치 창이 오면 '앱으로 설치하기' 버튼 → 설치 창 → 설치됨", async () => {
+  it("갤럭시(크롬): '설치하기' 한 번 → 브라우저 설치 창 → 설치됨(순서 안내는 접혀 있음)", async () => {
     setUserAgent(UA.androidChrome, 5);
     const win = fakeWindow("/admin/settings");
     startAppInstallCapture(win);
     renderCard();
-    expect(screen.getByRole("status").textContent).toBe("브라우저 메뉴에서 앱을 설치해요.");
+    expect(screen.getByRole("button", { name: /^설치하기$/ })).toBeTruthy();
+    expect(document.querySelector(".app-install-steps")).toBeNull();
     const event = installPromptEvent("accepted");
     act(() => {
       win.dispatchEvent(event);
     });
-    expect(screen.getByRole("status").textContent).toBe("이 기기에 바로 설치할 수 있어요");
-    fireEvent.click(screen.getByRole("button", { name: /앱으로 설치하기/ }));
+    expect(screen.getByRole("status").textContent).toContain("누르면 바로 설치 창이 떠요");
+    fireEvent.click(screen.getByRole("button", { name: /^설치하기$/ }));
     await waitFor(() => expect(screen.getByRole("status").textContent).toContain("설치했어요 · 홈 화면을 확인해 주세요"));
     expect(event.prompt).toHaveBeenCalledTimes(1);
-    expect(toastMock.success).toHaveBeenCalledWith(expect.stringContaining("홈 화면에 두고푸드 아이콘"));
-    expect(screen.queryByRole("button", { name: /앱으로 설치하기/ })).toBeNull();
+    expect(toastMock.success).toHaveBeenCalledWith(expect.stringContaining("두고푸드 앱을 설치하고 있어요"));
+    expect(screen.queryByRole("button", { name: /설치하기/ })).toBeNull();
   });
 
-  it("삼성 인터넷: 메뉴 › 현재 페이지 추가 › 홈 화면 순서", () => {
+  it("설치 창에서 취소하면 안내하고, 브라우저가 설치 창을 다시 주면 한 번 더 눌러 설치할 수 있습니다", async () => {
+    setUserAgent(UA.androidChrome, 5);
+    const win = fakeWindow("/admin/settings");
+    startAppInstallCapture(win);
+    renderCard();
+    const first = installPromptEvent("dismissed");
+    act(() => {
+      win.dispatchEvent(first);
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^설치하기$/ }));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("설치를 취소했어요. 다음에 다시 설치할 수 있어요."));
+    expect(first.prompt).toHaveBeenCalledTimes(1);
+    expect(readInstalled("admin")).toBe(false);
+    const again = installPromptEvent("accepted");
+    act(() => {
+      win.dispatchEvent(again);
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^설치하기$/ }));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("설치했어요"));
+    expect(again.prompt).toHaveBeenCalledTimes(1);
+  });
+
+  it("처음 방문이라 설치 창이 아직 없으면 '설치하기'가 한 번만 새로고침해 설치 창을 받습니다", () => {
+    setUserAgent(UA.samsung, 5);
+    const reload = vi.fn();
+    resetAppInstallForTest(reload);
+    Object.defineProperty(window.navigator, "serviceWorker", { configurable: true, value: { controller: null } });
+    try {
+      startAppInstallCapture(fakeWindow("/admin/settings"));
+      renderCard();
+      fireEvent.click(screen.getByRole("button", { name: /^설치하기$/ }));
+      expect(reload).toHaveBeenCalledTimes(1);
+      expect(Number(window.sessionStorage.getItem("doogo:app-install-retry"))).toBeGreaterThan(0);
+      expect((screen.getByRole("button", { name: /설치 준비 중/ }) as HTMLButtonElement).disabled).toBe(true);
+    } finally {
+      delete (window.navigator as unknown as Record<string, unknown>).serviceWorker;
+    }
+  });
+
+  it("새로고침 직후에는 '설치 준비 중…'으로 설치 창을 기다렸다가, 오면 '설치하기'로 바뀝니다", () => {
+    setUserAgent(UA.samsung, 5);
+    window.sessionStorage.setItem("doogo:app-install-retry", String(Date.now()));
+    const win = fakeWindow("/admin/settings");
+    startAppInstallCapture(win);
+    renderCard();
+    const waiting = screen.getByRole("button", { name: /설치 준비 중/ }) as HTMLButtonElement;
+    expect(waiting.disabled).toBe(true);
+    expect(screen.getByRole("status").textContent).toContain("설치 준비 중이에요");
+    act(() => {
+      win.dispatchEvent(installPromptEvent());
+    });
+    const ready = screen.getByRole("button", { name: /^설치하기$/ }) as HTMLButtonElement;
+    expect(ready.disabled).toBe(false);
+    expect(screen.getByRole("status").textContent).toContain("누르면 바로 설치 창이 떠요");
+  });
+
+  it("새로고침해도 설치 창이 오지 않으면 삼성 인터넷 순서(현재 페이지 추가 › 앱스 화면)를 펼칩니다", () => {
+    setUserAgent(UA.samsung, 5);
+    window.sessionStorage.setItem("doogo:app-install-retry", String(Date.now() - 40_000));
+    startAppInstallCapture(fakeWindow("/admin/settings"));
+    renderCard();
+    expect(screen.getByRole("status").textContent).toBe("이 브라우저가 설치 창을 열지 않았어요. 아래 순서대로 추가해 주세요.");
+    expect(steps()[1].textContent).toContain("현재 페이지 추가 › 앱스 화면");
+    expect(steps()[2].textContent).toContain("앱스 화면·홈 화면에 두고푸드 아이콘");
+  });
+
+  it("삼성 인터넷: 설치 창도 새로고침도 쓸 수 없으면 '설치하기'가 순서 안내를 펼치고, '직접 추가하는 방법 보기'로도 볼 수 있습니다", () => {
     setUserAgent(UA.samsung, 5);
     renderCard();
-    expect(screen.getByRole("status").textContent).toBe("삼성 인터넷은 메뉴에서 홈 화면에 추가해요.");
-    expect(steps()[1].textContent).toContain("현재 페이지 추가 › 홈 화면");
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(document.querySelector(".app-install-steps")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "직접 추가하는 방법 보기" }));
+    expect(steps()[1].textContent).toContain("현재 페이지 추가 › 앱스 화면");
+    expect(screen.queryByRole("button", { name: "직접 추가하는 방법 보기" })).toBeNull();
+    cleanup();
+    renderCard();
+    fireEvent.click(screen.getByRole("button", { name: /^설치하기$/ }));
+    expect(screen.getByRole("status").textContent).toContain("이 브라우저가 설치 창을 열지 않았어요");
+    expect(steps()).toHaveLength(3);
   });
 
   it("카카오톡 안 브라우저: 다른 브라우저로 여는 법 + 주소 복사", async () => {
@@ -359,10 +442,11 @@ describe("설정 화면 '앱으로 설치' 칸", () => {
     delete (window.navigator as unknown as Record<string, unknown>).clipboard;
   });
 
-  it("PC 크롬·엣지는 주소창 설치 아이콘 안내, 파이어폭스는 다른 브라우저 안내", () => {
+  it("PC 크롬·엣지도 '설치하기' 한 번(설치 창이 없으면 주소창 설치 아이콘 안내), 파이어폭스는 다른 브라우저 안내", () => {
     setUserAgent(UA.windowsChrome, 0);
     renderCard();
-    expect(screen.getByRole("status").textContent).toBe("PC에서도 크롬·엣지로 설치할 수 있어요.");
+    fireEvent.click(screen.getByRole("button", { name: /^설치하기$/ }));
+    expect(screen.getByRole("status").textContent).toContain("이 브라우저가 설치 창을 열지 않았어요");
     expect(steps()).toHaveLength(2);
     expect(screen.getByText(/앱 창 오른쪽 위 메뉴\(⋮\)에서 제거/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "이미 설치했어요" })).toBeTruthy();
@@ -450,10 +534,11 @@ describe("manifest · 서비스 워커 파일", () => {
     // 미리 받은 응답(navigation preload)이 있으면 그것
     const preloaded = new Response("preloaded", { status: 200 });
     expect(await dispatch("navigate", Promise.resolve(preloaded))).toBe(preloaded);
-    // 인터넷이 끊기면 안내 화면
+    // 인터넷이 끊기면 안내 화면(상태 200: 브라우저의 '인터넷 없이 시작 주소가 열리는지' 확인에서도 앱으로 인정)
     network.mockRejectedValueOnce(new TypeError("Failed to fetch"));
     const offline = (await dispatch("navigate")) as Response;
-    expect(offline.status).toBe(503);
+    expect(offline.status).toBe(200);
+    expect(offline.headers.get("Cache-Control")).toBe("no-store");
     const html = await offline.text();
     expect(html).toContain("인터넷 연결을 확인해 주세요");
     expect(html).toContain('src="data:image/webp;base64,');

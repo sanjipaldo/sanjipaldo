@@ -3925,46 +3925,88 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 @media (max-width: 1050px) {
   .master-login-page .login-brand-panel { min-height: 380px; gap: 18px; padding: 24px 24px 26px; border-bottom: 0; background-position: center 62%; }
 }
-/* 휴대폰(2026-11-26 관리자 요청 "위 배경이 너무 길어 아이디를 치고 스크롤해서 비밀번호를 쳐야 한다 — 위를 세로로 줄여 아이디·비밀번호가
-   한눈에"): 사진 칸을 약 170px(로고 + 뒤로가기·공개 DB 작은 버튼 한 줄 + 두 줄 제목)로 줄이고, 로그인 카드는 아이콘 옆에 제목을 둬
-   첫 화면(320~430px 폭, 높이 560px 이상)에 아이디·비밀번호·로그인 버튼이 모두 보입니다. 앱(홈 화면 아이콘)으로 열어도 같은 화면입니다. */
+/* 휴대폰 관리자 로그인(2026-11-26 관리자 요청 두 번 — ① "위 배경이 너무 길어 아이디를 치고 스크롤해서 비밀번호를 쳐야 한다"
+   ② 줄인 뒤 "위 영역을 더 세로로 키워 줘, 아래가 텅 비어 이상하다 — 접속했을 때 아이디·비밀번호 칸이 균형 있게 딱 보이게"):
+   보이는 화면 높이(100svh, 주소창·아래 도구줄을 뺀 높이)를 사진 칸 + 로그인 카드가 꽉 채웁니다. 로그인 카드는 내용 높이만큼 맨 아래에
+   두고 사진 칸 아래쪽에 40px 겹쳐 띄우며, 남는 높이는 모두 사진 칸이 가져(최소 250px) 휴대폰마다 아래 빈칸 없이 균형이 맞습니다
+   (갤럭시 삼성 인터넷 360×650 → 사진 약 325px, 아이폰 390×664 → 약 340px, 아이폰 SE 320×568 → 약 265px, 모두 로그인 버튼까지 한 화면).
+   사진 칸 위에는 로고 + 작은 '← 뒤로가기'·'공개 DB', 아래에는 MASTER CONSOLE + 두 줄 제목(높은 화면은 설명 한 줄도). 앱으로 열어도 같습니다. */
 .login-link-short { display: none; }
 @media (max-width: 720px) {
-  /* 화면 높이(100vh) 남는 곳은 로그인 칸이 갖고, 사진 칸은 내용 높이만(예전에는 두 칸이 남는 높이를 나눠 가져 사진 칸이 커졌음) */
-  .admin-login-page.master-login-page { grid-template-rows: auto 1fr; }
+  .admin-login-page.master-login-page {
+    grid-template-rows: minmax(250px, 1fr) auto;
+    min-height: 100vh;
+    min-height: 100svh;
+  }
   .master-login-page .login-brand-panel {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto 1fr;
     grid-template-areas: "logo actions" "copy copy";
     align-items: center;
     gap: 16px 10px;
     min-height: 0;
-    padding: 16px 16px 20px;
+    padding: max(16px, env(safe-area-inset-top)) 18px 64px;
+    border-bottom: 0;
     background-image: url("/assets/login/admin-login-farm-sm.webp");
-    background-position: center 64%;
+    background-position: center 58%;
   }
-  .master-login-page .login-brand-panel::before { background: linear-gradient(180deg, rgba(8, 22, 4, .5) 0%, rgba(7, 19, 3, .62) 55%, rgba(5, 15, 2, .86) 100%); }
-  .master-login-page .login-brand-panel > .public-brand { grid-area: logo; margin: 0; }
-  .master-login-page .login-brand-panel .doogo-logo { width: 104px; height: auto; }
-  .master-login-page .login-brand-panel > div:not(.login-brand-footer) { grid-area: copy; }
-  .master-login-page .login-kicker { font-size: 11px; letter-spacing: .14em; }
-  .master-login-page .login-brand-panel h1 { margin: 6px 0 0; font-size: 21px; line-height: 1.32; letter-spacing: -.03em; }
+  .master-login-page .login-brand-panel::before {
+    background: linear-gradient(180deg, rgba(8, 22, 4, .62) 0%, rgba(8, 22, 4, .22) 24%, rgba(8, 22, 4, .18) 38%, rgba(7, 19, 3, .64) 62%, rgba(5, 15, 2, .92) 100%);
+  }
+  .master-login-page .login-brand-panel > .public-brand { grid-area: logo; align-self: center; margin: 0; }
+  .master-login-page .login-brand-panel .doogo-logo { width: 106px; height: auto; }
+  .master-login-page .login-brand-panel > div:not(.login-brand-footer) { grid-area: copy; align-self: end; }
+  .master-login-page .login-kicker { font-size: 12px; letter-spacing: .15em; text-shadow: 0 1px 10px rgba(0, 0, 0, .45); }
+  .master-login-page .login-brand-panel h1 { margin: 8px 0 0; font-size: 26px; line-height: 1.3; letter-spacing: -.035em; }
   .master-login-page .login-brand-panel p { display: none; }
-  .master-login-page .login-brand-footer { grid-area: actions; gap: 0; }
+  .master-login-page .login-brand-footer { grid-area: actions; align-self: center; gap: 0; }
   .master-login-page .login-brand-footer small { display: none; }
   .master-login-page .login-landing-actions { flex-direction: row; flex-wrap: nowrap; gap: 6px; width: auto; }
   .master-login-page .login-landing-actions button,
-  .master-login-page .login-landing-actions a { width: auto; min-height: 30px; padding: 0 11px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .master-login-page .login-landing-actions a { flex: 0 0 auto; width: auto; min-height: 32px; padding: 0 12px; font-size: 12px; font-weight: 700; white-space: nowrap; }
   .master-login-page .login-link-long { display: none; }
   .master-login-page .login-link-short { display: inline; }
-  .master-login-page .login-form-panel { place-items: start center; padding: 14px 14px 28px; }
-  .master-login-page .login-card { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; column-gap: 12px; padding: 18px 18px 20px; }
-  .master-login-page .login-icon { grid-row: 1 / span 2; width: 42px; height: 42px; border-radius: 13px; }
+  /* 로그인 카드: 사진 칸 위로 40px 겹쳐 띄움(사진 칸이 position: relative라 카드 쪽도 쌓임 순서를 올림) */
+  .master-login-page .login-form-panel { position: relative; z-index: 1; display: block; padding: 0 16px max(20px, env(safe-area-inset-bottom)); }
+  .master-login-page .login-card {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 12px;
+    width: 100%;
+    max-width: 480px;
+    margin: -40px auto 0;
+    padding: 22px 20px;
+    box-shadow: 0 1px 3px rgba(22, 51, 0, .06), 0 16px 44px rgba(22, 51, 0, .16);
+  }
+  .master-login-page .login-icon { grid-row: 1 / span 2; width: 44px; height: 44px; border-radius: 13px; }
   .master-login-page .login-card h2 { grid-column: 2; margin: 0; font-size: 20px; }
-  .master-login-page .login-card > p { grid-column: 2; margin: 2px 0 0; font-size: 13px; }
-  .master-login-page .login-card label { grid-column: 1 / -1; margin-top: 12px; }
-  .master-login-page .login-card input { height: 48px !important; }
-  .master-login-page .login-card > button { grid-column: 1 / -1; height: 50px; margin-top: 16px; }
+  .master-login-page .login-card > p { grid-column: 2; margin: 3px 0 0; font-size: 13.5px; }
+  .master-login-page .login-card label { grid-column: 1 / -1; margin-top: 14px; }
+  .master-login-page .login-card input { height: 50px !important; }
+  .master-login-page .login-card > button { grid-column: 1 / -1; height: 52px; margin-top: 18px; }
+}
+/* 높은 화면(760px 이상): 사진 칸이 넉넉해 설명 한 줄도 보여 줌 */
+@media (max-width: 720px) and (min-height: 760px) {
+  .master-login-page .login-brand-panel p { display: block; max-width: 30em; margin: 10px 0 0; font-size: 14px; line-height: 1.6; }
+}
+/* 낮은 화면(620px 이하, 아이폰 SE 등): 사진 칸 최소 높이와 칸 간격만 조금 줄임 */
+@media (max-width: 720px) and (max-height: 620px) {
+  .admin-login-page.master-login-page { grid-template-rows: minmax(210px, 1fr) auto; }
+  .master-login-page .login-brand-panel { padding-bottom: 60px; }
+  .master-login-page .login-brand-panel h1 { font-size: 23px; }
+  .master-login-page .login-card { padding: 18px 18px 20px; }
+  .master-login-page .login-card label { margin-top: 10px; }
+  .master-login-page .login-card input { height: 46px !important; }
+  .master-login-page .login-card > button { height: 48px; margin-top: 14px; }
+}
+/* 아주 좁은 화면(359px 이하): 로고·버튼 한 줄에 맞춤 */
+@media (max-width: 359px) {
+  .master-login-page .login-brand-panel { padding-right: 14px; padding-left: 14px; }
+  .master-login-page .login-brand-panel .doogo-logo { width: 98px; }
+  .master-login-page .login-landing-actions button,
+  .master-login-page .login-landing-actions a { padding: 0 10px; }
 }
 
 /* ---------- 공급사 센터에서 공개 화면으로 왔을 때 맨 위 "공급사 화면으로 돌아가기"(2026-11-26 관리자 요청) ----------

@@ -56,6 +56,9 @@
 .app-install-primary:disabled { opacity: .6; cursor: default; }
 .app-install-primary:focus-visible, .app-install-secondary:focus-visible, .app-install-link:focus-visible { outline: 3px solid rgba(75, 154, 47, .45); outline-offset: 2px; }
 .app-install-prompt small { color: var(--w-mute, #868685); font-size: 12.5px; }
+.app-install-result { width: min(420px, 100%); margin: 0; padding: 0 4px; color: var(--w-mute, #6a7066); font-size: 13px; line-height: 1.55; text-align: center; }
+.app-install-result.is-notice { padding: 10px 14px; border-radius: 12px; color: #5c3b00; background: #fff4cc; font-weight: 600; text-align: left; }
+.app-install-primary:disabled { cursor: progress; }
 .app-install-guide { display: grid; gap: 10px; }
 .app-install-steps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: app-step; }
 .app-install-steps li { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 56px; padding: 11px 14px 11px 52px; border: 1px solid #e3e9dc; border-radius: 14px; background: #fbfdf8; counter-increment: app-step; }
