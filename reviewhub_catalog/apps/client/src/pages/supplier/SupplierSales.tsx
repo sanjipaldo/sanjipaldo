@@ -2,6 +2,7 @@
 // 2026-11-25부터 정산 방식(판매수수료 · 일반 도매)에 따라 금액이 바뀝니다: 판매수수료 = 판매 금액, 일반 도매 = 공급가(원가) × 수량.
 // 정산 입금 = 물품 대금 + 배송비(100%), 판매수수료 방식은 한 달 판매 대금의 수수료를 다음 달 1~3일에 두고푸드로 보냅니다.
 // 2026-11-26: 달력 옆에는 고른 날짜 내역·입금 일정만 두고, 정산 카드는 달력 아래 전체 너비로 옮겨 빈 공간을 줄였어요(판매 없는 기간은 한 칸에 모음).
+// 2026-11-26: 날짜 카드 아래 '세부내역 보기'(supplier-day-detail.tsx) — 상품별 단가(도매 = 공급가) × 수량 · 반품 · 배송비로 그날 합계를 펼쳐 보여 줘요.
 import { useEffect, useMemo, useState } from "react";
 import { BadgePercent, Banknote, CalendarDays, ChevronLeft, ChevronRight, CircleAlert, ShieldAlert, Trophy } from "lucide-react";
 import {
@@ -21,6 +22,7 @@ import { SalesThumb } from "../admin/sales-widgets";
 import "../admin/sales-admin.css";
 import { compactWon, count, dayLabel, monthLabel, supplierGet, won, type SalesMonth } from "./supplier-api";
 import { FeeList, FeeStatus, PayoutStatus, SettlementMoneyList, feeDueMap, feePayable } from "./supplier-dashboard";
+import { SupplierDayDetail } from "./supplier-day-detail";
 
 type PayoutDay = SalesMonth["payoutDays"][number];
 type PeriodSettlement = SalesMonth["settlements"][number];
@@ -202,6 +204,8 @@ export function SupplierSales() {
                       {selectedDay.shippingFee ? <div><dt>배송비</dt><dd>{won(selectedDay.shippingFee)}</dd></div> : null}
                     </dl>
                   ) : <p className="sup-muted-text">이 날 판매·반품 내역이 없어요.</p>}
+                  {/* 세부내역 보기: 상품별 단가(도매 = 공급가) × 수량 · 반품 · 배송비 → 이 날 합계. 판매 없는 날은 숨기고 펼친 상태는 기억 */}
+                  <SupplierDayDetail date={selected} settings={settings} version={view} hidden={!selectedDay} />
                   {selectedPayout && (
                     <div className={`sup-day-payout ${selectedPayout.payout.done ? "is-done" : ""}`}>
                       <Banknote size={17} aria-hidden="true" />

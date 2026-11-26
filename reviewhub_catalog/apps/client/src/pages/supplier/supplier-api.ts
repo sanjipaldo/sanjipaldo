@@ -173,6 +173,33 @@ export type SalesMonth = {
   settlementState?: SupplierSettlementState | null;
 };
 
+/** 판매·정산 날짜 '세부내역 보기'(GET /supplier/sales/day?date=): 같은 상품·같은 단가끼리 모은 그날 판매 */
+export type SalesDayLine = {
+  key: string;
+  productId: string | null;
+  productCode: string | null;
+  productName: string;
+  imageUrl: string | null;
+  unitPrice: number | null; // 일반 도매 = 공급가(원가, 모르면 null), 판매수수료 = 판매 단가
+  quantity: number;
+  netQuantity: number;
+  returnQuantity: number;
+  saleAmount: number; // 단가 × 판매 수량
+  returnAmount: number; // 단가 × 반품 수량
+  netAmount: number; // 반품 뺀 금액
+  shippingFee: number; // 배송비(100% 입금)
+  orders: number;
+  costMissing: boolean;
+};
+
+export type SalesDayDetail = {
+  date: string;
+  type: SupplierSettlementType;
+  settings: SupplierSettlementSettings;
+  lines: SalesDayLine[];
+  totals: SalesDay & { goodsAmount: number; shippingFee: number; payoutAmount: number; costMissing: number };
+};
+
 export type SupplierDashboard = SupplierProfile & {
   today: string;
   month: string;

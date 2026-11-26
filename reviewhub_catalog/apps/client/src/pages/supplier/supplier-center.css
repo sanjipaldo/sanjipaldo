@@ -220,6 +220,55 @@
 .sup-day-payout strong { font-size: 14px; }
 .sup-day-payout span { color: var(--w-body); font-size: 13px; line-height: 1.5; }
 .sup-day-payout.is-done { color: var(--w-body); background: var(--w-soft-2); }
+/* 날짜 카드 '세부내역 보기'(2026-11-26): 상품별 단가 × 수량 · 반품 · 배송비 → 이 날 합계를 영수증처럼 펼침 */
+.sup-day-detail { margin-top: 12px; }
+.sup-day-detail-toggle { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 44px; padding: 10px 14px; border: 1px solid var(--w-line); border-radius: var(--w-radius-md); color: var(--w-positive-deep); background: var(--w-canvas); font-size: 14px; font-weight: 800; cursor: pointer; }
+.sup-day-detail-toggle:hover { background: var(--w-soft-2); }
+.sup-day-detail-toggle:focus-visible { outline: 2px solid var(--w-positive-deep); outline-offset: 2px; }
+.sup-day-detail-chevron { transition: transform 0.15s ease; }
+.sup-day-detail.is-open .sup-day-detail-toggle { border-color: transparent; background: var(--w-soft-2); }
+.sup-day-detail.is-open .sup-day-detail-chevron { transform: rotate(180deg); }
+.sup-day-detail-panel { margin-top: 8px; padding: 12px; border-radius: var(--w-radius-md); background: var(--w-soft-2); }
+.sup-day-detail-panel[hidden] { display: none; }
+.sup-day-detail-panel .admin-loading.inline { padding: 10px 0; }
+.sup-day-detail-caption { margin: 0 0 8px; color: var(--w-mute); font-size: 12.5px; }
+.sup-day-lines { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; container-type: inline-size; }
+/* 한 상품: 왼쪽 썸네일, 오른쪽에 이름 → 단가 × 수량(반품·반품 뺀 금액) → 배송비.
+   목록 폭이 좁으면(PC 달력 옆 칸·작은 휴대폰) 계산 줄을 썸네일 아래 전체 너비로 내려 '단가 × 수량 … 금액'이 한 줄에 들어가게 */
+.sup-day-lines > li { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: start; column-gap: 10px; row-gap: 2px; padding: 10px; border-radius: 10px; background: var(--w-canvas); }
+.sup-day-lines > li > .sa-thumb { grid-row: 1 / span 3; }
+.sup-day-line-head, .sup-day-line-calc, .sup-day-line-ship { grid-column: 2; min-width: 0; }
+.sup-day-line-head { display: grid; gap: 1px; }
+.sup-day-line-name { color: var(--w-ink); font-size: 14px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+.sup-day-line-code { color: var(--w-mute); font-size: 12px; }
+.sup-nowrap { white-space: nowrap; }
+.sup-day-line-calc { display: grid; gap: 3px; margin: 2px 0 0; }
+.sup-day-line-calc > div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sup-day-line-calc dt { min-width: 0; color: var(--w-body); font-size: 13px; overflow-wrap: anywhere; }
+.sup-day-line-calc dd { flex: 0 0 auto; margin: 0; color: var(--w-ink); font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sup-day-line-calc .is-return dt, .sup-day-line-calc .is-return dd { color: var(--w-negative); }
+.sup-day-line-calc .is-subtotal { padding-top: 4px; border-top: 1px dashed var(--w-line); }
+.sup-day-line-calc .is-subtotal dt { color: var(--w-ink); font-weight: 700; }
+.sup-day-line-calc .is-subtotal dd { color: var(--w-positive-deep); font-weight: 800; }
+.sup-day-line-ship { display: inline-flex; align-items: center; justify-self: start; gap: 4px; margin-top: 2px; color: var(--w-mute); font-size: 12.5px; }
+.sup-day-line-ship svg { flex: 0 0 auto; }
+.sup-day-sum { margin-top: 10px; padding: 0 12px; border-radius: 10px; background: var(--w-canvas); }
+.sup-day-sum > div { padding: 9px 0; }
+.sup-day-detail-warn { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; color: var(--w-warning-content); background: var(--w-warning-pale); font-size: 12.5px; line-height: 1.5; }
+.sup-day-detail-note { margin: 8px 0 0; color: var(--w-body); font-size: 12.5px; line-height: 1.55; }
+.sup-day-detail-error { display: grid; justify-items: start; gap: 4px; color: var(--w-body); font-size: 13px; }
+@container (max-width: 300px) {
+  .sup-day-lines > li > .sa-thumb { grid-row: 1; }
+  .sup-day-line-head { align-self: center; }
+  .sup-day-line-calc, .sup-day-line-ship { grid-column: 1 / -1; }
+  .sup-day-line-calc { margin-top: 6px; }
+}
+@media (max-width: 380px) {
+  .sup-day-detail-panel { padding: 10px; }
+  .sup-day-sum { padding: 0 10px; }
+  .sup-day-sum dt { font-size: 13px; }
+  .sup-day-sum .is-total dd { font-size: 16px; }
+}
 /* 정산 카드(2026-11-26, 달력 아래 전체 너비): 기간 칸 · 판매 없는 기간 · 판매 수수료 · 안내를 나란히 놓고 좁으면 한 줄씩 */
 .sup-settle-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 12px; }
 .sup-settle-list > article, .sup-settle-list > .sup-fee-block, .sup-settle-list > .sup-settle-notes { min-width: 0; margin: 0; padding: 12px 14px; border: 1px solid var(--w-line); border-radius: var(--w-radius-md); }

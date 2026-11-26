@@ -22,6 +22,7 @@ import {
   type SupplierSettlementCycle,
   type SupplierSettlementSettings,
   type SupplierSettlementState,
+  type SupplierSettlementType,
   type FeeInvoiceState,
   type SupplierSettlementStatus
 } from "@repo/shared/supplier-portal";
@@ -253,6 +254,77 @@ export async function supplierLedgerByProduct(supplierName: string, start: strin
     imageUrl: row.imageUrl ?? null,
     ...toLedger(row)
   }));
+}
+
+/** 하루 세부내역 한 줄: 같은 상품·같은 단가끼리 모은 판매(공급사 센터 '세부내역 보기') */
+export type SupplierDayLine = {
+  key: string;
+  productId: string | null;
+  productCode: string | null;
+  productName: string;
+  imageUrl: string | null;
+  unitPrice: number | null; // 일반 도매 = 공급가(원가, 모르면 null), 판매수수료 = 판매 단가
+  quantity: number;
+  netQuantity: number;
+  returnQuantity: number;
+  saleAmount: number; // 단가 × 판매 수량
+  returnAmount: number; // 단가 × 반품 수량
+  netAmount: number; // 반품 뺀 금액(날짜 카드 '공급 금액(반품 뺌)'·'순매출'과 같은 계산)
+  shippingFee: number; // 공급사 매입 배송비(100% 지급)
+  orders: number;
+  costMissing: boolean; // 일반 도매인데 공급가(원가)를 모르는 줄
+};
+
+/**
+ * 한 공급사의 하루 판매를 상품·단가별로 모읍니다(2026-11-26 관리자 요청: 판매·정산 달력 날짜 '세부내역 보기').
+ * - 일반 도매: 공급가(원가)로만 묶고 계산합니다. 두고푸드 판매가·판매 금액 칸은 읽지도 않습니다(공급사에게 보내지 않음).
+ * - 판매수수료: 판매 단가(두고푸드 공급가)로 묶고, 반품 뺀 금액은 장부와 같이 판매 줄 금액을 더합니다.
+ * 같은 상품이라도 날마다 원가·단가가 다를 수 있어 상품 + 단가로 나눕니다. 줄을 모두 더하면 같은 날 장부(supplierLedgerByDay) 금액과 같습니다.
+ */
+export async function supplierDayLines(supplierName: string, date: string, type: SupplierSettlementType): Promise<SupplierDayLine[]> {
+  const wholesale = type === "wholesale";
+  const key = sql<string>`coalesce(${L.productId}, 'bj:' || ${L.baljuoraProductId}, 'name:' || ${L.productName})`;
+  const unit = wholesale ? sql<number | null>`${unitCost}` : sql<number | null>`${L.unitPrice}`;
+  const rows = await getDb().select({
+    key,
+    unit,
+    productId: sql<string | null>`max(${L.productId})`,
+    productCode: sql<string | null>`max(${L.productCode})`,
+    productName: sql<string>`max(${L.productName})`,
+    imageUrl: sql<string | null>`max(${products.imageUrl})`,
+    quantity: sql<number>`coalesce(sum(${L.quantity}), 0)`,
+    netQuantity: sql<number>`coalesce(sum(${L.netQuantity}), 0)`,
+    // 판매 줄 금액은 두고푸드 판매가 기준이라 판매수수료 방식에서만 더합니다.
+    lineAmount: wholesale ? sql<number>`0` : sql<number>`coalesce(sum(${L.amount}), 0)`,
+    shippingFee: sql<number>`coalesce(sum(${L.purchaseShippingFee}), 0)`,
+    orders: sql<number>`count(distinct coalesce(${L.orderId}, ${L.id}))`
+  }).from(L).leftJoin(products, eq(products.id, L.productId))
+    .where(inRange(date, date, supplierName))
+    .groupBy(key, unit);
+  return rows.map((row) => {
+    const quantity = Number(row.quantity ?? 0);
+    const netQuantity = Number(row.netQuantity ?? 0);
+    const returnQuantity = Math.max(0, quantity - netQuantity);
+    const unitPrice = row.unit === null || row.unit === undefined ? null : Number(row.unit);
+    const price = unitPrice ?? 0;
+    return {
+      key: `${row.key}|${unitPrice ?? "-"}`,
+      productId: row.productId && !row.productId.startsWith("bj:") ? row.productId : null,
+      productCode: row.productCode,
+      productName: row.productName,
+      imageUrl: row.imageUrl ?? null,
+      unitPrice,
+      quantity,
+      netQuantity,
+      returnQuantity,
+      saleAmount: price * quantity,
+      returnAmount: price * returnQuantity,
+      netAmount: wholesale ? price * netQuantity : Number(row.lineAmount ?? 0),
+      shippingFee: Number(row.shippingFee ?? 0),
+      orders: Number(row.orders ?? 0),
+      costMissing: wholesale && unitPrice === null && netQuantity > 0
+    };
+  }).sort((first, second) => second.netAmount - first.netAmount || second.quantity - first.quantity || first.productName.localeCompare(second.productName, "ko"));
 }
 
 /** 공급사별 장부(이름 없는 판매는 "(공급사 미지정)") */

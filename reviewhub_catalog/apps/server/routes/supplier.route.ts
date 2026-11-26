@@ -5,7 +5,7 @@
 import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { z } from "zod";
 import { apiFailure, apiSuccess } from "@repo/shared/http";
-import { isMonthKey, seoulDateKey } from "@repo/shared/supplier-portal";
+import { isDateKey, isMonthKey, seoulDateKey } from "@repo/shared/supplier-portal";
 import { DatabaseError } from "../_core/db";
 import {
   cancelSupplierRequest,
@@ -13,6 +13,7 @@ import {
   createSupplierRequest,
   getSupplierContext,
   getSupplierDashboard,
+  getSupplierSalesDay,
   getSupplierSalesMonth,
   listSupplierCategories,
   listSupplierProducts,
@@ -159,6 +160,17 @@ supplierRouter.get("/sales", supplierAuth, async (c) => {
   const month = isMonthKey(requested) ? requested : seoulDateKey().slice(0, 7);
   try {
     return c.json(apiSuccess(await getSupplierSalesMonth(c.var.supplierContext, month)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 판매·정산 달력 날짜 '세부내역 보기'(2026-11-26): 그날 상품·단가별 수량·반품·배송비와 합계. 일반 도매는 공급가(원가)로만 보냅니다.
+supplierRouter.get("/sales/day", supplierAuth, async (c) => {
+  const date = c.req.query("date");
+  if (!isDateKey(date)) return c.json(apiFailure("INVALID_INPUT", "날짜를 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess(await getSupplierSalesDay(c.var.supplierContext, date)));
   } catch (error) {
     return errorResponse(c, error);
   }

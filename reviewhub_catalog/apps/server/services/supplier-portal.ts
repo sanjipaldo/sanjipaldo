@@ -59,11 +59,13 @@ import { createProduct, updateProduct, type ProductInput } from "./catalog";
 import { getHometaxSettings } from "./baljuora-sales";
 import {
   effectiveSettlementFor,
+  emptyLedgerRow,
   feeState,
   invoiceState,
   ledgerBetween,
   payoutState,
   settlementRecords,
+  supplierDayLines,
   supplierLedgerByDay,
   supplierLedgerByProduct,
   syncStoredSettlementFromAccount,
@@ -946,6 +948,36 @@ export async function getSupplierSalesMonth(context: SupplierContext, month: str
         return { date: period.payoutStart, endDate: period.payoutEnd, periodStart: period.start, periodEnd: period.end, amount: summary.payoutAmount, done: period.payoutEnd < today, state: payoutState(recordOf(payoutRecordKey(period))) };
       }),
       fees
+    };
+  });
+}
+
+/**
+ * 판매·정산 달력에서 고른 날의 세부내역(2026-11-26 관리자 요청 '세부내역 보기'): 상품·단가별 수량·반품·배송비와 합계.
+ * 일반 도매는 공급가(원가) × 수량, 판매수수료는 판매 단가 × 수량. 합계는 달력·날짜 카드와 같은 장부로 계산해 줄을 더한 값과 같습니다.
+ */
+export async function getSupplierSalesDay(context: SupplierContext, date: string) {
+  return guarded(async () => {
+    const settings = await supplierSettlementSettings(context);
+    const supplierName = context.supplier.name;
+    const [lines, byDay] = await Promise.all([
+      supplierDayLines(supplierName, date, settings.type),
+      supplierLedgerByDay(supplierName, date, date)
+    ]);
+    const ledger = byDay.get(date) ?? emptyLedgerRow();
+    const amounts = settlementAmounts(ledger, settings);
+    return {
+      date,
+      type: settings.type,
+      settings,
+      lines: lines.filter((line) => line.quantity > 0 || line.netAmount !== 0 || line.shippingFee !== 0),
+      totals: {
+        ...facingDay(date, ledger, settings.type),
+        goodsAmount: amounts.goodsAmount,
+        shippingFee: amounts.shippingFee,
+        payoutAmount: amounts.payoutAmount,
+        costMissing: settings.type === "wholesale" ? ledger.costMissing : 0
+      }
     };
   });
 }

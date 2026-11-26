@@ -431,3 +431,83 @@ describe("공급사 판매·정산", () => {
     expect(dashboard.data.fees).toEqual([]);
   });
 });
+
+// 판매·정산 달력 날짜 '세부내역 보기'(2026-11-26 관리자 요청): 그날 어떤 상품이 얼마(단가)에 몇 개 팔려 합계가 됐는지, 반품·배송비까지.
+type DayDetailBody = {
+  date: string;
+  type: string;
+  lines: Array<{ productName: string; unitPrice: number | null; quantity: number; returnQuantity: number; saleAmount: number; returnAmount: number; netAmount: number; shippingFee: number; costMissing: boolean }>;
+  totals: { date: string; saleAmount: number; saleQuantity: number; returnAmount: number; returnQuantity: number; orderCount: number; netAmount: number; goodsAmount: number; shippingFee: number; payoutAmount: number; costMissing: number };
+};
+const lineRow = (line: DayDetailBody["lines"][number]) => [line.productName, line.unitPrice, line.quantity, line.returnQuantity, line.saleAmount, line.returnAmount, line.netAmount, line.shippingFee, line.costMissing];
+
+describe("공급사 판매·정산 날짜 세부내역", () => {
+  it("일반 도매: 공급가(원가) × 수량·반품·배송비로 그날 합계를 나누어 보여 주고, 두고푸드 판매가는 보내지 않습니다", async () => {
+    const admin = await adminToken();
+    const token = await supplierToken(admin);
+    expect((await putSettlement(admin, "sup-a", { type: "wholesale", cycle: "weekly" })).status).toBe(200);
+    // 11/18: 사과(원가 20,000원) 3개 중 1개 반품 + 배송비 4,000원 · 같은 사과가 다른 원가(21,000원)로 1개 ·
+    // 배(발주오라 원가 없음 → DB센터 원가 30,000원) · 원가를 모르는 상품. 두고푸드 판매가는 26,170 · 38,170 · 9,370원
+    await saleLine("dl1", { saleDate: "2026-11-18", productId: "p-a1", productName: "봄날 사과 5kg", quantity: 3, netQuantity: 2, unitPrice: 26170, unitCost: 20000, purchaseShippingFee: 4000, salesShippingFee: 5000 });
+    await saleLine("dl2", { saleDate: "2026-11-18", productId: "p-a1", productName: "봄날 사과 5kg", quantity: 1, unitPrice: 26170, unitCost: 21000 });
+    await saleLine("dl3", { saleDate: "2026-11-18", productId: "p-a2", productName: "봄날 배 7.5kg", quantity: 1, unitPrice: 38170, unitCost: null });
+    await saleLine("dl4", { saleDate: "2026-11-18", productId: null, productName: "모르는 상품", quantity: 1, unitPrice: 9370, unitCost: null });
+    // 다른 날 · 다른 공급사 · 주문대기는 빠짐
+    await saleLine("dl5", { saleDate: "2026-11-19", productId: "p-a1", productName: "봄날 사과 5kg", quantity: 7, unitPrice: 26170, unitCost: 20000 });
+    await saleLine("dl6", { saleDate: "2026-11-18", supplierName: "이웃농장(테스트)", productId: "p-b1", productName: "이웃 감귤 3kg", quantity: 5, unitPrice: 12170, unitCost: 9000 });
+    await saleLine("dl7", { saleDate: "2026-11-18", productId: "p-a1", productName: "봄날 사과 5kg", quantity: 4, unitPrice: 26170, unitCost: 20000, status: "pending" });
+
+    const res = await fetchWithAuth(app, token, "/api/supplier/sales/day?date=2026-11-18");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const text = await res.clone().text();
+    const body = await json<DayDetailBody>(res);
+    expect(body.data).toMatchObject({ date: "2026-11-18", type: "wholesale" });
+    // 상품 + 원가별로 나누고, 반품 뺀 공급 금액이 큰 순서
+    expect(body.data.lines.map(lineRow)).toEqual([
+      ["봄날 사과 5kg", 20000, 3, 1, 60000, 20000, 40000, 4000, false],
+      ["봄날 배 7.5kg", 30000, 1, 0, 30000, 0, 30000, 0, false],
+      ["봄날 사과 5kg", 21000, 1, 0, 21000, 0, 21000, 0, false],
+      ["모르는 상품", null, 1, 0, 0, 0, 0, 0, true]
+    ]);
+    // 합계 = 공급 금액(반품 뺌) 91,000원 + 배송비 4,000원
+    expect(body.data.totals).toMatchObject({ saleAmount: 111000, returnAmount: 20000, netAmount: 91000, goodsAmount: 91000, shippingFee: 4000, payoutAmount: 95000, costMissing: 1, saleQuantity: 6, returnQuantity: 1, orderCount: 4 });
+    expect(body.data.lines.reduce((sum, line) => sum + line.netAmount, 0)).toBe(body.data.totals.netAmount);
+    expect(body.data.lines.reduce((sum, line) => sum + line.shippingFee, 0)).toBe(body.data.totals.shippingFee);
+    // 달력 날짜 카드(월 판매 내역의 그날)와 같은 금액
+    const month = await json<{ days: Array<Record<string, unknown>> }>(await fetchWithAuth(app, token, "/api/supplier/sales?month=2026-11"));
+    expect(body.data.totals).toMatchObject(month.data.days.find((day) => day.date === "2026-11-18")!);
+    // 두고푸드 판매가(단가·판매 금액)와 다른 공급사 판매는 응답에 없음
+    for (const hidden of ["26170", "52340", "78510", "38170", "9370", "12170", "이웃 감귤"]) expect(text).not.toContain(hidden);
+
+    // 판매 없는 날은 빈 목록 · 0원
+    const empty = await json<DayDetailBody>(await fetchWithAuth(app, token, "/api/supplier/sales/day?date=2026-11-20"));
+    expect(empty.data.lines).toEqual([]);
+    expect(empty.data.totals).toMatchObject({ saleAmount: 0, netAmount: 0, shippingFee: 0, payoutAmount: 0 });
+  });
+
+  it("판매수수료: 판매 단가 × 수량, 반품 뺀 판매 대금 + 배송비 = 그날 정산 금액", async () => {
+    const admin = await adminToken();
+    const token = await supplierToken(admin);
+    await saleLine("dc1", { saleDate: "2026-11-02", productId: "p-a1", productName: "봄날 사과 5kg", quantity: 5, netQuantity: 4, unitPrice: 20000 });
+    await saleLine("dc2", { saleDate: "2026-11-02", productId: "p-a2", productName: "봄날 배 7.5kg", quantity: 6, unitPrice: 30000, purchaseShippingFee: 3000 });
+    const body = await json<DayDetailBody>(await fetchWithAuth(app, token, "/api/supplier/sales/day?date=2026-11-02"));
+    expect(body.data.type).toBe("commission");
+    expect(body.data.lines.map(lineRow)).toEqual([
+      ["봄날 배 7.5kg", 30000, 6, 0, 180000, 0, 180000, 3000, false],
+      ["봄날 사과 5kg", 20000, 5, 1, 100000, 20000, 80000, 0, false]
+    ]);
+    expect(body.data.totals).toMatchObject({ saleAmount: 280000, returnAmount: 20000, netAmount: 260000, goodsAmount: 260000, shippingFee: 3000, payoutAmount: 263000, costMissing: 0 });
+  });
+
+  it("날짜가 틀리면 400, 로그인 없으면 401, 공급사 계정이 아니면 403", async () => {
+    const admin = await adminToken();
+    const token = await supplierToken(admin);
+    for (const bad of ["2026-11-31", "2026-13-01", "11/18", "2026-11-1", ""]) {
+      expect((await fetchWithAuth(app, token, `/api/supplier/sales/day?date=${encodeURIComponent(bad)}`)).status).toBe(400);
+    }
+    expect((await fetchWithAuth(app, token, "/api/supplier/sales/day")).status).toBe(400);
+    expect((await app.fetch(new Request("http://localhost/api/supplier/sales/day?date=2026-11-18"))).status).toBe(401);
+    expect((await fetchWithAuth(app, admin, "/api/supplier/sales/day?date=2026-11-18")).status).toBe(403);
+  });
+});
