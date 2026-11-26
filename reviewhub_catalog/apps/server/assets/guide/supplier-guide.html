@@ -133,10 +133,19 @@ b { font-weight: 700; }
 .chip.green { color: #1d6b16; background: #dff3d3; }
 .chip.red { color: #b42323; background: #fde3e3; }
 .chip.blue { color: #1f4f9c; background: #e3ecfb; }
+.chip.special { color: #8a4300; background: #ffe7c7; box-shadow: inset 0 0 0 1px #f6c98d; letter-spacing: .02em; }
+.special-card { background: #f7f8f5 !important; }
+.warn { margin-top: 12px; display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #fff4e3; border: 1px solid #f6d6a8; }
+.warn .ic { width: 19px; height: 19px; margin-top: 1px; color: #c26a00; }
+.warn p { margin: 0 !important; font-size: 13.5px !important; line-height: 1.55 !important; color: #6b4a1f !important; }
+.warn b { color: #4a3000; }
 
 /* 1. 표지 */
+.cover::before { display: none; }
+.cover .cover-bg { position: absolute; z-index: 0; left: 520px; top: 0; width: 760px; height: 720px; }
+.cover .frame, .cover .phone { z-index: 2; }
 .cover .cover-logo { position: absolute; z-index: 2; left: 64px; top: 52px; height: 56px; }
-.cover .cover-top { position: absolute; z-index: 2; right: 64px; top: 70px; font-size: 12.5px; font-weight: 800; letter-spacing: .2em; color: var(--g); }
+.cover .cover-top { position: absolute; z-index: 2; right: 64px; top: 62px; padding: 8px 15px; border-radius: 999px; background: rgba(255, 255, 255, .88); box-shadow: 0 6px 18px rgba(22, 51, 0, .08); font-size: 12.5px; font-weight: 800; letter-spacing: .2em; color: var(--g); }
 .cover .cover-text { position: absolute; z-index: 2; left: 64px; top: 196px; width: 520px; }
 .cover .cover-kicker { font-size: 18px; font-weight: 800; color: var(--g-text); }
 .cover h1 { margin-top: 14px; font-size: 62px; font-weight: 800; line-height: 1.16; letter-spacing: -0.055em; }
@@ -206,11 +215,12 @@ b { font-weight: 700; }
 .calc.dark tr.total td:last-child { color: var(--lime); }
 .fit { position: absolute; left: 24px; right: 24px; bottom: 20px; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 11px; background: rgba(255, 255, 255, .75); font-size: 13px !important; font-weight: 700; color: var(--g-text) !important; margin: 0 !important; }
 .card:not(.pale) .fit { background: var(--gray); }
+.fit.special { background: #fff4e3 !important; color: #8a4300 !important; }
 .fit .ic { width: 16px; height: 16px; }
 .where { position: absolute; left: 18px; right: 18px; bottom: 14px; display: flex; align-items: center; gap: 6px; font-size: 12px !important; font-weight: 700; color: var(--g-text) !important; }
 .where .ic { width: 14px; height: 14px; }
 .mini-steps { list-style: none; margin-top: 8px; display: flex; flex-direction: column; gap: 6px; counter-reset: ms; }
-.mini-steps li { counter-increment: ms; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--body); }
+.mini-steps li { counter-increment: ms; display: flex; align-items: flex-start; line-height: 1.45; gap: 8px; font-size: 13px; color: var(--body); }
 .mini-steps li::before { content: counter(ms); width: 20px; height: 20px; flex: 0 0 auto; border-radius: 50%; background: var(--g); color: #fff; font-size: 11.5px; font-weight: 800; display: grid; place-items: center; }
 .mini-steps b { color: var(--ink); }
 .steps5 { position: absolute; left: 0; right: 0; top: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 34px; }
@@ -270,6 +280,7 @@ b { font-weight: 700; }
 
 <!-- 1. 표지 -->
 <section class="page cover" id="p-cover">
+  <img class="cover-bg" src="{{ASSET_DIR}}/cover-produce.jpg" alt="" />
   <img class="cover-logo" src="{{BRAND_DIR}}/doogo-food-logo-color.png" alt="DOOGO FOOD" />
   <p class="cover-top">SUPPLIER CENTER GUIDE · 2026</p>
   <div class="cover-text">
@@ -597,7 +608,7 @@ b { font-weight: 700; }
     </div>
     <div class="card pale" style="left:836px; right:0; bottom:0; padding:14px 16px;">
       <p style="margin:0; font-size:13.5px; font-weight:800; color:var(--g-text)">보낸 다음에는</p>
-      <ol class="mini-steps"><li>두고푸드가 내용 확인</li><li>상품코드·카테고리를 정해 단가표에 등록</li><li><b>내 상품</b> 목록에 보여요</li></ol>
+      <ol class="mini-steps"><li><span>두고푸드가 내용 확인</span></li><li><span>상품코드·카테고리를 정해 단가표에 등록</span></li><li><span><b>내 상품</b> 목록에 보여요</span></li></ol>
     </div>
   </div>
 </section>
@@ -696,10 +707,19 @@ b { font-weight: 700; }
     </figure>
     <figure class="frame" style="left:608px; top:0; width:240px;">
       <div class="bar">이번 달 입금 일정</div>
-      <div class="shot fade"><img src="{{ASSET_DIR}}/shots/sales-payout.jpg" alt="" />
-        <span class="pin" style="left:72%; top:23%">5</span>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/sales-payout.jpg" alt="" />
+        <span class="pin" style="left:92%; top:31%">5</span>
       </div>
     </figure>
+    <div class="card pale" style="left:608px; top:168px; width:240px; height:240px; padding:16px 16px;">
+      <p style="margin:0; font-size:12.5px; font-weight:800; color:var(--g-text)">월 정산 흐름 · 예시</p>
+      <ol class="mini-steps" style="margin-top:10px; gap:9px">
+        <li><span><b>11월 1~30일</b> 판매</span></li>
+        <li><span><b>12월 1~3일</b> 두고푸드 입금<br /><b style="color:var(--blue)">3,268,500원</b></span></li>
+        <li><span><b>12월 1~3일</b> 수수료 10%<br /><b style="color:var(--orange)">315,300원</b> → 두고푸드</span></li>
+      </ol>
+      <p style="margin-top:10px; font-size:12px; line-height:1.5; color:var(--mute)">입금이 끝나면 '입금 완료 · 날짜'로 바뀌어요.</p>
+    </div>
     <div style="position:absolute; left:872px; top:0; width:296px;">
       <ol class="legend" style="gap:11px">
         <li><i>1</i><div><b>입금 합계</b><span>물품 대금(판매 금액 100%) + 배송비(100%)</span></div></li>
@@ -748,12 +768,12 @@ b { font-weight: 700; }
 <section class="page" data-tab="3" id="p-type">
   <div class="head">
     <div class="row"><div class="badge"><small>정산</small><b>1</b></div><div><p class="kicker">SETTLEMENT TYPE</p><p class="subtitle">정산 방식</p></div></div>
-    <h1>정산 방식은 <em>두 가지</em>예요</h1>
-    <p class="lead">공급사마다 두고푸드와 계약한 방식 하나로 계산해요. 내 방식은 <b>내 정보 › 계정·정산</b>에서 확인해요.</p>
+    <h1>정산 방식은 <em>판매수수료</em>가 기본이에요</h1>
+    <p class="lead">두고푸드 기본은 <b>판매수수료 · 월 정산</b>이에요. 일반 도매(매입)는 해외 상품 같은 <b>스페셜 조건</b>일 때만 가능해요.</p>
   </div>
   <div class="zone">
     <div class="card deep" style="left:0; top:0; width:600px; height:408px; padding:22px 28px;">
-      <div style="display:flex; align-items:center; gap:10px"><span class="chip" style="background:var(--lime); color:var(--deep)">기본 · 권장</span><span class="no">TYPE A</span></div>
+      <div style="display:flex; align-items:center; gap:10px"><span class="chip" style="background:var(--lime); color:var(--deep)">기본 · 모든 공급사</span><span class="no">TYPE A</span></div>
       <h3 style="font-size:26px; margin-top:10px">판매수수료 <span style="color:var(--lime)">10%</span></h3>
       <ul class="points">
         <li><i class="ic" data-icon="banknote"></i><span>두고푸드가 지급 주기마다 <b>판매 대금 100% + 배송비</b>를 먼저 입금해요.</span></li>
@@ -761,29 +781,27 @@ b { font-weight: 700; }
         <li><i class="ic" data-icon="receipt"></i><span>수수료 입금이 확인되면 두고푸드가 <b>'판매대행·마케팅대행 수수료'</b> 세금계산서를 발행해요.</span></li>
       </ul>
       <table class="calc dark">
-        <caption>예시 · 11월 판매분(주 정산)</caption>
+        <caption>예시 · 11월 판매분(월 정산)</caption>
         <tr><td>물품 대금(판매 − 반품)</td><td>3,153,000원</td></tr>
         <tr><td>+ 배송비</td><td>115,500원</td></tr>
-        <tr class="sub"><td>= 두고푸드 입금 합계 <small>매주 월요일에 나눠 입금</small></td><td>3,268,500원</td></tr>
+        <tr class="sub"><td>= 두고푸드 입금 합계 <small>12월 1~3일 입금</small></td><td>3,268,500원</td></tr>
         <tr><td>− 판매 수수료 10% <small>12월 1~3일 → 두고푸드</small></td><td>315,300원</td></tr>
         <tr class="total"><td>= 실 수령</td><td>2,953,200원</td></tr>
       </table>
     </div>
-    <div class="card" style="left:620px; top:0; width:548px; height:408px; padding:22px 28px;">
-      <div style="display:flex; align-items:center; gap:10px"><span class="chip gray">계약에 따라</span><span class="no">TYPE B</span></div>
+    <div class="card special-card" style="left:620px; top:0; width:548px; height:408px; padding:22px 28px;">
+      <div style="display:flex; align-items:center; gap:8px"><span class="chip special"><i class="ic" data-icon="sparkles"></i>SPECIAL 조건</span><span class="chip gray">권장하지 않아요</span><span class="no" style="color:var(--mute)">TYPE B</span></div>
       <h3 style="font-size:26px; margin-top:10px">일반 도매(매입)</h3>
-      <ul class="points">
-        <li><i class="ic" data-icon="banknote"></i><span>두고푸드가 지급 주기마다 <b>공급가(원가) × 판매 수량 + 배송비</b>를 입금해요.</span></li>
+      <div class="warn"><i class="ic" data-icon="shield-alert"></i><p><b>해외 상품처럼 특별한 경우에만</b> 스페셜 조건으로 정해요. 그 밖의 공급사는 두고푸드 기본(<b>판매수수료 · 월 정산</b>)을 지켜 주세요.</p></div>
+      <ul class="points" style="margin-top:10px; gap:6px">
+        <li><i class="ic" data-icon="banknote"></i><span>두고푸드가 <b>공급가(원가) × 판매 수량 + 배송비</b>를 입금해요.</span></li>
         <li><i class="ic" data-icon="ban"></i><span><b>판매 수수료가 없어요.</b> 받은 금액이 그대로 정산 금액이에요.</span></li>
-        <li><i class="ic" data-icon="eye"></i><span>공급사 센터의 판매·정산 금액도 <b>공급가 기준</b>으로 보여요.</span></li>
       </ul>
-      <table class="calc">
+      <table class="calc" style="margin-top:10px">
         <caption>예시 · 공급가 20,000원 상품 10개</caption>
         <tr><td>물품 대금(공급가 × 판매 수량)</td><td>200,000원</td></tr>
         <tr><td>+ 배송비</td><td>35,000원</td></tr>
-        <tr class="sub"><td>= 두고푸드 입금 합계</td><td>235,000원</td></tr>
-        <tr><td>판매 수수료</td><td>0원</td></tr>
-        <tr class="total"><td>= 실 수령</td><td>235,000원</td></tr>
+        <tr class="total"><td>= 두고푸드 입금 · 실 수령</td><td>235,000원</td></tr>
       </table>
     </div>
   </div>
@@ -793,43 +811,43 @@ b { font-weight: 700; }
 <section class="page" data-tab="3" id="p-cycle">
   <div class="head">
     <div class="row"><div class="badge"><small>정산</small><b>2</b></div><div><p class="kicker">PAYOUT CYCLE</p><p class="subtitle">지급 주기</p></div></div>
-    <h1>언제 입금되는지 <em>지급 주기</em>로 정해져요</h1>
-    <p class="lead"><b>주 정산</b>이 기본이에요. 지급 주기도 계약할 때 정하고, <b>내 정보</b>와 대시보드 맨 위에서 확인해요.</p>
+    <h1>입금은 <em>월 정산</em>이 기본이에요</h1>
+    <p class="lead"><b>월 정산</b>이 모든 공급사의 기본이고, 주 정산·매일 정산은 <b>스페셜 조건</b>일 때만 가능해요. 내 주기는 <b>내 정보</b>에서 확인해요.</p>
   </div>
   <div class="zone">
     <div class="card pale" style="left:0; top:0; width:378px; height:330px;">
-      <div style="display:flex; align-items:center; gap:8px"><span class="chip deep">기본</span><span class="no">WEEKLY</span></div>
-      <h3>주 정산</h3>
-      <p><b style="color:var(--ink)">월요일~일요일 판매분</b>을 <b style="color:var(--ink)">다음 주 월요일</b>에 입금해요.</p>
-      <div class="timeline">
-        <div class="sale">월<small>11.23</small></div><div class="sale">화</div><div class="sale">수</div><div class="sale">목</div><div class="sale">금</div><div class="sale">토</div><div class="sale">일<small>11.29</small></div><div class="pay">월<small>11.30</small></div>
-      </div>
-      <p style="font-size:13px">예시 · 11.23~11.29 판매분 → <b style="color:var(--blue)">11월 30일(월) 입금</b></p>
-      <p class="fit"><i class="ic" data-icon="store"></i>대부분의 공급사가 쓰는 기본 주기</p>
-    </div>
-    <div class="card" style="left:395px; top:0; width:378px; height:330px;">
-      <span class="no">MONTHLY</span>
+      <div style="display:flex; align-items:center; gap:8px"><span class="chip deep">기본</span><span class="no">MONTHLY</span></div>
       <h3>월 정산</h3>
       <p><b style="color:var(--ink)">1일~말일 판매분</b>을 <b style="color:var(--ink)">다음 달 1~3일</b>에 입금해요.</p>
       <div class="timeline">
         <div class="sale">11월 1일</div><div class="sale">…</div><div class="sale">11월 30일</div><div class="pay">12월<small>1~3일</small></div>
       </div>
       <p style="font-size:13px">예시 · 11월 판매분 → <b style="color:var(--blue)">12월 1~3일 입금</b></p>
-      <p class="fit"><i class="ic" data-icon="calendar-days"></i>한 달 치를 한 번에 받는 방식</p>
+      <p class="fit"><i class="ic" data-icon="store"></i>모든 공급사의 기본 주기</p>
+    </div>
+    <div class="card" style="left:395px; top:0; width:378px; height:330px;">
+      <div style="display:flex; align-items:center; gap:8px"><span class="chip special"><i class="ic" data-icon="sparkles"></i>SPECIAL</span><span class="no">WEEKLY</span></div>
+      <h3>주 정산</h3>
+      <p><b style="color:var(--ink)">월요일~일요일 판매분</b>을 <b style="color:var(--ink)">다음 주 월요일</b>에 입금해요.</p>
+      <div class="timeline">
+        <div class="sale">월<small>11.23</small></div><div class="sale">화</div><div class="sale">수</div><div class="sale">목</div><div class="sale">금</div><div class="sale">토</div><div class="sale">일<small>11.29</small></div><div class="pay">월<small>11.30</small></div>
+      </div>
+      <p style="font-size:13px">예시 · 11.23~11.29 판매분 → <b style="color:var(--blue)">11월 30일(월) 입금</b></p>
+      <p class="fit special"><i class="ic" data-icon="sparkles"></i>스페셜 조건일 때만 · 계약 때 협의</p>
     </div>
     <div class="card" style="left:790px; top:0; width:378px; height:330px;">
-      <span class="no">DAILY</span>
+      <div style="display:flex; align-items:center; gap:8px"><span class="chip special"><i class="ic" data-icon="sparkles"></i>SPECIAL</span><span class="no">DAILY</span></div>
       <h3>매일 정산</h3>
       <p><b style="color:var(--ink)">그날 판매분</b>을 <b style="color:var(--ink)">그날</b> 입금해요. 두고푸드가 먼저 입금해야 출고하는 공급사용이에요.</p>
       <div class="timeline">
         <div class="sale">11.26 판매</div><div class="pay">11.26 입금</div><div style="background:#fff3c9; color:#7a5a00">입금 확인 후<small>출고</small></div>
       </div>
       <p style="font-size:13px">예시 · 11월 26일 판매분 → <b style="color:var(--blue)">11월 26일 입금</b></p>
-      <p class="fit"><i class="ic" data-icon="truck"></i>입금이 확인되면 출고하는 공급사</p>
+      <p class="fit special"><i class="ic" data-icon="sparkles"></i>스페셜 조건일 때만 · 입금 확인 후 출고</p>
     </div>
     <div class="flow" style="padding:14px 20px;">
       <span class="sq" style="width:38px; height:38px; background:var(--orange)"><i class="ic" data-icon="hand-coins"></i></span>
-      <span style="font-size:14.5px; line-height:1.5; color:var(--body)"><b style="color:var(--ink)">판매 수수료는 지급 주기와 상관없이 한 달에 한 번</b>이에요. 판매수수료 방식이면 매달 1~3일에 지난달 판매 대금(배송비 제외)의 10%를 두고푸드로 보내 주세요.</span>
+      <span style="font-size:14.5px; line-height:1.5; color:var(--body)"><b style="color:var(--ink)">판매 수수료는 지급 주기와 상관없이 한 달에 한 번</b>이에요. 매달 1~3일에 지난달 판매 대금(배송비 제외)의 10%를 두고푸드로 보내 주세요.</span>
     </div>
   </div>
 </section>
@@ -883,7 +901,7 @@ b { font-weight: 700; }
     <div><h3><i>Q</i>정산 금액은 어떻게 계산되나요?</h3><p>판매 금액(공급가 × 판매 수량)에서 <b>반품을 빼고 배송비를 더해요.</b> 판매수수료 방식이면 수수료는 다음 달 1~3일에 따로 보내요.</p></div>
     <div><h3><i>Q</i>판매 수수료에 배송비도 들어가나요?</h3><p>아니요. 수수료는 <b>판매 대금(배송비 제외)</b> 기준이고, 배송비는 100% 공급사 몫이에요.</p></div>
     <div><h3><i>Q</i>주문은 어디서 받나요?</h3><p>지금처럼 두고푸드가 정한 시간에 <b>메일로 보내는 발주서(엑셀)</b>로 받아요. 출고 후 그 메일에 택배사·송장번호를 넣어 회신해 주세요.</p></div>
-    <div><h3><i>Q</i>정산 방식·지급 주기를 바꾸고 싶어요.</h3><p>계약 기준이라 <b>담당자와 협의 후 두고푸드가 바꿔</b> 드려요. 바뀐 내용은 내 정보에 바로 보여요.</p></div>
+    <div><h3><i>Q</i>정산 방식·지급 주기를 바꾸고 싶어요.</h3><p>기본은 <b>판매수수료 · 월 정산</b>이에요. 주 정산·매일 정산·일반 도매는 <b>스페셜 조건</b>이라 담당자와 협의해 정해요.</p></div>
   </div>
 </section>
 
