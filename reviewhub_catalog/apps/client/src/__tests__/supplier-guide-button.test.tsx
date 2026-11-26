@@ -1,4 +1,4 @@
-// 공급사 센터 위 줄 "공급사 안내" 버튼(2026-11-26): 로그인한 공급사 화면에만 있고, 설명서 링크가 있으면 새 탭으로 엽니다.
+// 공급사 센터 위 줄 "공급사 안내" 버튼(2026-11-26): 로그인한 공급사 화면에만 있고, 설명서(DocSend) 링크를 새 탭으로 엽니다.
 import React from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -19,7 +19,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 import { SupplierCenterRoute } from "@/pages/supplier/SupplierCenter";
-import { SUPPLIER_GUIDE_PENDING_MESSAGE, SupplierGuideButton } from "@/pages/supplier/supplier-guide";
+import { SUPPLIER_GUIDE_PDF_URL, SUPPLIER_GUIDE_PENDING_MESSAGE, SupplierGuideButton } from "@/pages/supplier/supplier-guide";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -49,7 +49,7 @@ afterEach(() => {
 });
 
 describe("공급사 안내 버튼", () => {
-  it("공급사로 로그인하면 위 줄 공급사 이름 옆에 있고, 링크가 없으면 준비 중이라고 안내합니다", async () => {
+  it("공급사로 로그인하면 위 줄 공급사 이름 옆에 있고, 누르면 두고푸드 공급사 설명서(DocSend)를 새 탭으로 엽니다", async () => {
     apiFetch.mockImplementation(async (path: string) => {
       if (path === "/supplier/me") return json({ ok: true, data: profile });
       if (path === "/supplier/requests") return json({ ok: true, data: { requests: [] } });
@@ -57,10 +57,12 @@ describe("공급사 안내 버튼", () => {
     });
     renderCenter();
     const header = (await screen.findByText("DOOGO FOOD 공급사 센터")).closest("header") as HTMLElement;
-    const button = within(header).getByRole("button", { name: "공급사 안내" });
+    const link = within(header).getByRole("link", { name: "공급사 안내" });
     expect(within(header).getByText("봄날농원")).toBeTruthy();
-    fireEvent.click(button);
-    expect(toastMock).toHaveBeenCalledWith(SUPPLIER_GUIDE_PENDING_MESSAGE);
+    expect(SUPPLIER_GUIDE_PDF_URL).toBe("https://docsend.com/view/ggjdri9ntqcikrhn");
+    expect(link.getAttribute("href")).toBe(SUPPLIER_GUIDE_PDF_URL);
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
   });
 
   it("관리자 계정처럼 공급사가 아니면 공급사 센터 대신 안내 화면이라 버튼이 없습니다", async () => {
@@ -74,7 +76,13 @@ describe("공급사 안내 버튼", () => {
     expect(screen.queryByText("공급사 안내")).toBeNull();
   });
 
-  it("설명서 링크가 있으면 새 탭으로 엽니다", () => {
+  it("링크를 비우면 눌렀을 때 준비 중이라고 안내합니다", () => {
+    render(<SupplierGuideButton url="" />);
+    fireEvent.click(screen.getByRole("button", { name: "공급사 안내" }));
+    expect(toastMock).toHaveBeenCalledWith(SUPPLIER_GUIDE_PENDING_MESSAGE);
+  });
+
+  it("다른 설명서 링크를 주면 그 주소를 새 탭으로 엽니다", () => {
     render(<SupplierGuideButton url="https://example.com/doogo-food-supplier-guide.pdf" />);
     const link = screen.getByRole("link", { name: "공급사 안내" });
     expect(link.getAttribute("href")).toBe("https://example.com/doogo-food-supplier-guide.pdf");
