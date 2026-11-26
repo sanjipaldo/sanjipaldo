@@ -2,6 +2,7 @@
 // - 마스터 관리자가 만들어 준 공급사 아이디·비밀번호로 로그인합니다(회원가입 없음).
 // - 화면 틀은 마스터 관리자와 같은 모양(왼쪽 메뉴 · 위 제목 줄 · 카드)입니다.
 // - 메뉴: 대시보드 · 내 상품 · 변경 요청 내역 · 판매·정산 · 내 정보, 왼쪽 위 "상품 등록 요청".
+// - 위 줄 오른쪽: "공급사 안내"(두고푸드 공급사 설명서 PDF, supplier-guide.tsx) · 공급사 이름.
 // 공급사에게 보이는 화면이라 주문 프로그램 이름(도매몰 시스템)은 쓰지 않습니다.
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -38,6 +39,7 @@ import {
   settlementPlanText
 } from "@repo/shared/supplier-portal";
 import { shortDateTime, supplierGet, supplierPost, type SupplierProfile, type SupplierRequestItem } from "./supplier-api";
+import { SupplierGuideButton } from "./supplier-guide";
 import { CreateRequestModal, SupplierProducts } from "./SupplierProducts";
 import { SupplierRequests } from "./SupplierRequests";
 import { SupplierSales } from "./SupplierSales";
@@ -339,7 +341,7 @@ function SupplierShell({ section, profile }: { section: SupplierSection; profile
         <header className="admin-topbar">
           <button className="mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="메뉴 열기"><Menu size={21} /></button>
           <div><strong>{current?.label}</strong><span>DOOGO FOOD 공급사 센터</span></div>
-          <div className="admin-topbar-tools"><span className="admin-chip sup-chip"><Store size={15} /> <span className="sup-chip-name">{profile.supplier.name}</span></span></div>
+          <div className="admin-topbar-tools"><SupplierGuideButton /><span className="admin-chip sup-chip"><Store size={15} /> <span className="sup-chip-name">{profile.supplier.name}</span></span></div>
         </header>
         <div className="admin-content">
           {section === "home" && <SupplierHome profile={profile} reloadKey={reloadKey} onCreate={openCreate} />}

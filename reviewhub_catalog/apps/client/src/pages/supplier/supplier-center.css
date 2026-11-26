@@ -444,3 +444,7 @@
 @media (max-width: 720px) {
   .sup-cal-fee { padding: 1px 4px; font-size: 9px; }
 }
+
+/* ---------- 위 줄 "공급사 안내" 버튼(설명서 PDF, 2026-11-26) — 관리자 "오늘 운영" 버튼(.today-chip)과 같은 모양 ---------- */
+.supplier-shell .admin-topbar .sup-guide-chip { flex: 0 0 auto; font-family: inherit; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.supplier-shell .admin-topbar .sup-guide-chip svg { flex: 0 0 auto; }

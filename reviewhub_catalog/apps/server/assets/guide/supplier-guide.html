@@ -1,0 +1,942 @@
+<!doctype html>
+<!--
+  두고푸드 공급사 설명서 — 공급사 센터 사용 설명서 (16:9 슬라이드 · 1280×720). scripts/render-supplier-guide-pdf.mjs가 Chromium으로 PDF를 만듭니다.
+  - 형식: 관리자가 준 코워크시티 회사소개서(위 탭 · 아래 로고·쪽 번호)와 두고클래스 파트너스 소개서(번호 뱃지 · 큰 제목 강조 ·
+    브라우저 틀 화면 + 번호 표시 · 아래 요약 카드 · 자주 묻는 질문 · 문의 QR)를 두고푸드 초록으로 맞췄습니다.
+  - {{FONT_DIR}}: Pretendard 글꼴 폴더, {{BRAND_DIR}}: 로고 폴더, {{ASSET_DIR}}: 이 폴더(화면 shots/), {{PROPOSAL_DIR}}: 제안서 폴더(카카오톡 QR)로 바뀝니다.
+  - <i class="ic" data-icon="이름"></i>는 lucide 아이콘(ISC) SVG로 바뀝니다.
+  - 화면(shots/)은 로컬 DB의 예시 계정(봄날농원)으로 찍었습니다. 공급사에게 보이는 자료라 주문 프로그램 이름은 쓰지 않습니다.
+  - 위 탭·아래 쪽 번호·차례 쪽 번호는 맨 아래 스크립트가 채웁니다.
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>두고푸드 공급사 설명서</title>
+<style>
+@font-face { font-family: "Pretendard"; font-weight: 400; src: url("{{FONT_DIR}}/Pretendard-Regular.otf"); }
+@font-face { font-family: "Pretendard"; font-weight: 500; src: url("{{FONT_DIR}}/Pretendard-Medium.otf"); }
+@font-face { font-family: "Pretendard"; font-weight: 600; src: url("{{FONT_DIR}}/Pretendard-SemiBold.otf"); }
+@font-face { font-family: "Pretendard"; font-weight: 700; src: url("{{FONT_DIR}}/Pretendard-Bold.otf"); }
+@font-face { font-family: "Pretendard"; font-weight: 800; src: url("{{FONT_DIR}}/Pretendard-ExtraBold.otf"); }
+@page { size: 1280px 720px; margin: 0; }
+:root {
+  --g: #4b9a2f;        /* 두고푸드 로고 초록 */
+  --g-text: #2e7d1f;   /* 작은 글씨용 진한 초록 */
+  --deep: #163300;     /* 진한 초록(뱃지·진한 카드) */
+  --lime: #9fe870;     /* 공급사 센터 버튼 연두 */
+  --pale: #eef7e7;     /* 연한 카드 */
+  --hl: #e2f6d5;
+  --gray: #f4f5f2;
+  --ink: #111410;
+  --body: #4a4f47;
+  --mute: #8a9086;
+  --line: #e3e7df;
+  --bg: #fbfcf9;
+  --blue: #1f5fbf;
+  --orange: #d9730d;
+  --red: #d33c3c;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #fff; }
+body { font-family: "Pretendard", sans-serif; color: var(--ink); letter-spacing: -0.02em; word-break: keep-all; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { position: relative; width: 1280px; height: 720px; overflow: hidden; background: var(--bg); break-after: page; }
+.page:last-child { break-after: auto; }
+.page::before { content: ""; position: absolute; z-index: 0; right: -210px; bottom: -300px; width: 700px; height: 700px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #e6f4da 0%, #eef8e6 55%, rgba(238, 248, 230, 0) 72%); }
+.ic { display: inline-block; width: 20px; height: 20px; flex: 0 0 auto; vertical-align: middle; }
+em { font-style: normal; color: var(--g); }
+b { font-weight: 700; }
+
+/* 위 탭(코워크시티) · 아래 줄 */
+.tabs { position: absolute; z-index: 2; left: 56px; right: 56px; top: 0; height: 62px; display: flex; align-items: center; gap: 30px; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--mute); }
+.tabs span.on { color: var(--g-text); font-weight: 800; }
+.tabs img { margin-left: auto; height: 24px; }
+.foot { position: absolute; z-index: 2; left: 56px; right: 56px; bottom: 0; height: 46px; display: flex; align-items: center; gap: 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--mute); }
+.foot .brand { color: var(--g-text); font-weight: 800; letter-spacing: .12em; font-size: 12.5px; }
+.foot .brand small { margin-left: 8px; letter-spacing: -0.01em; color: var(--mute); font-weight: 600; font-size: 12px; }
+.foot .memo { color: var(--mute); }
+.foot .url { margin-left: auto; }
+.foot .no { color: var(--ink); font-weight: 800; font-size: 13px; min-width: 20px; text-align: right; }
+
+/* 머리(두고클래스: 번호 뱃지 + 영문 작은 제목 + 큰 제목) */
+.head { position: absolute; z-index: 2; left: 56px; right: 56px; top: 82px; }
+.head .row { display: flex; align-items: center; gap: 14px; }
+.badge { width: 54px; height: 54px; flex: 0 0 auto; border-radius: 15px; background: var(--deep); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 8px 18px rgba(22, 51, 0, .18); }
+.badge small { font-size: 10.5px; font-weight: 800; color: var(--lime); letter-spacing: 0; }
+.badge b { font-size: 24px; font-weight: 800; line-height: 1; margin-top: 1px; }
+.kicker { font-size: 12px; font-weight: 800; letter-spacing: .18em; color: var(--g); }
+.subtitle { margin-top: 3px; font-size: 19px; font-weight: 800; letter-spacing: -0.03em; }
+.head h1 { margin-top: 14px; font-size: 38px; font-weight: 800; line-height: 1.22; letter-spacing: -0.045em; }
+.lead { margin-top: 8px; font-size: 16px; line-height: 1.55; color: var(--body); }
+.lead b { color: var(--ink); }
+.zone { position: absolute; z-index: 2; left: 56px; right: 56px; top: 250px; bottom: 62px; }
+
+/* 브라우저 틀 화면 + 번호 표시 + 말풍선 */
+.frame { position: absolute; background: #fff; border: 1px solid #dfe5da; border-radius: 14px; overflow: hidden; box-shadow: 0 16px 36px rgba(22, 51, 0, .10); }
+.frame .bar { height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: #f5f7f2; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+.frame .bar::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #ff6159; box-shadow: 14px 0 0 #ffbd2e, 28px 0 0 #2ac940; margin-right: 32px; flex: 0 0 auto; }
+.frame .bar u { margin-left: auto; text-decoration: none; font-weight: 500; font-size: 11px; color: var(--mute); }
+.shot { position: relative; }
+.shot img { display: block; width: 100%; height: auto; }
+.shot.fade::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: linear-gradient(rgba(255, 255, 255, 0), #fff); }
+.pin { position: absolute; z-index: 3; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: var(--g); color: #fff; font-size: 14px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 0 0 4px rgba(75, 154, 47, .28), 0 4px 10px rgba(0, 0, 0, .2); letter-spacing: 0; }
+.pin.sm { width: 21px; height: 21px; margin: -10.5px 0 0 -10.5px; font-size: 12px; box-shadow: 0 0 0 3px rgba(75, 154, 47, .28), 0 3px 8px rgba(0, 0, 0, .2); }
+.call { position: absolute; z-index: 4; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px 7px 11px; border-radius: 999px; background: var(--deep); color: #fff; font-size: 13.5px; font-weight: 800; box-shadow: 0 8px 18px rgba(22, 51, 0, .28); white-space: nowrap; }
+.call .ic { width: 16px; height: 16px; color: var(--lime); }
+.call.g { background: var(--g); }
+.call.g .ic { color: #fff; }
+.phone { position: absolute; padding: 8px; border-radius: 34px; background: #1b1f19; box-shadow: 0 18px 40px rgba(0, 0, 0, .24); }
+.phone img { display: block; width: 100%; border-radius: 27px; }
+.cap { position: absolute; font-size: 13px; line-height: 1.5; color: var(--body); }
+.cap b { color: var(--ink); }
+.cap.tick { display: flex; gap: 8px; }
+.cap.tick .ic { width: 17px; height: 17px; margin-top: 2px; color: var(--g); }
+.status-list { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.status-list > div { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--body); }
+.status-list .chip { min-width: 78px; justify-content: center; }
+
+/* 번호 목록 */
+.legend { list-style: none; display: flex; flex-direction: column; gap: 13px; }
+.legend li { display: grid; grid-template-columns: 26px 1fr; column-gap: 11px; align-items: start; }
+.legend li > i { width: 26px; height: 26px; border-radius: 50%; background: var(--g); color: #fff; font-style: normal; font-size: 13.5px; font-weight: 800; display: grid; place-items: center; letter-spacing: 0; }
+.legend li > div > b { display: block; font-size: 15.5px; font-weight: 800; line-height: 1.35; padding-top: 2px; }
+.legend li > div > span { display: block; margin-top: 2px; font-size: 13px; line-height: 1.5; color: var(--body); }
+.legend.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 20px; }
+.legend.grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 22px; }
+
+/* 아래 요약 카드(두고클래스) */
+.sum { position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.sum > div { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: #fff; border: 1.5px solid var(--line); border-radius: 16px; }
+.sum > div:first-child { border-color: #bfe0ab; }
+.sq { width: 44px; height: 44px; flex: 0 0 auto; border-radius: 13px; background: var(--g); color: #fff; display: grid; place-items: center; }
+.sq .ic { width: 22px; height: 22px; }
+.sum.compact > div { padding: 10px 16px; gap: 12px; }
+.sum.compact .sq { width: 38px; height: 38px; border-radius: 11px; }
+.sum b { display: block; font-size: 15.5px; font-weight: 800; line-height: 1.3; }
+.sum span { display: block; margin-top: 3px; font-size: 13px; line-height: 1.45; color: var(--body); }
+
+/* 공통 카드·칩 */
+.card { position: absolute; background: #fff; border: 1.5px solid var(--line); border-radius: 18px; padding: 22px 24px; }
+.card.pale { background: var(--pale); border-color: #d7ecc8; }
+.card.deep { background: var(--deep); border-color: var(--deep); color: #fff; }
+.card .no { font-size: 13px; font-weight: 800; color: var(--g); letter-spacing: .04em; }
+.card.deep .no { color: var(--lime); }
+.card h3 { margin-top: 6px; font-size: 21px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.3; }
+.card p { margin-top: 8px; font-size: 14px; line-height: 1.6; color: var(--body); }
+.card.deep p { color: rgba(255, 255, 255, .82); }
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.chip .ic { width: 14px; height: 14px; }
+.chip.deep { color: var(--lime); background: var(--deep); }
+.chip.line { color: var(--g-text); background: #fff; box-shadow: inset 0 0 0 1.5px #9fd182; }
+.chip.pale { color: var(--g-text); background: var(--hl); }
+.chip.gray { color: var(--body); background: var(--gray); }
+.chip.yellow { color: #7a5a00; background: #fff1bf; }
+.chip.green { color: #1d6b16; background: #dff3d3; }
+.chip.red { color: #b42323; background: #fde3e3; }
+.chip.blue { color: #1f4f9c; background: #e3ecfb; }
+
+/* 1. 표지 */
+.cover .cover-logo { position: absolute; z-index: 2; left: 64px; top: 52px; height: 56px; }
+.cover .cover-top { position: absolute; z-index: 2; right: 64px; top: 70px; font-size: 12.5px; font-weight: 800; letter-spacing: .2em; color: var(--g); }
+.cover .cover-text { position: absolute; z-index: 2; left: 64px; top: 196px; width: 520px; }
+.cover .cover-kicker { font-size: 18px; font-weight: 800; color: var(--g-text); }
+.cover h1 { margin-top: 14px; font-size: 62px; font-weight: 800; line-height: 1.16; letter-spacing: -0.055em; }
+.cover h1 .mark { background: linear-gradient(transparent 62%, var(--lime) 62%, var(--lime) 92%, transparent 92%); padding: 0 .04em; }
+.cover .cover-lead { margin-top: 22px; font-size: 17px; line-height: 1.65; color: var(--body); }
+.cover .cover-chips { margin-top: 26px; display: flex; gap: 8px; flex-wrap: wrap; }
+.cover .cover-chips .chip { height: 32px; padding: 0 14px; font-size: 14px; }
+.cover .cover-foot { position: absolute; z-index: 2; left: 64px; bottom: 44px; font-size: 12.5px; color: var(--mute); }
+.cover .cover-foot b { color: var(--ink); }
+
+/* 2. 차례 */
+.toc { position: absolute; z-index: 2; left: 56px; right: 56px; top: 236px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+.toc .col { border-top: 2px solid var(--deep); padding-top: 16px; }
+.toc .col .no { font-size: 13px; font-weight: 800; color: var(--g); letter-spacing: .06em; }
+.toc .col h2 { margin-top: 4px; font-size: 22px; font-weight: 800; letter-spacing: -0.04em; }
+.toc .col ul { list-style: none; margin-top: 14px; display: flex; flex-direction: column; gap: 9px; }
+.toc .col li { display: flex; align-items: baseline; gap: 8px; font-size: 14.5px; color: var(--body); }
+.toc .col li::after { content: ""; order: 1; flex: 1 1 auto; border-bottom: 1px dotted #c9cfc3; transform: translateY(-4px); }
+.toc .col li span { order: 2; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.quick { position: absolute; z-index: 2; left: 56px; right: 56px; bottom: 74px; display: flex; align-items: center; gap: 22px; padding: 18px 24px; border-radius: 18px; background: var(--deep); color: #fff; }
+.quick strong { font-size: 16px; font-weight: 800; color: var(--lime); white-space: nowrap; }
+.quick ol { list-style: none; display: flex; gap: 10px; flex: 1 1 auto; }
+.quick li { flex: 1 1 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .08); font-size: 13.5px; line-height: 1.4; }
+.quick li i { width: 24px; height: 24px; flex: 0 0 auto; border-radius: 50%; background: var(--lime); color: var(--deep); font-style: normal; font-weight: 800; font-size: 13px; display: grid; place-items: center; }
+
+/* 3. 흐름 띠 */
+.flow { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 8px; padding: 16px 20px; border-radius: 18px; background: #fff; border: 1.5px solid var(--line); }
+.flow strong { font-size: 14px; font-weight: 800; color: var(--g-text); margin-right: 6px; white-space: nowrap; }
+.flow .step { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border-radius: 12px; background: var(--gray); font-size: 13.5px; font-weight: 700; white-space: nowrap; }
+.flow .step.on { background: var(--hl); color: #1d5f12; }
+.flow .step .ic { width: 17px; height: 17px; color: var(--g); }
+.flow .arrow { color: #a9b3a2; }
+.flow .arrow .ic { width: 16px; height: 16px; }
+
+/* 정산 방식·주기·흐름 */
+.ex { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, .1); font-size: 13.5px; line-height: 1.55; }
+.card:not(.deep) .ex { background: var(--gray); color: var(--body); }
+.ex b { color: var(--lime); }
+.card:not(.deep) .ex b { color: var(--ink); }
+.points { list-style: none; margin-top: 12px; display: flex; flex-direction: column; gap: 9px; }
+.points li { display: flex; gap: 9px; font-size: 14.5px; line-height: 1.5; color: var(--body); }
+.points li .ic { width: 18px; height: 18px; margin-top: 2px; color: var(--g); }
+.card.deep .points li { color: rgba(255, 255, 255, .9); }
+.card.deep .points li .ic { color: var(--lime); }
+.card.deep .points b { color: #fff; }
+.points b { color: var(--ink); }
+.timeline { display: flex; align-items: stretch; gap: 4px; margin-top: 16px; }
+.timeline > div { flex: 1 1 0; padding: 8px 4px; border-radius: 9px; background: var(--gray); text-align: center; font-size: 11.5px; font-weight: 700; color: var(--body); line-height: 1.35; }
+.timeline > div small { display: block; font-size: 10.5px; font-weight: 600; color: var(--mute); }
+.timeline > div.sale { background: var(--hl); color: #1d5f12; }
+.timeline > div.pay { background: #e3ecfb; color: #1f4f9c; }
+.timeline > div.fee { background: #fdebd6; color: #9a4a00; }
+.money { display: flex; flex-direction: column; gap: 4px; }
+.calc { width: 100%; margin-top: 16px; border-collapse: collapse; font-size: 13.5px; color: var(--body); }
+.calc caption { caption-side: top; text-align: left; padding-bottom: 6px; font-size: 12px; font-weight: 800; color: var(--g-text); letter-spacing: -0.01em; }
+.calc td { padding: 6px 2px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.calc td:last-child { text-align: right; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.calc td small { margin-left: 6px; font-size: 11.5px; color: var(--mute); }
+.calc tr.sub td { font-weight: 700; color: var(--ink); }
+.calc tr.total td { border-bottom: 0; padding-top: 8px; font-size: 15px; font-weight: 800; color: var(--ink); }
+.calc tr.total td:last-child { color: var(--g-text); font-size: 17px; }
+.calc.dark { color: rgba(255, 255, 255, .78); }
+.calc.dark caption { color: var(--lime); }
+.calc.dark td { border-bottom-color: rgba(255, 255, 255, .14); }
+.calc.dark td:last-child, .calc.dark tr.sub td, .calc.dark tr.total td { color: #fff; }
+.calc.dark td small { color: rgba(255, 255, 255, .55); }
+.calc.dark tr.total td:last-child { color: var(--lime); }
+.fit { position: absolute; left: 24px; right: 24px; bottom: 20px; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 11px; background: rgba(255, 255, 255, .75); font-size: 13px !important; font-weight: 700; color: var(--g-text) !important; margin: 0 !important; }
+.card:not(.pale) .fit { background: var(--gray); }
+.fit .ic { width: 16px; height: 16px; }
+.where { position: absolute; left: 18px; right: 18px; bottom: 14px; display: flex; align-items: center; gap: 6px; font-size: 12px !important; font-weight: 700; color: var(--g-text) !important; }
+.where .ic { width: 14px; height: 14px; }
+.mini-steps { list-style: none; margin-top: 8px; display: flex; flex-direction: column; gap: 6px; counter-reset: ms; }
+.mini-steps li { counter-increment: ms; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--body); }
+.mini-steps li::before { content: counter(ms); width: 20px; height: 20px; flex: 0 0 auto; border-radius: 50%; background: var(--g); color: #fff; font-size: 11.5px; font-weight: 800; display: grid; place-items: center; }
+.mini-steps b { color: var(--ink); }
+.steps5 { position: absolute; left: 0; right: 0; top: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 34px; }
+.steps5 .st { position: relative; padding: 18px 18px 16px; border-radius: 18px; background: #fff; border: 1.5px solid var(--line); min-height: 196px; }
+.steps5 .st:not(:last-child)::after { content: ""; position: absolute; right: -27px; top: 50%; width: 20px; height: 20px; margin-top: -10px; background: no-repeat center/20px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234b9a2f' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='m12 5 7 7-7 7'/%3E%3C/svg%3E"); }
+.steps5 .st .dir { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 11.5px; font-weight: 800; }
+.dir.to-sup { color: #1f4f9c; background: #e3ecfb; }
+.dir.to-doogo { color: #9a4a00; background: #fdebd6; }
+.dir.both { color: var(--g-text); background: var(--hl); }
+.steps5 .st .n { position: absolute; right: 16px; top: 14px; font-size: 30px; font-weight: 800; color: #e3ebdc; letter-spacing: -0.04em; }
+.steps5 .st h3 { margin-top: 10px; font-size: 18px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.32; }
+.steps5 .st p { margin-top: 7px; font-size: 13px; line-height: 1.55; color: var(--body); }
+.steps5 .st p b { color: var(--ink); }
+
+/* 18. 자주 묻는 질문 */
+.faq-left { position: absolute; z-index: 2; left: 56px; top: 110px; width: 300px; }
+.faq-left h1 { margin-top: 12px; font-size: 40px; font-weight: 800; line-height: 1.22; letter-spacing: -0.05em; }
+.faq-left p { margin-top: 14px; font-size: 15px; line-height: 1.65; color: var(--body); }
+.faq-left .faq-icon { margin-top: 40px; width: 128px; height: 128px; border-radius: 34px; background: var(--deep); display: grid; place-items: center; color: var(--lime); box-shadow: 0 16px 34px rgba(22, 51, 0, .22); }
+.faq-left .faq-icon .ic { width: 64px; height: 64px; }
+.faq { position: absolute; z-index: 2; left: 392px; right: 56px; top: 88px; bottom: 66px; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 12px 14px; }
+.faq > div { padding: 15px 18px; border-radius: 16px; background: #fff; border: 1.5px solid var(--line); }
+.faq h3 { display: flex; gap: 9px; font-size: 15px; font-weight: 800; line-height: 1.4; letter-spacing: -0.035em; }
+.faq h3 i { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px; background: var(--g); color: #fff; font-style: normal; font-size: 12px; display: grid; place-items: center; letter-spacing: 0; margin-top: 0; }
+.faq p { margin-top: 6px; padding-left: 31px; font-size: 13px; line-height: 1.55; color: var(--body); }
+.faq p b { color: var(--ink); }
+
+/* 19. 문의 */
+.contact-left { position: absolute; z-index: 2; left: 56px; top: 0; bottom: 0; width: 640px; }
+.contact-left .logo { position: absolute; left: 0; top: 52px; height: 46px; }
+.contact-left h1 { position: absolute; left: 0; top: 150px; font-size: 42px; font-weight: 800; line-height: 1.25; letter-spacing: -0.05em; }
+.contact-left .lead2 { position: absolute; left: 0; top: 270px; font-size: 16px; line-height: 1.6; color: var(--body); width: 600px; }
+.contact-cards { position: absolute; left: 0; top: 352px; width: 640px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.contact-cards > div { padding: 16px 18px; border-radius: 16px; background: #fff; border: 1.5px solid var(--line); }
+.contact-cards > div.pale { background: var(--pale); border-color: #d7ecc8; }
+.contact-cards small { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--g-text); }
+.contact-cards small .ic { width: 15px; height: 15px; }
+.contact-cards strong { display: block; margin-top: 6px; font-size: 17px; font-weight: 800; letter-spacing: -0.03em; }
+.contact-cards p { margin-top: 4px; font-size: 13px; line-height: 1.5; color: var(--body); }
+.contact-left .biz { position: absolute; left: 0; bottom: 40px; font-size: 11.5px; line-height: 1.6; color: var(--mute); }
+.contact-right { position: absolute; z-index: 2; right: 0; top: 0; bottom: 0; width: 520px; background: var(--deep); color: #fff; padding: 64px 56px; }
+.contact-right .sec { font-size: 13px; font-weight: 800; letter-spacing: .18em; color: var(--lime); }
+.contact-right .qr { margin-top: 30px; display: flex; gap: 22px; align-items: center; }
+.contact-right .qr img { width: 168px; height: 168px; padding: 12px; border-radius: 18px; background: #fff; }
+.contact-right .qr b { display: block; font-size: 20px; font-weight: 800; }
+.contact-right .qr span { display: block; margin-top: 6px; font-size: 14px; color: rgba(255, 255, 255, .78); line-height: 1.55; }
+.contact-right .guide-btn { margin-top: 34px; padding: 18px 20px; border-radius: 16px; background: rgba(255, 255, 255, .08); font-size: 14px; line-height: 1.6; color: rgba(255, 255, 255, .86); }
+.contact-right .guide-btn b { color: #fff; }
+.contact-right .guide-btn .mock { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; margin: 0 2px; border-radius: 8px; background: #fff; color: #617086; font-size: 12px; font-weight: 800; vertical-align: middle; }
+.contact-right .guide-btn .mock .ic { width: 13px; height: 13px; }
+.contact-right .slogan { position: absolute; left: 56px; bottom: 56px; }
+.contact-right .slogan small { font-size: 13px; font-weight: 700; color: var(--lime); }
+.contact-right .slogan strong { display: block; margin-top: 8px; font-size: 32px; font-weight: 800; line-height: 1.3; letter-spacing: -0.045em; }
+</style>
+</head>
+<body>
+
+<!-- 1. 표지 -->
+<section class="page cover" id="p-cover">
+  <img class="cover-logo" src="{{BRAND_DIR}}/doogo-food-logo-color.png" alt="DOOGO FOOD" />
+  <p class="cover-top">SUPPLIER CENTER GUIDE · 2026</p>
+  <div class="cover-text">
+    <p class="cover-kicker">내 상품과 정산을 한눈에</p>
+    <h1>두고푸드<br /><span class="mark">공급사 센터</span><br />사용 설명서</h1>
+    <p class="cover-lead">공급사 센터의 메뉴와 정산 보는 법을<br />실제 화면과 함께 하나씩 설명합니다.</p>
+    <div class="cover-chips">
+      <span class="chip deep"><i class="ic" data-icon="link"></i>doogofood.site/supplier</span>
+      <span class="chip line"><i class="ic" data-icon="monitor"></i>PC · 휴대폰 모두 사용</span>
+    </div>
+  </div>
+  <figure class="frame" data-bleed style="left:612px; top:150px; width:700px;">
+    <div class="bar">공급사 센터 · 대시보드<u>doogofood.site/supplier/home</u></div>
+    <div class="shot"><img src="{{ASSET_DIR}}/shots/home.jpg" alt="" /></div>
+  </figure>
+  <figure class="phone" style="left:1010px; top:300px; width:206px;"><img src="{{ASSET_DIR}}/shots/m-home.jpg" alt="" /></figure>
+  <p class="cover-foot"><b>(주)두고홀딩스 · DOOGO FOOD</b> · 공급사 전용 설명서 · ※ 화면은 예시 계정(봄날농원)입니다.</p>
+</section>
+
+<!-- 2. 차례 -->
+<section class="page" data-tab="0" id="p-toc">
+  <div class="head">
+    <p class="kicker">CONTENTS</p>
+    <h1 style="margin-top:8px">설명서 차례</h1>
+    <p class="lead">왼쪽 메뉴 순서대로 설명해요. 처음이라면 아래 <b>처음 시작하기 4단계</b>부터 따라 해 보세요.</p>
+  </div>
+  <div class="toc">
+    <div class="col"><p class="no">01</p><h2>시작하기</h2><ul>
+      <li>공급사 센터란?<span data-ref="p-about"></span></li>
+      <li>로그인<span data-ref="p-login"></span></li>
+      <li>화면 구성<span data-ref="p-layout"></span></li>
+    </ul></div>
+    <div class="col"><p class="no">02</p><h2>메뉴 안내</h2><ul>
+      <li>대시보드<span data-ref="p-dash1"></span></li>
+      <li>내 상품<span data-ref="p-products"></span></li>
+      <li>상품 변경 요청<span data-ref="p-edit"></span></li>
+      <li>상품 등록 요청<span data-ref="p-create"></span></li>
+      <li>변경 요청 내역<span data-ref="p-requests"></span></li>
+      <li>판매·정산<span data-ref="p-sales1"></span></li>
+      <li>내 정보<span data-ref="p-account"></span></li>
+    </ul></div>
+    <div class="col"><p class="no">03</p><h2>정산 안내</h2><ul>
+      <li>정산 방식<span data-ref="p-type"></span></li>
+      <li>지급 주기<span data-ref="p-cycle"></span></li>
+      <li>수수료·세금계산서·반품<span data-ref="p-flow"></span></li>
+    </ul></div>
+    <div class="col"><p class="no">04</p><h2>도움말</h2><ul>
+      <li>자주 묻는 질문<span data-ref="p-faq"></span></li>
+      <li>문의하기<span data-ref="p-contact"></span></li>
+    </ul></div>
+  </div>
+  <div class="quick">
+    <strong>처음 시작하기<br />4단계</strong>
+    <ol>
+      <li><i>1</i><span>두고푸드에서 받은 아이디로 <b>로그인</b></span></li>
+      <li><i>2</i><span>내 정보에서 <b>비밀번호 바꾸기</b></span></li>
+      <li><i>3</i><span>내 상품에서 <b>공급가·판매 상태</b> 확인</span></li>
+      <li><i>4</i><span>대시보드에서 <b>다음 정산일</b> 확인</span></li>
+    </ol>
+  </div>
+</section>
+
+<!-- 3. 공급사 센터란? -->
+<section class="page" data-tab="1" id="p-about">
+  <div class="head">
+    <div class="row"><div class="badge"><small>시작</small><b>1</b></div><div><p class="kicker">WHAT IS SUPPLIER CENTER</p><p class="subtitle">공급사 센터란?</p></div></div>
+    <h1>상품·요청·정산을 <em>한 곳에서</em> 확인하세요</h1>
+    <p class="lead">두고푸드에 공급하는 <b>내 상품</b>과 <b>판매·정산 금액</b>, <b>입금일</b>을 공급사가 직접 확인하는 전용 화면이에요.</p>
+  </div>
+  <div class="zone">
+    <div class="card" style="left:0; top:0; width:278px; height:268px;">
+      <div class="sq"><i class="ic" data-icon="boxes"></i></div>
+      <p class="no" style="margin-top:16px">01</p><h3>내 상품 확인</h3>
+      <p>두고푸드 단가표에 올라간 내 상품의 공급가, 권장 판매가, 판매 상태를 한 목록으로 봐요.</p>
+    </div>
+    <div class="card" style="left:296px; top:0; width:278px; height:268px;">
+      <div class="sq"><i class="ic" data-icon="send"></i></div>
+      <p class="no" style="margin-top:16px">02</p><h3>변경·등록 요청</h3>
+      <p>가격·품절·사진을 바꾸거나 새 상품을 올리고 싶으면 요청을 보내요. 두고푸드가 승인하면 반영돼요.</p>
+    </div>
+    <div class="card" style="left:592px; top:0; width:278px; height:268px;">
+      <div class="sq"><i class="ic" data-icon="chart-column"></i></div>
+      <p class="no" style="margin-top:16px">03</p><h3>판매·정산 자동 계산</h3>
+      <p>날짜별 판매·반품과 정산 금액, 판매 수수료까지 자동으로 계산돼요. 따로 엑셀을 만들 필요가 없어요.</p>
+    </div>
+    <div class="card deep" style="left:888px; top:0; width:280px; height:268px;">
+      <div class="sq" style="background:var(--lime); color:var(--deep)"><i class="ic" data-icon="calendar-check"></i></div>
+      <p class="no" style="margin-top:16px">04</p><h3>입금 일정 한눈에</h3>
+      <p>다음 정산일과 금액, 판매 수수료 보내는 날까지 달력으로 확인해요. 휴대폰에서도 똑같이 보여요.</p>
+    </div>
+    <div class="flow">
+      <strong>이렇게 돌아가요</strong>
+      <span class="step"><i class="ic" data-icon="store"></i>공급사가 요청</span><span class="arrow"><i class="ic" data-icon="arrow-right"></i></span>
+      <span class="step"><i class="ic" data-icon="badge-check"></i>두고푸드 확인·승인</span><span class="arrow"><i class="ic" data-icon="arrow-right"></i></span>
+      <span class="step"><i class="ic" data-icon="list-checks"></i>단가표 반영</span><span class="arrow"><i class="ic" data-icon="arrow-right"></i></span>
+      <span class="step"><i class="ic" data-icon="truck"></i>위탁셀러 판매</span><span class="arrow"><i class="ic" data-icon="arrow-right"></i></span>
+      <span class="step on"><i class="ic" data-icon="chart-column"></i>판매·정산 자동 계산</span><span class="arrow"><i class="ic" data-icon="arrow-right"></i></span>
+      <span class="step on"><i class="ic" data-icon="banknote"></i>정해진 날 입금</span>
+    </div>
+  </div>
+</section>
+
+<!-- 4. 로그인 -->
+<section class="page" data-tab="1" id="p-login">
+  <div class="head">
+    <div class="row"><div class="badge"><small>시작</small><b>2</b></div><div><p class="kicker">LOGIN</p><p class="subtitle">로그인</p></div></div>
+    <h1>두고푸드가 드린 <em>아이디</em>로 바로 시작해요</h1>
+    <p class="lead">주소창에 <b>doogofood.site/supplier</b>를 입력하고, 두고푸드에서 받은 아이디·비밀번호로 로그인하세요.</p>
+  </div>
+  <div class="zone">
+    <figure class="frame" style="left:0; top:0; width:600px;">
+      <div class="bar">공급사 센터 · 로그인<u>doogofood.site/supplier</u></div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/login.jpg" alt="" />
+        <span class="pin" style="left:60.5%; top:43%">1</span>
+        <span class="pin" style="left:60.5%; top:54%">2</span>
+        <span class="pin" style="left:60.5%; top:67%">3</span>
+      </div>
+    </figure>
+    <div style="position:absolute; left:636px; top:4px; width:532px;">
+      <ol class="legend">
+        <li><i>1</i><div><b>아이디</b><span>두고푸드 담당자에게 받은 공급사 아이디를 입력해요.</span></div></li>
+        <li><i>2</i><div><b>비밀번호</b><span>처음 받은 비밀번호는 로그인 후 <b>내 정보</b>에서 꼭 바꿔 주세요.</span></div></li>
+        <li><i>3</i><div><b>로그인</b><span>누르면 <b>대시보드</b>가 열려요. 같이 쓰는 PC라면 다 쓴 뒤 왼쪽 아래 <b>로그아웃</b>을 눌러 주세요.</span></div></li>
+      </ol>
+    </div>
+    <div class="sum compact" style="left:636px; grid-template-columns:1fr; gap:8px;">
+      <div><div class="sq"><i class="ic" data-icon="user-round"></i></div><div><b>회원가입이 없어요</b><span>두고푸드가 공급사 계정을 만들어 드려요.</span></div></div>
+      <div><div class="sq"><i class="ic" data-icon="key-round"></i></div><div><b>비밀번호를 잊었다면</b><span>두고푸드 담당자에게 알려 주시면 새로 정해 드려요.</span></div></div>
+      <div><div class="sq"><i class="ic" data-icon="smartphone"></i></div><div><b>휴대폰에서도 같은 주소</b><span>PC와 휴대폰 어디서나 같은 화면을 볼 수 있어요.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 화면 구성 -->
+<section class="page" data-tab="1" id="p-layout">
+  <div class="head">
+    <div class="row"><div class="badge"><small>시작</small><b>3</b></div><div><p class="kicker">LAYOUT</p><p class="subtitle">화면 구성</p></div></div>
+    <h1>왼쪽 메뉴 <em>5개</em>로 모든 업무를 해요</h1>
+    <p class="lead">PC는 왼쪽 메뉴, 휴대폰은 왼쪽 위 <b>☰ 메뉴</b>를 눌러 이동해요. 위 줄 <b>공급사 안내</b>를 누르면 이 설명서가 열려요.</p>
+  </div>
+  <div class="zone">
+    <figure class="frame" style="left:0; top:0; width:640px;">
+      <div class="bar">공급사 센터 · 대시보드<u>doogofood.site/supplier/home</u></div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/home.jpg" alt="" />
+        <span class="pin" style="left:16.6%; top:23.1%">1</span>
+        <span class="pin" style="left:16.6%; top:39.7%">2</span>
+        <span class="pin" style="left:87.2%; top:10.6%">3</span>
+        <span class="pin" style="left:95.2%; top:10.6%">4</span>
+        <span class="pin" style="left:16.6%; top:90.6%">5</span>
+      </div>
+    </figure>
+    <figure class="phone" style="left:664px; top:0; width:220px;"><img src="{{ASSET_DIR}}/shots/m-menu.jpg" alt="" /></figure>
+    <div style="position:absolute; left:906px; top:2px; width:262px;">
+      <ol class="legend" style="gap:11px">
+        <li><i>1</i><div><b>상품 등록 요청</b><span>새 상품 정보를 보내요.</span></div></li>
+        <li><i>2</i><div><b>메뉴 5개</b><span>대시보드 · 내 상품 · 변경 요청 내역 · 판매·정산 · 내 정보</span></div></li>
+        <li><i>3</i><div><b>공급사 안내</b><span>이 설명서(PDF)를 언제든 다시 열어요.</span></div></li>
+        <li><i>4</i><div><b>공급사 이름</b><span>지금 로그인한 업체예요.</span></div></li>
+        <li><i>5</i><div><b>아래 메뉴</b><span>공급사 사용방법 · 공개 단가표 보기 · 로그아웃</span></div></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 대시보드 ① -->
+<section class="page" data-tab="2" id="p-dash1">
+  <div class="head">
+    <div class="row"><div class="badge"><small>메뉴</small><b>1</b></div><div><p class="kicker">DASHBOARD</p><p class="subtitle">대시보드 ① 정산 한눈에 보기</p></div></div>
+    <h1>다음 정산 <em>날짜와 금액</em>이 맨 위에 보여요</h1>
+    <p class="lead">로그인하면 처음 열리는 화면이에요. 이번 달 판매와 정산 금액을 <b>자동으로 계산</b>해 보여 드려요.</p>
+  </div>
+  <div class="zone">
+    <figure class="frame" style="left:0; top:0; width:870px;">
+      <div class="bar">공급사 센터 · 대시보드<u>doogofood.site/supplier/home</u></div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/dash-hero-kpi.jpg" alt="" />
+        <span class="pin" style="left:59.6%; top:21%">1</span>
+        <span class="pin" style="left:97%; top:12%">2</span>
+        <span class="pin" style="left:22.6%; top:59%">3</span>
+        <span class="pin" style="left:47.9%; top:59%">4</span>
+        <span class="pin" style="left:73.2%; top:59%">5</span>
+        <span class="pin" style="left:97%; top:59%">6</span>
+      </div>
+    </figure>
+    <div style="position:absolute; left:896px; top:0; width:272px;">
+      <ol class="legend" style="gap:10px">
+        <li><i>1</i><div><b>다음 정산 안내</b><span>언제, 얼마가, 어느 기간 판매분으로 들어오는지</span></div></li>
+        <li><i>2</i><div><b>정산 달력 보기</b><span>누르면 판매·정산 달력으로 가요</span></div></li>
+        <li><i>3</i><div><b>이번 달 판매 금액</b><span>판매에서 반품을 뺀 금액</span></div></li>
+        <li><i>4</i><div><b>다음 정산 입금</b><span>입금 예정 → 입금 완료로 바뀌어요</span></div></li>
+        <li><i>5</i><div><b>판매 수수료</b><span>이번 달 판매분 10% · 다음 달 1~3일</span></div></li>
+        <li><i>6</i><div><b>판매 중인 상품</b><span>내 상품 · 품절 · 승인 대기 수</span></div></li>
+      </ol>
+    </div>
+    <div class="sum" style="right:298px; grid-template-columns:1fr 1fr;">
+      <div><div class="sq"><i class="ic" data-icon="rotate-ccw"></i></div><div><b>금액은 자동으로 다시 계산</b><span>두고푸드에 판매 자료가 들어오면 숫자가 바뀌어요.</span></div></div>
+      <div><div class="sq"><i class="ic" data-icon="info"></i></div><div><b>일반 도매(매입)라면</b><span>수수료 대신 '공급가 × 판매 수량 · 판매 수수료 없음'으로 보여요.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 대시보드 ② -->
+<section class="page" data-tab="2" id="p-dash2">
+  <div class="head">
+    <div class="row"><div class="badge"><small>메뉴</small><b>1</b></div><div><p class="kicker">DASHBOARD</p><p class="subtitle">대시보드 ② 판매 흐름과 요청 결과</p></div></div>
+    <h1>판매 흐름부터 <em>요청 결과</em>까지 한 화면에</h1>
+    <p class="lead">아래로 내리면 <b>날짜별 판매 금액</b>, <b>판매 달력</b>, <b>잘 팔린 상품</b>, <b>정산 금액</b>, <b>최근 변경 요청</b>이 이어져요.</p>
+  </div>
+  <div class="zone">
+    <figure class="frame" style="left:0; top:0; width:440px;">
+      <div class="bar">날짜별 판매 금액</div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/dash-chart.jpg" alt="" /></div>
+    </figure>
+    <figure class="frame" style="left:458px; top:0; width:300px;">
+      <div class="bar">판매 달력</div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/dash-calendar.jpg" alt="" /></div>
+    </figure>
+    <figure class="frame" style="left:776px; top:0; width:392px;">
+      <div class="bar">이번 달 잘 팔린 상품</div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/dash-rank-top.jpg" alt="" /></div>
+    </figure>
+    <p class="cap tick" style="left:0; top:350px; width:440px;"><i class="ic" data-icon="circle-check"></i><span><b>막대에 마우스를 올리거나 누르면</b> 그날 금액이 보여요. 아래에 합계·하루 평균·가장 많이 판 날이 있어요.</span></p>
+    <p class="cap tick" style="left:458px; top:350px; width:300px;"><i class="ic" data-icon="circle-check"></i><span>파란 <b style="color:var(--blue)">입금</b> = 정산 입금일<br />주황 <b style="color:var(--orange)">수수료</b> = 수수료 보내는 날</span></p>
+    <p class="cap tick" style="left:776px; top:350px; width:392px;"><i class="ic" data-icon="circle-check"></i><span>판매 금액이 큰 상품 TOP 5. 아래로 <b>정산 금액(자동 계산)</b> · <b>최근 변경 요청</b> · <b>바로 가기</b> 카드가 이어져요.</span></p>
+  </div>
+</section>
+
+<!-- 8. 내 상품 -->
+<section class="page" data-tab="2" id="p-products">
+  <div class="head">
+    <div class="row"><div class="badge"><small>메뉴</small><b>2</b></div><div><p class="kicker">MY PRODUCTS</p><p class="subtitle">내 상품</p></div></div>
+    <h1>내 상품의 <em>공급가·판매 상태</em>를 확인해요</h1>
+    <p class="lead">두고푸드 단가표에 올라간 내 상품 목록이에요. 바꾸고 싶은 상품은 오른쪽 <b>변경 요청</b> 버튼으로 요청해요.</p>
+  </div>
+  <div class="zone">
+    <figure class="frame" style="left:0; top:0; width:690px;">
+      <div class="bar">공급사 센터 · 내 상품<u>doogofood.site/supplier/products</u></div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/products-main.jpg" alt="" />
+        <span class="pin" style="left:24.7%; top:10%">1</span>
+        <span class="pin" style="left:42.6%; top:30.4%">2</span>
+        <span class="pin sm" style="left:35.2%; top:44.5%">3</span>
+        <span class="pin sm" style="left:44.8%; top:44.5%">4</span>
+        <span class="pin sm" style="left:55.3%; top:44.5%">5</span>
+        <span class="pin sm" style="left:81.3%; top:44.5%">6</span>
+      </div>
+    </figure>
+    <div style="position:absolute; left:720px; top:2px; width:448px;">
+      <ol class="legend grid2" style="gap:12px 18px">
+        <li><i>1</i><div><b>상태 카드</b><span>누르면 판매중·품절·승인 대기 상품만 모아 봐요</span></div></li>
+        <li><i>2</i><div><b>검색</b><span>상품명·상품코드로 찾아요</span></div></li>
+        <li><i>3</i><div><b>공급가</b><span>두고푸드에 공급하는 1개 가격 · 정산 기준</span></div></li>
+        <li><i>4</i><div><b>권장 판매가</b><span>소비자 판매가 · 지정 판매가 또는 판매자 자율</span></div></li>
+        <li><i>5</i><div><b>판매 기간·상태</b><span>상시·기간 판매, 판매중·품절·단가표 숨김</span></div></li>
+        <li><i>6</i><div><b>변경 요청</b><span>승인 대기 중이면 '요청 고치기'로 보여요</span></div></li>
+      </ol>
+    </div>
+    <div class="sum compact" style="left:720px; grid-template-columns:1fr; gap:8px;">
+      <div><div class="sq"><i class="ic" data-icon="clock"></i></div><div><b>승인 전에는 지금 값 그대로</b><span>두고푸드가 승인하면 단가표에 반영돼요.</span></div></div>
+      <div><div class="sq"><i class="ic" data-icon="banknote"></i></div><div><b>공급가 = 정산 기준</b><span>판매 금액은 공급가 × 판매 수량으로 계산해요.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 9. 상품 변경 요청 -->
+<section class="page" data-tab="2" id="p-edit">
+  <div class="head">
+    <div class="row"><div class="badge"><small>메뉴</small><b>3</b></div><div><p class="kicker">CHANGE REQUEST</p><p class="subtitle">상품 변경 요청</p></div></div>
+    <h1>바꿀 칸만 고쳐서 <em>요청</em>을 보내요</h1>
+    <p class="lead"><b>내 상품 › 변경 요청</b>을 누르면 창이 열려요. 고친 칸은 아래 <b>바뀌는 항목</b>에 바로 보이고, 승인되면 반영돼요.</p>
+  </div>
+  <div class="zone">
+    <figure class="frame" style="left:0; top:0; width:396px;">
+      <div class="bar">상품 변경 요청 · 위</div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/edit-top.jpg" alt="" />
+        <span class="pin" style="left:16%; top:20.4%">1</span>
+        <span class="pin" style="left:50%; top:51.4%">2</span>
+      </div>
+    </figure>
+    <figure class="frame" style="left:412px; top:0; width:396px;">
+      <div class="bar">상품 변경 요청 · 아래</div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/edit-bottom.jpg" alt="" />
+        <span class="pin" style="left:24.5%; top:76.9%">3</span>
+        <span class="pin" style="left:88%; top:88.5%">4</span>
+      </div>
+    </figure>
+    <div style="position:absolute; left:836px; top:2px; width:332px;">
+      <ol class="legend">
+        <li><i>1</i><div><b>바꿀 칸만 고치기</b><span>상품명 · 사진 · 공급가 · 원산지 · 권장 판매가 · 판매 기간 · 판매 상태</span></div></li>
+        <li><i>2</i><div><b>공급가 고치기 예시</b><span>35,000원 → 34,000원. 정산은 이 금액으로 계산해요.</span></div></li>
+        <li><i>3</i><div><b>바뀌는 항목 확인</b><span>이전 값 → 바뀔 값이 자동으로 정리돼요.</span></div></li>
+        <li><i>4</i><div><b>변경 요청 보내기</b><span>'승인 대기'로 보내지고, 승인되면 단가표에 반영돼요.</span></div></li>
+      </ol>
+      <div class="card pale" style="position:relative; margin-top:16px; padding:14px 16px;">
+        <p style="margin:0; font-size:13px; line-height:1.55"><b style="color:var(--ink)">품절·시즌 종료도 여기서</b> 판매 상태를 '품절'로 바꿔 보내 주세요. 승인 대기 중에 다시 보내면 <b style="color:var(--ink)">새 내용으로 바뀌어요.</b></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. 상품 등록 요청 -->
+<section class="page" data-tab="2" id="p-create">
+  <div class="head">
+    <div class="row"><div class="badge"><small>메뉴</small><b>4</b></div><div><p class="kicker">NEW PRODUCT</p><p class="subtitle">상품 등록 요청</p></div></div>
+    <h1>새 상품은 <em>등록 요청</em> 한 번이면 돼요</h1>
+    <p class="lead">왼쪽 위 초록 버튼 <b>상품 등록 요청</b>으로 정보를 보내면, 두고푸드가 <b>상품코드·카테고리</b>를 정해 단가표에 올려요.</p>
+  </div>
+  <div class="zone">
+    <figure class="frame" style="left:0; top:0; width:396px;">
+      <div class="bar">신규 상품 등록 요청 · 위</div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/create-top.jpg" alt="" /></div>
+    </figure>
+    <figure class="frame" style="left:412px; top:0; width:396px;">
+      <div class="bar">신규 상품 등록 요청 · 아래</div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/create-bottom.jpg" alt="" /></div>
+    </figure>
+    <div style="position:absolute; left:836px; top:0; width:332px;">
+      <p style="font-size:15px; font-weight:800; margin-bottom:10px">이렇게 채워 주세요</p>
+      <ul class="points" style="margin-top:0; gap:7px">
+        <li><i class="ic" data-icon="check"></i><span><b>상품명 · 공급가</b>는 꼭 적어요</span></li>
+        <li><i class="ic" data-icon="check"></i><span><b>사진</b> JPG·PNG 5MB 미만, 정사각형(1:1)이 가장 잘 보여요</span></li>
+        <li><i class="ic" data-icon="check"></i><span><b>권장 판매가</b> 지정 판매가 또는 판매자 자율</span></li>
+        <li><i class="ic" data-icon="check"></i><span><b>판매 기간</b> 상시 또는 기간(해를 넘기면 10월~3월처럼)</span></li>
+        <li><i class="ic" data-icon="check"></i><span><b>카테고리</b> 모르면 '두고푸드가 정해 주세요'</span></li>
+        <li><i class="ic" data-icon="check"></i><span><b>상품 설명</b> 규격·포장·보관·출고 요일·상세페이지 위치</span></li>
+      </ul>
+    </div>
+    <div class="card pale" style="left:836px; right:0; bottom:0; padding:14px 16px;">
+      <p style="margin:0; font-size:13.5px; font-weight:800; color:var(--g-text)">보낸 다음에는</p>
+      <ol class="mini-steps"><li>두고푸드가 내용 확인</li><li>상품코드·카테고리를 정해 단가표에 등록</li><li><b>내 상품</b> 목록에 보여요</li></ol>
+    </div>
+  </div>
+</section>
+
+<!-- 11. 변경 요청 내역 -->
+<section class="page" data-tab="2" id="p-requests">
+  <div class="head">
+    <div class="row"><div class="badge"><small>메뉴</small><b>5</b></div><div><p class="kicker">REQUESTS</p><p class="subtitle">변경 요청 내역</p></div></div>
+    <h1>보낸 요청의 <em>처리 결과</em>를 확인해요</h1>
+    <p class="lead">수정·신규 등록 요청과 <b>두고푸드 답변</b>이 모여 있어요. <b>승인 대기</b> 요청은 고치거나 취소할 수 있어요.</p>
+  </div>
+  <div class="zone">
+    <figure class="frame" style="left:0; top:0; width:740px;">
+      <div class="bar">공급사 센터 · 변경 요청 내역<u>doogofood.site/supplier/requests</u></div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/requests.jpg" alt="" />
+        <span class="pin" style="left:44.6%; top:8.4%">1</span>
+        <span class="pin" style="left:63.6%; top:59%">2</span>
+        <span class="pin" style="left:89.4%; top:19.4%">3</span>
+      </div>
+    </figure>
+    <div style="position:absolute; left:770px; top:0; width:398px;">
+      <ol class="legend" style="gap:11px">
+        <li><i>1</i><div><b>상태로 거르기</b><span>전체 · 승인 대기 · 승인 완료 · 반려 · 요청 취소</span></div></li>
+        <li><i>2</i><div><b>두고푸드 답변</b><span>반려되면 이유가 여기에 적혀요. '자세히'로 전체 내용을 봐요.</span></div></li>
+        <li><i>3</i><div><b>고치기 · 취소</b><span>승인 대기 요청만 고치거나 취소할 수 있어요.</span></div></li>
+      </ol>
+      <div class="status-list">
+        <div><span class="chip yellow">승인 대기</span><span>두고푸드가 확인하고 있어요.</span></div>
+        <div><span class="chip green">승인 완료</span><span>상품에 반영됐어요 · 신규는 등록 완료.</span></div>
+        <div><span class="chip red">반려</span><span>답변을 확인하고 다시 보내 주세요.</span></div>
+        <div><span class="chip gray">요청 취소</span><span>공급사가 취소한 요청이에요.</span></div>
+      </div>
+      <div class="card pale" style="position:relative; margin-top:12px; padding:11px 14px;">
+        <p style="margin:0; font-size:13px; line-height:1.5">왼쪽 메뉴 <b style="color:var(--ink)">변경 요청 내역</b> 옆 노란 숫자 = 승인 대기 요청 수</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 12. 판매·정산 ① -->
+<section class="page" data-tab="2" id="p-sales1">
+  <div class="head">
+    <div class="row"><div class="badge"><small>메뉴</small><b>6</b></div><div><p class="kicker">SALES &amp; SETTLEMENT</p><p class="subtitle">판매·정산 ① 판매 달력</p></div></div>
+    <h1>날짜를 누르면 <em>그날 판매</em>가 보여요</h1>
+    <p class="lead">날짜별 <b>판매·반품</b>과 <b>정산 입금일</b>을 달력으로 확인해요. 지난달·다음 달은 달력 위 화살표로 넘겨요.</p>
+  </div>
+  <div class="zone">
+    <figure class="frame" style="left:0; top:0; width:430px;">
+      <div class="bar">판매·정산 · 판매 달력<u>/supplier/sales</u></div>
+      <div class="shot fade"><img src="{{ASSET_DIR}}/shots/sales-calendar-4w.jpg" alt="" /></div>
+    </figure>
+    <span class="call" style="left:304px; top:340px;"><i class="ic" data-icon="mouse-pointer-click"></i>날짜를 누르면 →</span>
+    <figure class="frame" style="left:470px; top:0; width:320px;">
+      <div class="bar">11월 19일(목) 내역</div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/sales-day.jpg" alt="" /></div>
+    </figure>
+    <div style="position:absolute; left:470px; top:318px; width:320px;">
+      <p class="cap" style="position:static">판매 금액 · 주문·수량 · <b style="color:var(--red)">반품</b> · <b>순매출</b> · 배송비, 그날 정산 입금이 있으면 함께 보여요.</p>
+    </div>
+    <div style="position:absolute; left:822px; top:0; width:346px;">
+      <p style="font-size:15px; font-weight:800; margin-bottom:12px">달력 표시 읽는 법</p>
+      <ol class="legend" style="gap:10px">
+        <li><i style="background:#2f8f2a">₩</i><div><b>초록 금액 = 그날 판매</b><span>판매 건수·수량도 함께 보여요</span></div></li>
+        <li><i style="background:var(--red)">−</i><div><b>빨간 글씨 = 반품</b><span>반품 금액은 정산에서 빠져요</span></div></li>
+        <li><i style="background:var(--blue)">입</i><div><b>파란 '입금' = 정산 입금일</b><span>그날 들어오는 금액이 적혀요</span></div></li>
+        <li><i style="background:var(--orange)">수</i><div><b>주황 '수수료' = 수수료 보내는 날</b><span>매달 1~3일(판매수수료 방식)</span></div></li>
+      </ol>
+      <div class="card pale" style="position:relative; margin-top:14px; padding:12px 14px;">
+        <p style="margin:0; font-size:13px; line-height:1.55">달력 위 카드 4개: <b style="color:var(--ink)">판매 금액 · 반품 금액 · 물품 대금 · 실 수령 예상</b></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 13. 판매·정산 ② -->
+<section class="page" data-tab="2" id="p-sales2">
+  <div class="head">
+    <div class="row"><div class="badge"><small>메뉴</small><b>6</b></div><div><p class="kicker">SALES &amp; SETTLEMENT</p><p class="subtitle">판매·정산 ② 정산 금액·입금 일정</p></div></div>
+    <h1>정산 금액은 <em>자동으로 계산</em>돼요</h1>
+    <p class="lead">지급 주기마다 <b>물품 대금 + 배송비 = 입금 합계</b>, 판매수수료 방식이면 <b>수수료를 뺀 실 수령 예상</b>까지 보여요.</p>
+  </div>
+  <div class="zone">
+    <figure class="frame" style="left:0; top:0; width:300px;">
+      <div class="bar">이번 달 판매분 정산</div>
+      <div class="shot fade"><img src="{{ASSET_DIR}}/shots/sales-settle-1.jpg" alt="" />
+        <span class="pin" style="left:91%; top:36%">1</span>
+        <span class="pin" style="left:91%; top:68%">2</span>
+        <span class="pin" style="left:91%; top:88%">3</span>
+      </div>
+    </figure>
+    <figure class="frame" style="left:316px; top:0; width:276px;">
+      <div class="bar">판매 수수료(공급사 → 두고푸드)</div>
+      <div class="shot"><img src="{{ASSET_DIR}}/shots/sales-fee.jpg" alt="" />
+        <span class="pin" style="left:28.5%; top:49%">4</span>
+      </div>
+    </figure>
+    <figure class="frame" style="left:608px; top:0; width:240px;">
+      <div class="bar">이번 달 입금 일정</div>
+      <div class="shot fade"><img src="{{ASSET_DIR}}/shots/sales-payout.jpg" alt="" />
+        <span class="pin" style="left:72%; top:23%">5</span>
+      </div>
+    </figure>
+    <div style="position:absolute; left:872px; top:0; width:296px;">
+      <ol class="legend" style="gap:11px">
+        <li><i>1</i><div><b>입금 합계</b><span>물품 대금(판매 금액 100%) + 배송비(100%)</span></div></li>
+        <li><i>2</i><div><b>판매 수수료 10%</b><span>다음 달 1~3일에 한 달 치를 두고푸드로</span></div></li>
+        <li><i>3</i><div><b>실 수령 예상</b><span>입금 합계 − 판매 수수료</span></div></li>
+        <li><i>4</i><div><b>수수료 상태</b><span>청구 전 → 청구함 → 입금 확인·정산 완료</span></div></li>
+        <li><i>5</i><div><b>입금 일정</b><span>날짜별 입금 예정·입금 완료</span></div></li>
+      </ol>
+      <div class="card pale" style="position:relative; margin-top:14px; padding:12px 14px;">
+        <p style="margin:0; font-size:13px; line-height:1.55">맨 아래 <b style="color:var(--ink)">상품 판매 순위</b>에서 상품별 판매·반품·순매출도 봐요.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 14. 내 정보 -->
+<section class="page" data-tab="2" id="p-account">
+  <div class="head">
+    <div class="row"><div class="badge"><small>메뉴</small><b>7</b></div><div><p class="kicker">MY ACCOUNT</p><p class="subtitle">내 정보</p></div></div>
+    <h1>계약한 <em>정산 방식</em>과 비밀번호를 관리해요</h1>
+    <p class="lead">공급사 정보, <b>정산 방식·지급 주기·판매 수수료</b>, 로그인 <b>비밀번호 바꾸기</b>가 있어요.</p>
+  </div>
+  <div class="zone">
+    <figure class="frame" style="left:0; top:0; width:660px;">
+      <div class="bar">공급사 센터 · 내 정보<u>doogofood.site/supplier/account</u></div>
+      <div class="shot fade"><img src="{{ASSET_DIR}}/shots/account-main.jpg" alt="" />
+        <span class="pin" style="left:16.5%; top:6.2%">1</span>
+        <span class="pin" style="left:66.2%; top:6.2%">2</span>
+        <span class="pin" style="left:19.6%; top:90%">3</span>
+      </div>
+    </figure>
+    <div style="position:absolute; left:692px; top:2px; width:476px;">
+      <ol class="legend">
+        <li><i>1</i><div><b>공급사 정보</b><span>업체명 · 대표자 · 사업자등록번호 · 연락처 · 이메일 · 주소. 바뀌면 두고푸드 담당자에게 알려 주세요.</span></div></li>
+        <li><i>2</i><div><b>계정·정산</b><span>아이디, 정산 방식, 지급 주기, 판매 수수료. 두고푸드와 계약한 기준이에요.</span></div></li>
+        <li><i>3</i><div><b>비밀번호 바꾸기</b><span>지금 비밀번호를 넣고 새 비밀번호를 정해요. 8자 이상, 영문·숫자를 섞으면 더 안전해요. 바꾸면 다른 기기는 로그아웃돼요.</span></div></li>
+      </ol>
+    </div>
+    <div class="sum" style="left:692px; grid-template-columns:1fr;">
+      <div><div class="sq" style="background:#e8a33a"><i class="ic" data-icon="shield-alert"></i></div><div><b>반품·환불 안내도 함께</b><span>계정·정산 카드 아래에 반품 책임 기준이 있어요.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 15. 정산 방식 -->
+<section class="page" data-tab="3" id="p-type">
+  <div class="head">
+    <div class="row"><div class="badge"><small>정산</small><b>1</b></div><div><p class="kicker">SETTLEMENT TYPE</p><p class="subtitle">정산 방식</p></div></div>
+    <h1>정산 방식은 <em>두 가지</em>예요</h1>
+    <p class="lead">공급사마다 두고푸드와 계약한 방식 하나로 계산해요. 내 방식은 <b>내 정보 › 계정·정산</b>에서 확인해요.</p>
+  </div>
+  <div class="zone">
+    <div class="card deep" style="left:0; top:0; width:600px; height:408px; padding:22px 28px;">
+      <div style="display:flex; align-items:center; gap:10px"><span class="chip" style="background:var(--lime); color:var(--deep)">기본 · 권장</span><span class="no">TYPE A</span></div>
+      <h3 style="font-size:26px; margin-top:10px">판매수수료 <span style="color:var(--lime)">10%</span></h3>
+      <ul class="points">
+        <li><i class="ic" data-icon="banknote"></i><span>두고푸드가 지급 주기마다 <b>판매 대금 100% + 배송비</b>를 먼저 입금해요.</span></li>
+        <li><i class="ic" data-icon="percent"></i><span>공급사는 <b>한 달 판매 대금(배송비 제외) × 10%</b>를 다음 달 1~3일에 두고푸드로 보내요.</span></li>
+        <li><i class="ic" data-icon="receipt"></i><span>수수료 입금이 확인되면 두고푸드가 <b>'판매대행·마케팅대행 수수료'</b> 세금계산서를 발행해요.</span></li>
+      </ul>
+      <table class="calc dark">
+        <caption>예시 · 11월 판매분(주 정산)</caption>
+        <tr><td>물품 대금(판매 − 반품)</td><td>3,153,000원</td></tr>
+        <tr><td>+ 배송비</td><td>115,500원</td></tr>
+        <tr class="sub"><td>= 두고푸드 입금 합계 <small>매주 월요일에 나눠 입금</small></td><td>3,268,500원</td></tr>
+        <tr><td>− 판매 수수료 10% <small>12월 1~3일 → 두고푸드</small></td><td>315,300원</td></tr>
+        <tr class="total"><td>= 실 수령</td><td>2,953,200원</td></tr>
+      </table>
+    </div>
+    <div class="card" style="left:620px; top:0; width:548px; height:408px; padding:22px 28px;">
+      <div style="display:flex; align-items:center; gap:10px"><span class="chip gray">계약에 따라</span><span class="no">TYPE B</span></div>
+      <h3 style="font-size:26px; margin-top:10px">일반 도매(매입)</h3>
+      <ul class="points">
+        <li><i class="ic" data-icon="banknote"></i><span>두고푸드가 지급 주기마다 <b>공급가(원가) × 판매 수량 + 배송비</b>를 입금해요.</span></li>
+        <li><i class="ic" data-icon="ban"></i><span><b>판매 수수료가 없어요.</b> 받은 금액이 그대로 정산 금액이에요.</span></li>
+        <li><i class="ic" data-icon="eye"></i><span>공급사 센터의 판매·정산 금액도 <b>공급가 기준</b>으로 보여요.</span></li>
+      </ul>
+      <table class="calc">
+        <caption>예시 · 공급가 20,000원 상품 10개</caption>
+        <tr><td>물품 대금(공급가 × 판매 수량)</td><td>200,000원</td></tr>
+        <tr><td>+ 배송비</td><td>35,000원</td></tr>
+        <tr class="sub"><td>= 두고푸드 입금 합계</td><td>235,000원</td></tr>
+        <tr><td>판매 수수료</td><td>0원</td></tr>
+        <tr class="total"><td>= 실 수령</td><td>235,000원</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 16. 지급 주기 -->
+<section class="page" data-tab="3" id="p-cycle">
+  <div class="head">
+    <div class="row"><div class="badge"><small>정산</small><b>2</b></div><div><p class="kicker">PAYOUT CYCLE</p><p class="subtitle">지급 주기</p></div></div>
+    <h1>언제 입금되는지 <em>지급 주기</em>로 정해져요</h1>
+    <p class="lead"><b>주 정산</b>이 기본이에요. 지급 주기도 계약할 때 정하고, <b>내 정보</b>와 대시보드 맨 위에서 확인해요.</p>
+  </div>
+  <div class="zone">
+    <div class="card pale" style="left:0; top:0; width:378px; height:330px;">
+      <div style="display:flex; align-items:center; gap:8px"><span class="chip deep">기본</span><span class="no">WEEKLY</span></div>
+      <h3>주 정산</h3>
+      <p><b style="color:var(--ink)">월요일~일요일 판매분</b>을 <b style="color:var(--ink)">다음 주 월요일</b>에 입금해요.</p>
+      <div class="timeline">
+        <div class="sale">월<small>11.23</small></div><div class="sale">화</div><div class="sale">수</div><div class="sale">목</div><div class="sale">금</div><div class="sale">토</div><div class="sale">일<small>11.29</small></div><div class="pay">월<small>11.30</small></div>
+      </div>
+      <p style="font-size:13px">예시 · 11.23~11.29 판매분 → <b style="color:var(--blue)">11월 30일(월) 입금</b></p>
+      <p class="fit"><i class="ic" data-icon="store"></i>대부분의 공급사가 쓰는 기본 주기</p>
+    </div>
+    <div class="card" style="left:395px; top:0; width:378px; height:330px;">
+      <span class="no">MONTHLY</span>
+      <h3>월 정산</h3>
+      <p><b style="color:var(--ink)">1일~말일 판매분</b>을 <b style="color:var(--ink)">다음 달 1~3일</b>에 입금해요.</p>
+      <div class="timeline">
+        <div class="sale">11월 1일</div><div class="sale">…</div><div class="sale">11월 30일</div><div class="pay">12월<small>1~3일</small></div>
+      </div>
+      <p style="font-size:13px">예시 · 11월 판매분 → <b style="color:var(--blue)">12월 1~3일 입금</b></p>
+      <p class="fit"><i class="ic" data-icon="calendar-days"></i>한 달 치를 한 번에 받는 방식</p>
+    </div>
+    <div class="card" style="left:790px; top:0; width:378px; height:330px;">
+      <span class="no">DAILY</span>
+      <h3>매일 정산</h3>
+      <p><b style="color:var(--ink)">그날 판매분</b>을 <b style="color:var(--ink)">그날</b> 입금해요. 두고푸드가 먼저 입금해야 출고하는 공급사용이에요.</p>
+      <div class="timeline">
+        <div class="sale">11.26 판매</div><div class="pay">11.26 입금</div><div style="background:#fff3c9; color:#7a5a00">입금 확인 후<small>출고</small></div>
+      </div>
+      <p style="font-size:13px">예시 · 11월 26일 판매분 → <b style="color:var(--blue)">11월 26일 입금</b></p>
+      <p class="fit"><i class="ic" data-icon="truck"></i>입금이 확인되면 출고하는 공급사</p>
+    </div>
+    <div class="flow" style="padding:14px 20px;">
+      <span class="sq" style="width:38px; height:38px; background:var(--orange)"><i class="ic" data-icon="hand-coins"></i></span>
+      <span style="font-size:14.5px; line-height:1.5; color:var(--body)"><b style="color:var(--ink)">판매 수수료는 지급 주기와 상관없이 한 달에 한 번</b>이에요. 판매수수료 방식이면 매달 1~3일에 지난달 판매 대금(배송비 제외)의 10%를 두고푸드로 보내 주세요.</span>
+    </div>
+  </div>
+</section>
+
+<!-- 17. 수수료·세금계산서·반품 -->
+<section class="page" data-tab="3" id="p-flow">
+  <div class="head">
+    <div class="row"><div class="badge"><small>정산</small><b>3</b></div><div><p class="kicker">FEE · INVOICE · RETURN</p><p class="subtitle">판매 수수료 · 세금계산서 · 반품</p></div></div>
+    <h1>돈과 계산서가 오가는 <em>순서</em>예요</h1>
+    <p class="lead">판매수수료 방식 기준이에요. 일반 도매(매입)는 ①에서 <b>공급가 × 판매 수량 + 배송비</b>를 받고, <b>③·④ 단계가 없어요.</b></p>
+  </div>
+  <div class="zone">
+    <div class="steps5">
+      <div class="st"><span class="n">01</span><span class="dir to-sup">두고푸드 → 공급사</span><h3>판매 대금 입금</h3><p>지급 주기마다 <b>판매 대금 100% + 배송비</b>를 입금해요. 금액은 판매·정산 화면과 같아요.</p><p class="where"><i class="ic" data-icon="monitor"></i>판매·정산 › 판매분 정산 · 입금 일정</p></div>
+      <div class="st"><span class="n">02</span><span class="dir to-doogo">공급사 → 두고푸드</span><h3>물품 (세금)계산서</h3><p>받은 물품 대금으로 발행해 주세요. <b>면세 상품은 계산서</b>, 과세 상품은 세금계산서예요.</p><p class="where"><i class="ic" data-icon="receipt"></i>공급사가 두고푸드로 발행</p></div>
+      <div class="st"><span class="n">03</span><span class="dir to-doogo">공급사 → 두고푸드</span><h3>판매 수수료 입금</h3><p>다음 달 초 청구를 받으면 <b>1~3일</b>에 한 달 판매 대금(배송비 제외)의 <b>10%</b>를 보내요.</p><p class="where"><i class="ic" data-icon="monitor"></i>판매·정산 › 판매 수수료 카드</p></div>
+      <div class="st"><span class="n">04</span><span class="dir to-sup">두고푸드 → 공급사</span><h3>수수료 세금계산서</h3><p>입금이 확인되면 <b>'판매대행·마케팅대행 수수료'</b> 세금계산서를 발행해요.</p><p class="where"><i class="ic" data-icon="monitor"></i>수수료 카드에 발행 날짜 표시</p></div>
+    </div>
+    <div class="card" style="left:0; top:222px; width:572px; height:186px; padding:18px 22px;">
+      <div style="display:flex; align-items:center; gap:10px"><span class="sq" style="width:36px; height:36px; background:#e8a33a"><i class="ic" data-icon="shield-alert"></i></span><h3 style="margin:0; font-size:18px">반품·환불은 이렇게</h3></div>
+      <ul class="points" style="gap:6px">
+        <li><i class="ic" data-icon="check"></i><span>공급사 귀책(상품 문제)이면 위탁셀러(수강생) <b>응대(CS)는 두고푸드</b>가 맡아요.</span></li>
+        <li><i class="ic" data-icon="check"></i><span>제품 <b>파손·변질은 공급사가 100% 책임</b>지고 보상해요.</span></li>
+        <li><i class="ic" data-icon="check"></i><span>반품·환불된 금액은 <b>정산 금액에서 빠져요.</b></span></li>
+      </ul>
+    </div>
+    <div class="card pale" style="left:592px; top:222px; width:576px; height:186px; padding:18px 22px;">
+      <div style="display:flex; align-items:center; gap:10px"><span class="sq" style="width:36px; height:36px"><i class="ic" data-icon="truck"></i></span><h3 style="margin:0; font-size:18px">배송비 · 수수료 상태</h3></div>
+      <ul class="points" style="gap:6px">
+        <li><i class="ic" data-icon="check"></i><span>배송비는 <b>100% 공급사 몫</b>이고, 판매 수수료 계산에서 빠져요.</span></li>
+        <li><i class="ic" data-icon="check"></i><span>수수료 카드 상태: <span class="chip gray" style="height:22px">청구 전</span> → <span class="chip yellow" style="height:22px">청구함</span> → <span class="chip green" style="height:22px">입금 확인·정산 완료</span></span></li>
+        <li><i class="ic" data-icon="check"></i><span>세금계산서를 발행하면 수수료 카드에 <b>발행 날짜</b>가 보여요.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 18. 자주 묻는 질문 -->
+<section class="page" data-tab="4" id="p-faq">
+  <div class="faq-left">
+    <div class="row" style="display:flex; align-items:center; gap:12px"><div class="badge"><small>도움</small><b>1</b></div><p class="kicker">FAQ</p></div>
+    <h1>공급사 센터<br /><em>자주 묻는 질문</em></h1>
+    <p>궁금한 점이 여기 없으면<br />두고푸드 담당자에게 편하게 물어보세요.</p>
+    <div class="faq-icon"><i class="ic" data-icon="circle-help"></i></div>
+  </div>
+  <div class="faq">
+    <div><h3><i>Q</i>아이디·비밀번호를 잊었어요.</h3><p>두고푸드 담당자에게 알려 주세요. 확인 후 <b>비밀번호를 새로 정해</b> 드려요.</p></div>
+    <div><h3><i>Q</i>공급가를 바꿨는데 단가표에 그대로예요.</h3><p>변경 요청은 <b>두고푸드가 승인해야 반영</b>돼요. 변경 요청 내역에서 상태를 확인해 주세요.</p></div>
+    <div><h3><i>Q</i>보낸 요청을 고치거나 취소할 수 있나요?</h3><p><b>승인 대기</b> 중이면 '요청 고치기'나 '취소'를 누르면 돼요. 처리된 요청은 새로 보내 주세요.</p></div>
+    <div><h3><i>Q</i>품절되면 어떻게 알리나요?</h3><p>내 상품 › 변경 요청에서 <b>판매 상태를 '품절'</b>로 바꿔 보내 주세요. 승인되면 단가표에 품절로 보여요.</p></div>
+    <div><h3><i>Q</i>정산 금액은 어떻게 계산되나요?</h3><p>판매 금액(공급가 × 판매 수량)에서 <b>반품을 빼고 배송비를 더해요.</b> 판매수수료 방식이면 수수료는 다음 달 1~3일에 따로 보내요.</p></div>
+    <div><h3><i>Q</i>판매 수수료에 배송비도 들어가나요?</h3><p>아니요. 수수료는 <b>판매 대금(배송비 제외)</b> 기준이고, 배송비는 100% 공급사 몫이에요.</p></div>
+    <div><h3><i>Q</i>주문은 어디서 받나요?</h3><p>지금처럼 두고푸드가 정한 시간에 <b>메일로 보내는 발주서(엑셀)</b>로 받아요. 출고 후 그 메일에 택배사·송장번호를 넣어 회신해 주세요.</p></div>
+    <div><h3><i>Q</i>정산 방식·지급 주기를 바꾸고 싶어요.</h3><p>계약 기준이라 <b>담당자와 협의 후 두고푸드가 바꿔</b> 드려요. 바뀐 내용은 내 정보에 바로 보여요.</p></div>
+  </div>
+</section>
+
+<!-- 19. 문의 -->
+<section class="page" data-nofoot id="p-contact">
+  <div class="contact-left">
+    <img class="logo" src="{{BRAND_DIR}}/doogo-food-logo-color.png" alt="DOOGO FOOD" />
+    <h1>궁금한 점은 언제든<br /><em>두고푸드</em>에 물어보세요</h1>
+    <p class="lead2">공급사 센터 사용법, 정산 금액, 상품 등록 요청까지 두고푸드 팀원이 함께 확인해 드려요.</p>
+    <div class="contact-cards">
+      <div class="pale"><small><i class="ic" data-icon="message-circle"></i>계약한 공급사</small><strong>카카오톡 단톡방</strong><p>두고푸드 팀원과 함께 있는 단톡방에서<br />반품·CS·배송·정산을 바로 이야기해요.</p></div>
+      <div><small><i class="ic" data-icon="headset"></i>카카오톡 채널</small><strong>1:1 상담</strong><p>pf.kakao.com/_NyuVn<br />오른쪽 QR을 휴대폰 카메라로 찍어 주세요.</p></div>
+      <div><small><i class="ic" data-icon="link"></i>공급사 센터</small><strong>doogofood.site/supplier</strong><p>PC·휴대폰 어디서나 같은 주소로 들어와요.</p></div>
+      <div><small><i class="ic" data-icon="building-2"></i>운영 본사</small><strong>(주)두고홀딩스</strong><p>대표 문원오 · 세종 갈매로 353 제5층 5023호</p></div>
+    </div>
+    <p class="biz">사업자등록번호 726-87-03167 · 통신판매업 제2024-세종아름-0878호<br />※ 이 설명서의 화면·금액은 이해를 돕기 위한 예시(봄날농원)이며, 실제 정산 조건은 공급사 계약을 따릅니다.</p>
+  </div>
+  <div class="contact-right">
+    <p class="sec">CONTACT</p>
+    <div class="qr"><img src="{{PROPOSAL_DIR}}/qr-kakao.svg" alt="카카오톡 상담 QR" /><div><b>카카오톡 상담</b><span>휴대폰 카메라로 QR을 찍으면<br />두고푸드 카카오톡 채널이<br />바로 열려요.</span></div></div>
+    <div class="guide-btn">공급사 센터 위 줄 <span class="mock"><i class="ic" data-icon="file-text"></i>공급사 안내</span> 버튼을 누르면 <b>이 설명서를 언제든 다시</b> 열 수 있어요.</div>
+    <div class="slogan"><small>DOOGO FOOD 공급사 센터</small><strong>좋은 상품은 공급사가,<br />판매와 정산은 두고푸드가</strong></div>
+  </div>
+</section>
+
+<script>
+// 위 탭 · 아래 줄(쪽 번호) · 차례 쪽 번호를 채웁니다.
+(() => {
+  const tabs = ["시작하기", "메뉴 안내", "정산 안내", "도움말"];
+  const pages = [...document.querySelectorAll(".page")];
+  const numberOf = new Map(pages.map((page, index) => [page.id, index + 1]));
+  pages.forEach((page, index) => {
+    const no = String(index + 1).padStart(2, "0");
+    if (page.dataset.tab !== undefined) {
+      const nav = document.createElement("nav");
+      nav.className = "tabs";
+      const current = Number(page.dataset.tab);
+      nav.innerHTML = tabs.map((label, i) => `<span class="${current === i + 1 ? "on" : ""}">${label}</span>`).join("") + `<img src="{{BRAND_DIR}}/doogo-food-logo-color.png" alt="DOOGO FOOD" />`;
+      page.prepend(nav);
+    }
+    if (!page.classList.contains("cover") && page.dataset.nofoot === undefined) {
+      const foot = document.createElement("footer");
+      foot.className = "foot";
+      const shots = page.querySelector(".shot") ? `<span class="memo">※ 화면은 예시 계정(봄날농원)입니다.</span>` : "";
+      foot.innerHTML = `<span class="brand">DOOGO FOOD<small>공급사 설명서</small></span>${shots}<span class="url">doogofood.site/supplier</span><b class="no">${no}</b>`;
+      page.append(foot);
+    }
+  });
+  document.querySelectorAll("[data-ref]").forEach((span) => {
+    const number = numberOf.get(span.dataset.ref);
+    span.textContent = number ? String(number).padStart(2, "0") : "??";
+  });
+})();
+</script>
+</body>
+</html>
