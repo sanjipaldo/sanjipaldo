@@ -357,7 +357,7 @@ baljuoraRouter.get("/admin/hometax/file", adminRoute, async (c) => {
 // 여러 공급사 상태를 한 번에(판매 수수료 "한 번에 청구하기" 등)
 baljuoraRouter.put("/admin/settlements/bulk", adminRoute, async (c) => {
   const parsed = z.object({
-    kind: z.enum(["weekly", "monthly", "fee"]),
+    kind: z.enum(["weekly", "monthly", "daily", "fee"]),
     period: z.string().trim().max(10),
     status: z.enum(SUPPLIER_SETTLEMENT_STATUSES as [string, ...string[]]),
     supplierNames: z.array(z.string().trim().min(1).max(120)).min(1).max(300)
@@ -405,11 +405,12 @@ baljuoraRouter.post("/admin/settlements/fee-invoices", adminRoute, async (c) => 
   }
 });
 
-// 공급사 정산 목록: kind = weekly(주 정산 지급, period = 판매 주 월요일 YYYY-MM-DD) · monthly(월 정산 지급, YYYY-MM) · fee(판매 수수료 청구, YYYY-MM).
+// 공급사 정산 목록: kind = weekly(주 정산 지급, period = 판매 주 월요일 YYYY-MM-DD) · monthly(월 정산 지급, YYYY-MM)
+// · daily(매일 정산 지급, period = 판매일 YYYY-MM-DD, 비우면 오늘) · fee(판매 수수료 청구, YYYY-MM).
 // 예전처럼 ?month=YYYY-MM만 주면 월 정산입니다. period를 비우면 지난주·지난달.
 baljuoraRouter.get("/admin/settlements", adminRoute, async (c) => {
   const kind = c.req.query("kind");
-  if (kind && !["weekly", "monthly", "fee"].includes(kind)) return c.json(apiFailure("INVALID_INPUT", "정산 종류를 확인해 주세요."), 400);
+  if (kind && !["weekly", "monthly", "daily", "fee"].includes(kind)) return c.json(apiFailure("INVALID_INPUT", "정산 종류를 확인해 주세요."), 400);
   try {
     c.header("Cache-Control", "no-store");
     return c.json(apiSuccess(await listSupplierSettlements({ kind: kind ?? null, period: c.req.query("period") ?? null, month: c.req.query("month") ?? null })));
@@ -421,7 +422,7 @@ baljuoraRouter.get("/admin/settlements", adminRoute, async (c) => {
 baljuoraRouter.put("/admin/settlements", adminRoute, async (c) => {
   const parsed = z.object({
     supplierName: z.string().trim().min(1).max(120),
-    kind: z.enum(["weekly", "monthly", "fee"]).optional(),
+    kind: z.enum(["weekly", "monthly", "daily", "fee"]).optional(),
     period: z.string().trim().max(10).optional(),
     month: MonthSchema.optional(),
     status: z.enum(SUPPLIER_SETTLEMENT_STATUSES as [string, ...string[]]),

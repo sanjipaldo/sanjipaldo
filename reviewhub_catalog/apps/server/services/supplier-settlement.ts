@@ -1,11 +1,12 @@
 // 공급사 정산 방식·정산 장부(2026-11-25 관리자 요청 "정산 시스템 2가지: 판매수수료 / 일반 도매").
-// - 공급사마다 정산 방식(판매수수료 n% · 일반 도매(매입))과 지급 주기(주 정산 · 월 정산)를 둡니다. 저장은 마이그레이션 없이
+// - 공급사마다 정산 방식(판매수수료 n% · 일반 도매(매입))과 지급 주기(주 정산 · 월 정산 · 매일 정산)를 둡니다. 저장은 마이그레이션 없이
 //   baljuora_sync_store "supplier_settlement_settings" = { [공급사 id]: { type, commissionRate, cycle, updatedAt, updatedBy } }.
 //   저장한 적 없는 공급사는 공급사 센터 계정의 수수료율·주기(없으면 10% · 주 정산)와 판매수수료 방식으로 봅니다.
 //   설정을 저장하면 공급사 센터 계정(있으면)의 수수료율·주기도 같은 값으로 맞춥니다.
 // - 정산 장부는 발주오라 판매 줄(baljuora_sales_lines, 매출로 치는 상태만)을 공급사·날짜·상품별로 모읍니다:
 //   판매·반품(두고푸드 공급가), 원가(발주오라 매입원가, 없으면 DB센터 원가) × 수량, 매입 배송비(100% 공급사 지급), 매출처가 낸 배송비.
-// - 정산 기록(지급·수수료 상태)은 supplier_settlements에 기간 열쇠로 적습니다(주 정산 "w:<월요일>", 월 정산 "YYYY-MM", 수수료 "fee:YYYY-MM").
+// - 정산 기록(지급·수수료 상태)은 supplier_settlements에 기간 열쇠로 적습니다(주 정산 "w:<월요일>", 월 정산 "YYYY-MM", 매일 정산 "d:<판매일>",
+//   수수료 "fee:YYYY-MM").
 import { and, eq, gte, inArray, lte, sql, type SQL } from "drizzle-orm";
 import { SALES_EXCLUDED_STATUSES } from "@repo/shared/baljuora-sales";
 import {
@@ -14,9 +15,11 @@ import {
   SUPPLIER_SETTLEMENT_STATUSES,
   cleanSettlementSettings,
   emptyLedger,
+  settlementCycleOf,
   settlementRecordKey,
   type SettlementLedger,
   type SettlementRecordKind,
+  type SupplierSettlementCycle,
   type SupplierSettlementSettings,
   type SupplierSettlementState,
   type FeeInvoiceState,
@@ -98,7 +101,7 @@ export async function loadSettlementDirectory(): Promise<SettlementDirectory> {
     const base: SupplierSettlementSettings = {
       type: DEFAULT_SETTLEMENT_SETTINGS.type,
       commissionRate: account?.commissionRate ?? DEFAULT_SUPPLIER_COMMISSION_RATE,
-      cycle: account ? (account.settlementCycle === "weekly" ? "weekly" : "monthly") : DEFAULT_SETTLEMENT_SETTINGS.cycle
+      cycle: account ? settlementCycleOf(account.settlementCycle, "monthly") : DEFAULT_SETTLEMENT_SETTINGS.cycle
     };
     const saved = stored[supplier.id];
     const clean = saved ? cleanSettlementSettings(saved, base) : null;
@@ -157,7 +160,7 @@ export async function saveSupplierSettlementSettings(supplierId: string, input: 
 }
 
 /** 공급사 센터 계정 화면에서 수수료율·주기만 바꿨을 때 저장한 정산 방식에도 같은 값을 적습니다(방식은 그대로). */
-export async function syncStoredSettlementFromAccount(supplierId: string, input: { commissionRate?: number | null; settlementCycle?: "weekly" | "monthly" }) {
+export async function syncStoredSettlementFromAccount(supplierId: string, input: { commissionRate?: number | null; settlementCycle?: SupplierSettlementCycle }) {
   const stored = await readStore();
   const saved = stored[supplierId];
   if (!saved) return;

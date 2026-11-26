@@ -628,7 +628,8 @@ export const supplierAccounts = sqliteTable("supplier_accounts", {
   username: text("username").notNull().unique(),
   isActive: integer("isActive", { mode: "boolean" }).notNull().default(true),
   commissionRate: real("commissionRate").notNull().default(10),
-  settlementCycle: text("settlementCycle", { enum: ["monthly", "weekly"] }).notNull().default("monthly"),
+  // 지급 주기(2026-11-26 "daily" 매일 정산 추가 — 칸은 TEXT라 마이그레이션 없음)
+  settlementCycle: text("settlementCycle", { enum: ["monthly", "weekly", "daily"] }).notNull().default("monthly"),
   lastLoginAt: text("lastLoginAt"),
   createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)

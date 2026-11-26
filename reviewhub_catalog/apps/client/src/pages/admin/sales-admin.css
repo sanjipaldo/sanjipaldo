@@ -322,6 +322,17 @@
 .ssa-ship { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
 .ssa-total { color: #163300; font-size: 15.5px; }
 .ssa-info { color: #0f2747; background: #eaf2fd; }
+/* 매일 정산 지급(2026-11-26): 오늘로 · 지급 대기 날짜 · 다른 지급 주기 안내 */
+.sa-month .ssa-today { width: auto; padding: 0 12px; font-size: 13px; font-weight: 800; }
+.ssa-other-cycle { flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.ssa-other-cycle button { min-height: 28px; padding: 0 10px; border: 1px solid #c9dcf3; border-radius: 999px; color: #0f2747; background: #fff; font-size: 12.5px; font-weight: 800; cursor: pointer; }
+.ssa-other-cycle button:hover { background: #f3f8ff; }
+.ssa-pending-days { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid #f3d39c; border-radius: 14px; color: #7a4b00; background: #fffbf3; font-size: 13.5px; }
+.ssa-pending-days > span { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; }
+.ssa-pending-days button { min-height: 34px; padding: 0 12px; border: 1px solid #f0c98a; border-radius: 999px; color: #5c3b00; background: #fff; font-size: 13px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.ssa-pending-days button b { color: #3d2700; }
+.ssa-pending-days button.is-active { border-color: #7a4b00; color: #fff; background: #7a4b00; }
+.ssa-pending-days button.is-active b { color: #fff; }
 /* 판매 수수료 청구·세금계산서(2026-11-25) */
 .ssa-bulk { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 14px; margin: 0 0 14px; padding: 12px 16px; border: 1px solid #f3d39c; border-radius: 14px; color: #7a4b00; background: #fffbf3; font-size: 14px; }
 .ssa-bulk > span { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -344,6 +355,7 @@
 .ssa-invoice-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .ssa-invoice-actions button { display: inline-flex; align-items: center; gap: 6px; }
 @media (max-width: 720px) {
+  .ssa-pending-days button { flex: 1 1 100%; justify-content: flex-start; text-align: left; }
   .ssa-invoice-steps { grid-template-columns: minmax(0, 1fr); }
   .ssa-vat label { flex: 1 1 100%; }
   .ssa-bulk button, .ssa-invoice-actions button { width: 100%; justify-content: center; }

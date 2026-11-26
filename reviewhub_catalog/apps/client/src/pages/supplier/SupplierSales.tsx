@@ -86,6 +86,10 @@ export function SupplierSales() {
   const selectedPayout = selected ? payoutMap.get(selected) : undefined;
   const selectedFee = selected ? feeMap.get(selected) : undefined;
   const amountLabel = commission ? "판매 금액" : "공급 금액";
+  // 매일 정산: 날마다 입금하므로 정산 칸은 이 달 합계 한 칸으로 보여 주고 날짜별 입금은 '입금 일정'에서 봐요.
+  const daily = settings.cycle === "daily";
+  const dailyPaid = daily ? (view?.settlements ?? []).filter((item) => item.state && item.state.status !== "pending").length : 0;
+  const dailyWaiting = daily ? (view?.settlements ?? []).filter((item) => item.payoutAmount > 0 && (!item.state || item.state.status === "pending")).length : 0;
 
   return (
     <>
@@ -135,7 +139,7 @@ export function SupplierSales() {
                   const labelParts = [dayLabel(date)];
                   if (item?.saleAmount) labelParts.push(`판매 ${won(item.saleAmount)}`);
                   if (item?.returnAmount) labelParts.push(`반품 ${won(item.returnAmount)}`);
-                  if (payout) labelParts.push(payout.first ? `정산 입금 ${won(payout.payout.amount)}` : "정산 입금 기간");
+                  if (payout) labelParts.push(daily ? `정산 입금 ${won(payout.payout.amount)} ${payout.payout.state && payout.payout.state.status !== "pending" ? "완료" : "예정"}` : payout.first ? `정산 입금 ${won(payout.payout.amount)}` : "정산 입금 기간");
                   if (fee) labelParts.push(fee.first ? `판매 수수료 ${won(feePayable(fee.fee))} 두고푸드로 입금` : "판매 수수료 입금 기간");
                   return (
                     <button
@@ -150,7 +154,13 @@ export function SupplierSales() {
                       {item && item.saleAmount > 0 && <strong><span className="sup-full">{won(item.saleAmount)}</span><span className="sup-compact">{compactWon(item.saleAmount)}</span></strong>}
                       {item && item.returnAmount > 0 && <small className="is-return">반품 <span className="sup-full">{won(item.returnAmount)}</span><span className="sup-compact">{compactWon(item.returnAmount)}</span></small>}
                       {item && item.orderCount > 0 && <small className="sup-full">{item.orderCount}건 · {item.saleQuantity}개</small>}
-                      {payout && (
+                      {payout && daily && (
+                        // 매일 정산: 판매 금액이 바로 위에 있어 금액 대신 그날 입금 상태만
+                        <span className={`sup-cal-payout ${payout.payout.state && payout.payout.state.status !== "pending" ? "is-done" : ""}`}>
+                          <em>입금<span className="sup-full">{payout.payout.state && payout.payout.state.status !== "pending" ? " 완료" : " 예정"}</span></em>
+                        </span>
+                      )}
+                      {payout && !daily && (
                         <span className={`sup-cal-payout ${payout.payout.done ? "is-done" : ""}`}>
                           <em>{payout.first ? "입금" : <>입금<span className="sup-full"> 기간</span></>}</em>
                           {payout.first && payout.payout.amount > 0 && <span className="sup-full">{won(payout.payout.amount)}</span>}
@@ -204,7 +214,13 @@ export function SupplierSales() {
               <section className="admin-card sup-settle-card">
                 <div className="card-heading"><Banknote size={19} aria-hidden="true" /><div><h2>{monthLabel(month)} 판매분 정산</h2><p>{settlementSettingsLabel(settings)} · 자동 계산</p></div></div>
                 <div className="sup-settle-list">
-                  {view.settlements.map((settlement) => (
+                  {daily && totals && (
+                    <article>
+                      <div className="sup-settle-head"><span>{monthLabel(month)} 판매분 · 매일 정산</span><strong>입금 완료 {count(dailyPaid, "일")} · 입금 예정 {count(dailyWaiting, "일")}</strong></div>
+                      <SettlementMoneyList summary={{ cycle: "daily", start, end, payoutStart: start, payoutEnd: end, netAmount: totals.netAmount, goodsAmount: totals.goodsAmount, shippingFee: totals.shippingFee, costMissing: totals.costMissing, commission: totals.commission, payoutAmount: totals.payoutAmount, netIncome: totals.netIncome }} settings={settings} />
+                    </article>
+                  )}
+                  {!daily && view.settlements.map((settlement) => (
                     <article key={settlement.start}>
                       <div className="sup-settle-head"><span>{formatPeriodLabel(settlement)} 판매분</span><strong>{formatPayoutLabel(settlement)} 입금</strong></div>
                       <PayoutStatus state={settlement.state} done={settlement.payoutEnd < view.today} />

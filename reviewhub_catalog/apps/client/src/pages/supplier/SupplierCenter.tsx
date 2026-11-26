@@ -29,6 +29,8 @@ import { RequireAuth } from "@/components/auth/route-guards";
 import { apiFetch } from "@/lib/api";
 import { authClient, clearAuthToken } from "@/lib/auth";
 import {
+  SUPPLIER_CYCLE_HINTS,
+  SUPPLIER_CYCLE_LABELS,
   SUPPLIER_PASSWORD_MIN,
   SUPPLIER_PASSWORD_RECOMMENDED,
   SUPPLIER_RETURN_POLICY,
@@ -418,7 +420,7 @@ function SupplierAccount({ profile }: { profile: SupplierProfile }) {
           <dl className="sup-info-list">
             <div><dt>아이디</dt><dd>{account.username}</dd></div>
             <div><dt>정산 방식</dt><dd>{SUPPLIER_SETTLEMENT_TYPE_LABELS[settlement.type]}</dd></div>
-            <div><dt>지급 주기</dt><dd>{settlement.cycle === "weekly" ? "주 정산 · 월~일 판매분 → 다음 주 월요일" : "월 정산 · 1일~말일 → 다음 달 1~3일"}</dd></div>
+            <div><dt>지급 주기</dt><dd>{SUPPLIER_CYCLE_LABELS[settlement.cycle] ?? settlement.cycle} · {SUPPLIER_CYCLE_HINTS[settlement.cycle] ?? ""}</dd></div>
             {settlement.type === "commission" && <div><dt>판매 수수료</dt><dd>{settlement.commissionRate}% · 다음 달 1~3일</dd></div>}
             <div><dt>마지막 접속</dt><dd>{shortDateTime(account.lastLoginAt)}</dd></div>
           </dl>

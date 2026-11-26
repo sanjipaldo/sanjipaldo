@@ -50,6 +50,7 @@ import {
   settlementRecordKey,
   weekStartOf,
   type SettlementRecordKind,
+  type SupplierSettlementCycle,
   type SupplierSettlementSettings,
   type SupplierSettlementStatus
 } from "@repo/shared/supplier-portal";
@@ -59,6 +60,7 @@ import {
   feeState,
   invoiceState,
   ledgerBySupplier,
+  ledgerBySupplierDay,
   loadSettlementDirectory,
   payoutState,
   recordState,
@@ -894,25 +896,29 @@ export async function buildHometaxFile(month: string, kind: HometaxKind, part: n
   });
 }
 
-// ─── 공급사 정산(2026-11-25: 주 정산 지급 · 월 정산 지급 · 판매 수수료 청구) ─────────────────────────────
+// ─── 공급사 정산(2026-11-25: 주 정산 지급 · 월 정산 지급 · 판매 수수료 청구, 2026-11-26 매일 정산 지급) ──────────────
 // 정산 방식은 services/supplier-settlement.ts(공급사마다 판매수수료/일반 도매, 수수료율, 지급 주기).
 // - 주 정산: 판매 주(월~일) → 다음 주 월요일 지급, 기록 열쇠 "w:<월요일>"(지급 대기 → 지급 완료)
 // - 월 정산: 1일~말일 → 다음 달 1~3일 지급, 열쇠 "YYYY-MM"(예전 월 정산 기록과 같음 — 예전 "정산 완료"는 지급 완료 + 수수료 확인)
+// - 매일 정산(입금이 확인돼야 출고하는 공급사): 그날 판매분 → 그날 지급, 열쇠 "d:<판매일>"(지급 대기 → 지급 완료).
+//   판매수수료 방식이면 수수료는 아래 판매 수수료(한 달 판매 대금, 배송비 제외)로 다음 달 1~3일에 따로 받습니다.
 // - 판매 수수료: 판매수수료 방식 공급사의 한 달 판매 대금 × 수수료율 → 다음 달 1~3일 공급사가 두고푸드에 입금,
 //   열쇠 "fee:YYYY-MM"(청구 전 → 세금계산서 발행 → 수수료 입금 확인)
 type SettlementListInput = { kind?: string | null; period?: string | null; month?: string | null };
 
 function settlementKind(value: string | null | undefined): SettlementRecordKind {
-  return value === "weekly" || value === "fee" ? value : "monthly";
+  return value === "weekly" || value === "daily" || value === "fee" ? value : "monthly";
 }
 
 export function defaultSettlementPeriod(kind: SettlementRecordKind, today = seoulDateKey()) {
-  // 주 정산은 지난주 판매분(이번 주 월요일 지급), 월 정산·수수료는 지난달 판매분(이번 달 1~3일)을 먼저 보여 줍니다.
+  // 주 정산은 지난주 판매분(이번 주 월요일 지급), 월 정산·수수료는 지난달 판매분(이번 달 1~3일), 매일 정산은 오늘 판매분을 먼저 보여 줍니다.
+  if (kind === "daily") return today;
   if (kind === "weekly") return weekStartOf(addDays(today, -7));
   return nextMonthKey(today.slice(0, 7), -1);
 }
 
 function settlementWindow(kind: SettlementRecordKind, period: string) {
+  if (kind === "daily") return { start: period, end: period, payoutStart: period, payoutEnd: period };
   if (kind === "weekly") {
     const payout = addDays(period, 7);
     return { start: period, end: addDays(period, 6), payoutStart: payout, payoutEnd: payout };
@@ -935,14 +941,20 @@ async function settlementRowsFor(kind: SettlementRecordKind, period: string) {
   ]);
   const savedNames = [...records.values()].filter((row) => row.month === key).map((row) => row.supplierName);
   const names = new Set<string>([...savedNames]);
-  const otherCycle = { suppliers: 0, payoutAmount: 0 };
+  // 이 탭에 안 나오는 다른 지급 주기 공급사(이 기간 판매분) — 주기별로도 세어 '○○ 탭에서 봐요' 안내에 씁니다.
+  const otherCycle = { suppliers: 0, payoutAmount: 0, byCycle: {} as Partial<Record<SupplierSettlementCycle, { suppliers: number; payoutAmount: number }>> };
   for (const [name, ledger] of ledgers) {
     if (ledger.quantity <= 0) continue;
     const settings = directory.resolve(name);
     if (belongsTo(kind, settings)) names.add(name);
     else if (kind !== "fee") {
+      const payoutAmount = settlementAmounts(ledger, settings).payoutAmount;
       otherCycle.suppliers += 1;
-      otherCycle.payoutAmount += settlementAmounts(ledger, settings).payoutAmount;
+      otherCycle.payoutAmount += payoutAmount;
+      const entry = otherCycle.byCycle[settings.cycle] ?? { suppliers: 0, payoutAmount: 0 };
+      entry.suppliers += 1;
+      entry.payoutAmount += payoutAmount;
+      otherCycle.byCycle[settings.cycle] = entry;
     }
   }
   const rows = [...names].map((supplierName) => {
@@ -986,7 +998,31 @@ async function settlementRowsFor(kind: SettlementRecordKind, period: string) {
       invoice: kind === "fee" ? invoiceState(records.get(`${supplierName}|${feeInvoiceKey(period)}`)) : null
     };
   });
-  return { window, key, rows, otherCycle };
+  return { window, key, rows, otherCycle, directory };
+}
+
+// 매일 정산: 최근 14일(오늘 포함) 중 아직 지급하지 않은 날(매일 정산 공급사의 지급할 금액이 있는 날) — 빠뜨리지 않게 탭 위에 알려 줍니다.
+const DAILY_PENDING_LOOKBACK = 14;
+
+async function dailyPendingDays(today: string, directory: SettlementDirectory) {
+  const rows = (await ledgerBySupplierDay(addDays(today, -(DAILY_PENDING_LOOKBACK - 1)), today))
+    .map((row) => {
+      const settings = directory.resolve(row.supplierName);
+      return { ...row, cycle: settings.cycle, payoutAmount: settlementAmounts(row, settings).payoutAmount };
+    })
+    .filter((row) => row.cycle === "daily" && row.payoutAmount > 0);
+  if (rows.length === 0) return [];
+  const records = await settlementRecords([...new Set(rows.map((row) => settlementRecordKey("daily", row.date)))]);
+  const byDate = new Map<string, { date: string; suppliers: number; payoutAmount: number }>();
+  for (const row of rows) {
+    const record = records.get(`${row.supplierName}|${settlementRecordKey("daily", row.date)}`);
+    if (record && record.status !== "pending") continue;
+    const entry = byDate.get(row.date) ?? { date: row.date, suppliers: 0, payoutAmount: 0 };
+    entry.suppliers += 1;
+    entry.payoutAmount += row.payoutAmount;
+    byDate.set(row.date, entry);
+  }
+  return [...byDate.values()].sort((first, second) => first.date.localeCompare(second.date));
 }
 
 export async function listSupplierSettlements(input: SettlementListInput) {
@@ -994,9 +1030,10 @@ export async function listSupplierSettlements(input: SettlementListInput) {
     const kind = settlementKind(input.kind);
     const period = input.period ?? input.month ?? defaultSettlementPeriod(kind);
     if (!isSettlementPeriod(kind, period)) {
-      throw new DatabaseError("DATABASE_QUERY_FAILED", kind === "weekly" ? "정산할 주를 월요일 날짜(YYYY-MM-DD)로 골라 주세요." : "정산할 달을 YYYY-MM 형식으로 골라 주세요.", 400);
+      const message = kind === "weekly" ? "정산할 주를 월요일 날짜(YYYY-MM-DD)로 골라 주세요." : kind === "daily" ? "정산할 날짜를 YYYY-MM-DD 형식으로 골라 주세요." : "정산할 달을 YYYY-MM 형식으로 골라 주세요.";
+      throw new DatabaseError("DATABASE_QUERY_FAILED", message, 400);
     }
-    const { window, rows: baseRows, otherCycle } = await settlementRowsFor(kind, period);
+    const { window, rows: baseRows, otherCycle, directory } = await settlementRowsFor(kind, period);
     // 판매 수수료: 세금계산서(두고푸드 → 공급사) 금액·공급받는자 정보 확인을 함께 붙입니다.
     const hometax = kind === "fee" ? await getHometaxSettings() : null;
     const profiles = kind === "fee" ? await supplierTaxProfiles() : new Map<string, SupplierTaxProfile>();
@@ -1035,7 +1072,7 @@ export async function listSupplierSettlements(input: SettlementListInput) {
     return {
       kind,
       period,
-      month: kind === "weekly" ? period.slice(0, 7) : period,
+      month: kind === "weekly" || kind === "daily" ? period.slice(0, 7) : period,
       start: window.start,
       end: window.end,
       payoutFrom: window.payoutStart,
@@ -1045,6 +1082,8 @@ export async function listSupplierSettlements(input: SettlementListInput) {
       totals,
       otherCycle,
       invoice,
+      // 매일 정산 탭: 최근 14일 중 지급 대기인 날(날짜·공급사 수·금액)
+      pendingDays: kind === "daily" ? await dailyPendingDays(seoulDateKey(), directory) : [],
       sync: await getSalesSyncState()
     };
   });
@@ -1052,6 +1091,7 @@ export async function listSupplierSettlements(input: SettlementListInput) {
 
 const PAYOUT_STATUSES: Record<SettlementRecordKind, SupplierSettlementStatus[]> = {
   weekly: ["pending", "paid"],
+  daily: ["pending", "paid"],
   // 예전 월 정산 기록의 "정산 완료"(지급 + 수수료 확인)도 그대로 받습니다.
   monthly: ["pending", "paid", "done"],
   // 판매 수수료: 청구 전 → 청구함(입금 대기) → 입금 확인(정산 완료)

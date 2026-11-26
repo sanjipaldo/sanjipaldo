@@ -293,7 +293,8 @@ describe("발주오라 판매·매출처 → 판매 현황·매출처·홈택스
     expect(settlements.kind).toBe("monthly");
     expect(settlements.rows.map((item: any) => item.supplierName)).toEqual(["봄날농원"]);
     expect(spring()).toMatchObject({ registered: true, type: "commission", cycle: "monthly", saleAmount: 166000, returnAmount: 38000, netAmount: 128000, commissionRate: 10, commission: 12800, goodsAmount: 128000, shippingFee: 0, payoutAmount: 128000, status: "pending", recorded: null });
-    expect(settlements.otherCycle).toEqual({ suppliers: 2, payoutAmount: 25000 + 20000 });
+    // 다른 지급 주기 공급사(기본값 주 정산 2곳) — 주기별로도 세어 '○○ 탭에서 봐요' 버튼에 씀(2026-11-26)
+    expect(settlements.otherCycle).toEqual({ suppliers: 2, payoutAmount: 25000 + 20000, byCycle: { weekly: { suppliers: 2, payoutAmount: 25000 + 20000 } } });
     const paid = await call<any>(admin, "/admin/settlements", "PUT", { supplierName: "봄날농원", month, status: "paid", memo: "12/1 국민 입금" });
     expect(paid.state).toMatchObject({ status: "paid", saleAmount: 128000, commission: 12800, payoutAmount: 128000, memo: "12/1 국민 입금" });
     expect(paid.state.paidAt).toBeTruthy();

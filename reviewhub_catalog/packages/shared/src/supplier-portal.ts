@@ -1,10 +1,10 @@
 // 공급사 센터 공용 정의(서버·화면 공용, 2026-11-20 관리자 요청).
 // - 공급사가 바꿀 수 있는 상품 값(변경 요청)과 이름표
 // - 요청 상태 이름
-// - 정산 주기(월 정산·주 정산)별 판매 기간과 입금일 계산
+// - 정산 주기(월 정산·주 정산·매일 정산)별 판매 기간과 입금일 계산
 // 공급사에게 보이는 화면에는 "발주오라"를 쓰지 않습니다(CLAUDE.md 공급사 거래 방식).
 
-export type SupplierSettlementCycle = "monthly" | "weekly";
+export type SupplierSettlementCycle = "monthly" | "weekly" | "daily";
 export type SupplierRequestKind = "update" | "create";
 export type SupplierRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
 
@@ -80,8 +80,28 @@ export const SUPPLIER_REQUEST_KIND_LABELS: Record<SupplierRequestKind, string> =
 
 export const SUPPLIER_CYCLE_LABELS: Record<SupplierSettlementCycle, string> = {
   monthly: "월 정산",
-  weekly: "주 정산"
+  weekly: "주 정산",
+  daily: "매일 정산"
 };
+/** 지급 주기 고르는 순서(주 정산 기본) */
+export const SUPPLIER_SETTLEMENT_CYCLES: readonly SupplierSettlementCycle[] = ["weekly", "monthly", "daily"];
+/** 지급 주기 설명(고르기·공급사 내 정보) */
+export const SUPPLIER_CYCLE_HINTS: Record<SupplierSettlementCycle, string> = {
+  weekly: "월~일 판매분 → 다음 주 월요일",
+  monthly: "1일~말일 → 다음 달 1~3일",
+  daily: "그날 판매분 → 그날 입금"
+};
+/** 목록 칸에 쓰는 짧은 설명 */
+export const SUPPLIER_CYCLE_SHORT: Record<SupplierSettlementCycle, string> = {
+  weekly: "주 정산 · 월요일",
+  monthly: "월 정산 · 1~3일",
+  daily: "매일 정산 · 당일"
+};
+
+/** 저장된 값 → 지급 주기(모르는 값이면 fallback) */
+export function settlementCycleOf(value: unknown, fallback: SupplierSettlementCycle = "monthly"): SupplierSettlementCycle {
+  return value === "weekly" || value === "monthly" || value === "daily" ? value : fallback;
+}
 
 export const DEFAULT_SUPPLIER_COMMISSION_RATE = 10;
 
@@ -211,8 +231,10 @@ export type SettlementPeriod = {
 };
 
 // 판매일이 속한 정산 기간: 월 정산 = 그 달 1일~말일 → 다음 달 1~3일 입금,
-// 주 정산 = 그 주 월~일 → 다음 주 월요일 입금(공급사 사용방법·제안서와 같은 기준).
+// 주 정산 = 그 주 월~일 → 다음 주 월요일 입금(공급사 사용방법·제안서와 같은 기준),
+// 매일 정산(2026-11-26 관리자 요청: 입금이 돼야 출고하는 공급사) = 그날 판매분 → 그날 입금.
 export function settlementPeriodFor(saleDate: string, cycle: SupplierSettlementCycle): SettlementPeriod {
+  if (cycle === "daily") return { cycle, start: saleDate, end: saleDate, payoutStart: saleDate, payoutEnd: saleDate };
   if (cycle === "weekly") {
     const offset = (weekdayOf(saleDate) + 6) % 7; // 월요일까지 며칠 전인지
     const start = addDays(saleDate, -offset);
@@ -228,6 +250,8 @@ export function settlementPeriodFor(saleDate: string, cycle: SupplierSettlementC
 
 // 오늘 기준 "다음 입금": 아직 입금일이 지나지 않은 가장 가까운 정산 기간(지난 기간 입금일이 남아 있으면 그것)
 export function upcomingSettlement(today: string, cycle: SupplierSettlementCycle): SettlementPeriod {
+  // 매일 정산은 오늘 판매분을 오늘 입금합니다.
+  if (cycle === "daily") return settlementPeriodFor(today, cycle);
   if (cycle === "weekly") {
     const previous = settlementPeriodFor(addDays(today, -7), cycle);
     if (previous.payoutEnd >= today) return previous;
@@ -249,10 +273,11 @@ export function formatPayoutLabel(period: Pick<SettlementPeriod, "payoutStart" |
   return `${startMonth}월 ${startDay}~${endDay}일`;
 }
 
-// "11.1 ~ 11.30" · "11.16 ~ 11.22"
+// "11.1 ~ 11.30" · "11.16 ~ 11.22" · 하루면 "11.26"
 export function formatPeriodLabel(period: Pick<SettlementPeriod, "start" | "end">) {
   const [, startMonth, startDay] = period.start.split("-").map(Number);
   const [, endMonth, endDay] = period.end.split("-").map(Number);
+  if (period.start === period.end) return `${startMonth}.${startDay}`;
   return `${startMonth}.${startDay} ~ ${endMonth}.${endDay}`;
 }
 
@@ -297,7 +322,9 @@ export type SupplierSettlementState = {
 //   (두고푸드가 '마케팅·세일즈 수수료' 세금계산서를 발행). 매출 1억이면 1,000만원이 두고푸드 수익으로 바로 잡힙니다.
 // - 일반 도매(wholesale, 매입): 공급사 원가로 사서 두고푸드가 10~20% 마진을 붙여 수강생 단가·일반공급가로 팝니다.
 //   원가 × 판매 수량을 정산일에 보내고 수수료는 없습니다. 공급사 화면에는 두고푸드 판매가 대신 원가 기준 금액만 보입니다.
-// - 지급 주기: 주 정산(월~일 판매분 → 다음 주 월요일, 기본) · 월 정산(1일~말일 → 다음 달 1~3일).
+// - 지급 주기: 주 정산(월~일 판매분 → 다음 주 월요일, 기본) · 월 정산(1일~말일 → 다음 달 1~3일)
+//   · 매일 정산(2026-11-26: 입금이 확인돼야 출고하는 공급사 — 그날 판매분 물품 대금 + 배송비를 그날 입금,
+//     판매수수료 방식이면 수수료는 다른 주기와 같이 한 달 물품 금액(배송비 제외) × 수수료율을 다음 달 1~3일에 받음).
 // - 배송비: 공급사 매입 배송비는 100% 공급사에 줍니다(정산 입금에 더함).
 export type SupplierSettlementType = "commission" | "wholesale";
 export const SUPPLIER_SETTLEMENT_TYPES: readonly SupplierSettlementType[] = ["commission", "wholesale"];
@@ -319,7 +346,7 @@ export function cleanSettlementSettings(input: unknown, base: SupplierSettlement
   const type = value.type === undefined ? base.type : value.type;
   if (type !== "commission" && type !== "wholesale") return null;
   const cycle = value.cycle === undefined ? base.cycle : value.cycle;
-  if (cycle !== "weekly" && cycle !== "monthly") return null;
+  if (cycle !== "weekly" && cycle !== "monthly" && cycle !== "daily") return null;
   const rate = value.commissionRate === undefined || value.commissionRate === null || value.commissionRate === "" ? base.commissionRate : Number(value.commissionRate);
   if (!Number.isFinite(rate) || rate < 0 || rate > 100) return null;
   return { type, cycle, commissionRate: Math.round(rate * 10) / 10 };
@@ -333,11 +360,14 @@ export function settlementSettingsLabel(settings: SupplierSettlementSettings) {
 
 /** 정산 방식 안내(공급사 화면·관리자 설정 창) */
 export function settlementPlanText(settings: SupplierSettlementSettings) {
-  const when = settings.cycle === "weekly" ? "월요일~일요일 판매분을 다음 주 월요일에" : "매달 1일~말일 판매분을 다음 달 1~3일에";
+  const when = settings.cycle === "daily"
+    ? "그날 판매분은 그날"
+    : settings.cycle === "weekly" ? "월요일~일요일 판매분을 다음 주 월요일에" : "매달 1일~말일 판매분을 다음 달 1~3일에";
+  const afterPay = settings.cycle === "daily" ? "(입금이 확인되면 출고)" : "";
   if (settings.type === "wholesale") {
-    return `일반 도매(매입) · ${SUPPLIER_CYCLE_LABELS[settings.cycle]}: ${when} 공급가(원가) × 판매 수량과 배송비를 입금해요. 판매 수수료는 없어요.`;
+    return `일반 도매(매입) · ${SUPPLIER_CYCLE_LABELS[settings.cycle]}: ${when} 공급가(원가) × 판매 수량과 배송비를 입금해요${afterPay}. 판매 수수료는 없어요.`;
   }
-  return `판매수수료 ${settings.commissionRate}% · ${SUPPLIER_CYCLE_LABELS[settings.cycle]}: ${when} 판매 대금 100%와 배송비를 먼저 입금해요. 판매 수수료 ${settings.commissionRate}%는 한 달 판매 대금(배송비 제외) 기준으로 두고푸드가 다음 달 초에 청구하면 1~3일에 보내 주시고, 입금이 확인되면 두고푸드가 '${COMMISSION_INVOICE_ITEM}' 세금계산서를 발행해요.`;
+  return `판매수수료 ${settings.commissionRate}% · ${SUPPLIER_CYCLE_LABELS[settings.cycle]}: ${when} 판매 대금 100%와 배송비를 먼저 입금해요${afterPay}. 판매 수수료 ${settings.commissionRate}%는 한 달 판매 대금(배송비 제외) 기준으로 두고푸드가 다음 달 초에 청구하면 1~3일에 보내 주시고, 입금이 확인되면 두고푸드가 '${COMMISSION_INVOICE_ITEM}' 세금계산서를 발행해요.`;
 }
 
 /** 판매 줄을 모은 금액(정산 계산 재료). 반품 = 취소·반품 처리 수량. 원가를 모르는 줄은 원가 0원으로 세고 costMissing에 셉니다. */
@@ -395,9 +425,10 @@ export function supplierFacingAmounts(ledger: SettlementLedger, type: SupplierSe
 }
 
 // ── 정산 기록(supplier_settlements.month 칸에 기간 열쇠를 적음) ─────────────────────────────
-// 주 정산 지급 = "w:<판매 주 월요일>", 월 정산 지급 = "YYYY-MM"(예전 월 정산 기록과 같은 열쇠), 판매 수수료 = "fee:YYYY-MM".
-export type SettlementRecordKind = "weekly" | "monthly" | "fee";
-export const SETTLEMENT_RECORD_KINDS: readonly SettlementRecordKind[] = ["weekly", "monthly", "fee"];
+// 주 정산 지급 = "w:<판매 주 월요일>", 월 정산 지급 = "YYYY-MM"(예전 월 정산 기록과 같은 열쇠), 매일 정산 지급 = "d:<판매일>",
+// 판매 수수료 = "fee:YYYY-MM".
+export type SettlementRecordKind = "weekly" | "monthly" | "daily" | "fee";
+export const SETTLEMENT_RECORD_KINDS: readonly SettlementRecordKind[] = ["weekly", "monthly", "daily", "fee"];
 
 export function isDateKey(value: string | null | undefined): value is string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -409,16 +440,18 @@ export function weekStartOf(date: string) {
   return addDays(date, -((weekdayOf(date) + 6) % 7));
 }
 
-/** 기록 열쇠. 주 정산은 판매 주 월요일 날짜, 나머지는 YYYY-MM */
+/** 기록 열쇠. 주 정산은 판매 주 월요일 날짜, 매일 정산은 판매일, 나머지는 YYYY-MM */
 export function settlementRecordKey(kind: SettlementRecordKind, period: string) {
   if (kind === "weekly") return `w:${period}`;
+  if (kind === "daily") return `d:${period}`;
   if (kind === "fee") return `fee:${period}`;
   return period;
 }
 
-/** 기간이 그 종류에 맞는지(주 정산 = 월요일 날짜, 월·수수료 = YYYY-MM) */
+/** 기간이 그 종류에 맞는지(주 정산 = 월요일 날짜, 매일 정산 = 날짜, 월·수수료 = YYYY-MM) */
 export function isSettlementPeriod(kind: SettlementRecordKind, period: string | null | undefined): period is string {
   if (kind === "weekly") return isDateKey(period) && weekdayOf(period) === 1;
+  if (kind === "daily") return isDateKey(period);
   return isMonthKey(period);
 }
 

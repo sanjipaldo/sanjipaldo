@@ -20,6 +20,7 @@ import {
   nextMonthKey,
   seoulDateKey,
   settlementAmounts,
+  settlementCycleOf,
   settlementPeriodFor,
   settlementRecordKey,
   supplierFacingAmounts,
@@ -112,7 +113,7 @@ function accountView(row: SupplierAccount): SupplierAccountView {
     username: row.username,
     isActive: row.isActive,
     commissionRate: row.commissionRate,
-    settlementCycle: row.settlementCycle === "weekly" ? "weekly" : "monthly",
+    settlementCycle: settlementCycleOf(row.settlementCycle, "monthly"),
     lastLoginAt: row.lastLoginAt,
     createdAt: row.createdAt
   };
@@ -203,7 +204,7 @@ export async function createSupplierAccount(
         username,
         isActive: true,
         commissionRate,
-        settlementCycle: input.settlementCycle === "weekly" ? "weekly" : "monthly",
+        settlementCycle: settlementCycleOf(input.settlementCycle, "monthly"),
         createdAt: nowIso,
         updatedAt: nowIso
       });
@@ -228,7 +229,7 @@ export async function updateSupplierAccount(
     if (!current) fail("이 공급사에는 로그인 계정이 없어요.", 404);
     const patch: Partial<typeof supplierAccounts.$inferInsert> = { updatedAt: new Date().toISOString() };
     if (input.commissionRate !== undefined) patch.commissionRate = clampCommission(input.commissionRate);
-    if (input.settlementCycle) patch.settlementCycle = input.settlementCycle === "weekly" ? "weekly" : "monthly";
+    if (input.settlementCycle) patch.settlementCycle = settlementCycleOf(input.settlementCycle, "monthly");
     if (input.isActive !== undefined) patch.isActive = input.isActive;
     if (input.password) {
       validatePassword(input.password);
@@ -805,6 +806,7 @@ function periodSummary(period: SettlementPeriod, byDay: Map<string, LedgerRow>, 
 }
 
 function payoutRecordKey(period: Pick<SettlementPeriod, "cycle" | "start">) {
+  if (period.cycle === "daily") return settlementRecordKey("daily", period.start);
   return period.cycle === "weekly" ? settlementRecordKey("weekly", period.start) : settlementRecordKey("monthly", period.start.slice(0, 7));
 }
 
@@ -813,7 +815,7 @@ export async function supplierSettlementSettings(context: SupplierContext): Prom
     const effective = await effectiveSettlementFor(context.supplier.id);
     return { type: effective.type, commissionRate: effective.commissionRate, cycle: effective.cycle };
   } catch {
-    return { type: "commission", commissionRate: context.account.commissionRate, cycle: context.account.settlementCycle === "weekly" ? "weekly" : "monthly" };
+    return { type: "commission", commissionRate: context.account.commissionRate, cycle: settlementCycleOf(context.account.settlementCycle, "monthly") };
   }
 }
 
@@ -871,7 +873,7 @@ export async function getSupplierSalesMonth(context: SupplierContext, month: str
       costMissing: type === "wholesale" ? monthLedger.costMissing : 0
     };
 
-    // 이 달 판매분이 들어가는 정산(월 정산 1번, 주 정산은 이 달에 걸친 주마다)
+    // 이 달 판매분이 들어가는 정산(월 정산 1번, 주 정산은 이 달에 걸친 주마다, 매일 정산은 날마다 — 아래에서 판매·기록이 있는 날만 남김)
     const periods: SettlementPeriod[] = [];
     if (cycle === "monthly") {
       periods.push(settlementPeriodFor(start, cycle));
@@ -899,6 +901,12 @@ export async function getSupplierSalesMonth(context: SupplierContext, month: str
     // 수수료에 부가세가 들어 있는지(두고푸드 세금계산서 설정, 기본 포함): 공급사가 보낼 금액 = 포함이면 수수료, 별도면 수수료 + 부가세
     const vatIncluded = feeMonths.length > 0 ? (await getHometaxSettings()).commissionVatIncluded : true;
     const recordOf = (key: string) => records.get(`${supplierName}|${key}`);
+    // 매일 정산: 판매(취소·반품 포함)나 지급 기록이 있는 날만 정산·입금 일정에 남깁니다(빈 날 30줄이 생기지 않게).
+    const activePeriod = (period: SettlementPeriod) => cycle !== "daily"
+      || ledgerBetween(byDay, period.start, period.end).quantity > 0
+      || Boolean(recordOf(payoutRecordKey(period)));
+    const shownPeriods = periods.filter(activePeriod);
+    const shownPayoutPeriods = payoutPeriods.filter(activePeriod);
     // 지난달은 판매도 기록도 없으면 빼요("0원 · 수수료 청구 전" 줄이 헷갈리지 않게). 이 달 판매분은 늘 보여요.
     const fees = feeMonths.map((feeMonth) => {
       const range = monthRange(feeMonth);
@@ -932,8 +940,8 @@ export async function getSupplierSalesMonth(context: SupplierContext, month: str
       totals,
       days,
       ranking,
-      settlements: periods.map((period) => ({ ...periodSummary(period, byDay, settings), state: payoutState(recordOf(payoutRecordKey(period))) })),
-      payoutDays: payoutPeriods.map((period) => {
+      settlements: shownPeriods.map((period) => ({ ...periodSummary(period, byDay, settings), state: payoutState(recordOf(payoutRecordKey(period))) })),
+      payoutDays: shownPayoutPeriods.map((period) => {
         const summary = periodSummary(period, byDay, settings);
         return { date: period.payoutStart, endDate: period.payoutEnd, periodStart: period.start, periodEnd: period.end, amount: summary.payoutAmount, done: period.payoutEnd < today, state: payoutState(recordOf(payoutRecordKey(period))) };
       }),

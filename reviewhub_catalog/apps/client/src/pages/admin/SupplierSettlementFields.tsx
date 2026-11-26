@@ -3,7 +3,12 @@
 import { BadgePercent, Boxes, ShieldAlert } from "lucide-react";
 import {
   DEFAULT_SETTLEMENT_SETTINGS,
+  SUPPLIER_CYCLE_HINTS,
+  SUPPLIER_CYCLE_LABELS,
+  SUPPLIER_CYCLE_SHORT,
   SUPPLIER_RETURN_POLICY,
+  SUPPLIER_SETTLEMENT_CYCLES,
+  settlementCycleOf,
   settlementPlanText,
   type SupplierSettlementCycle,
   type SupplierSettlementSettings,
@@ -52,7 +57,7 @@ export function SettlementBadge({ value }: { value: SupplierSettlementView | und
   return (
     <span className="ssf-badge-cell">
       <span className={`ssf-badge is-${settings.type}`}>{settings.type === "commission" ? `수수료 ${settings.commissionRate}%` : "도매(매입)"}</span>
-      <small>{settings.cycle === "weekly" ? "주 정산 · 월요일" : "월 정산 · 1~3일"}{settings.explicit ? "" : " · 기본값"}</small>
+      <small>{SUPPLIER_CYCLE_SHORT[settings.cycle] ?? SUPPLIER_CYCLE_SHORT.weekly}{settings.explicit ? "" : " · 기본값"}</small>
     </span>
   );
 }
@@ -94,11 +99,10 @@ export function SupplierSettlementFields({ value, onChange, idPrefix }: { value:
         )}
         <label>
           지급 주기
-          <select value={value.cycle} onChange={(event) => onChange({ ...value, cycle: event.target.value === "monthly" ? "monthly" : "weekly" })} aria-label="지급 주기">
-            <option value="weekly">주 정산 (월~일 판매분 → 다음 주 월요일)</option>
-            <option value="monthly">월 정산 (1일~말일 → 다음 달 1~3일)</option>
+          <select value={value.cycle} onChange={(event) => onChange({ ...value, cycle: settlementCycleOf(event.target.value, "weekly") })} aria-label="지급 주기">
+            {SUPPLIER_SETTLEMENT_CYCLES.map((cycle) => <option key={cycle} value={cycle}>{SUPPLIER_CYCLE_LABELS[cycle]} ({SUPPLIER_CYCLE_HINTS[cycle]})</option>)}
           </select>
-          <small>배송비(공급사 매입 배송비)는 100% 함께 보내요.</small>
+          <small>{value.cycle === "daily" ? "입금이 확인돼야 출고하는 공급사용이에요. 배송비(공급사 매입 배송비)도 100% 그날 함께 보내요." : "배송비(공급사 매입 배송비)는 100% 함께 보내요."}</small>
         </label>
       </div>
       {preview && <p className="ssf-preview">{preview}</p>}

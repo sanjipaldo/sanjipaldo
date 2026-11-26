@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, CheckCircle2, KeyRound, Link2, Store } from "lucide-react";
 import { toast } from "sonner";
 import { parsePartnerProfile, partnerContractSummary, settlementMatchesContract, type PartnerSupplierSettlement } from "@repo/shared/partner-deal";
-import { SUPPLIER_CYCLE_LABELS, settlementSettingsLabel, type SupplierSettlementCycle } from "@repo/shared/supplier-portal";
+import { SUPPLIER_CYCLE_LABELS, settlementCycleOf, settlementSettingsLabel, type SupplierSettlementCycle } from "@repo/shared/supplier-portal";
 import { apiFetch } from "@/lib/api";
 import type { SourcingRequest } from "../catalog/types";
 import "./partner-supplier.css";
@@ -85,9 +85,10 @@ export function PartnerSupplierPanel({ request, onSaved }: { request: SourcingRe
           </label>
           {autoSettlement && (
             <label className="partner-memo-field">정산(지급) 주기
-              <select value={cycle} onChange={(event) => setCycle(event.target.value === "monthly" ? "monthly" : "weekly")}>
+              <select value={cycle} onChange={(event) => setCycle(settlementCycleOf(event.target.value, "weekly"))}>
                 <option value="weekly">{SUPPLIER_CYCLE_LABELS.weekly} · 월~일 판매분을 다음 주 월요일에 지급</option>
                 <option value="monthly">{SUPPLIER_CYCLE_LABELS.monthly} · 한 달 판매분을 다음 달 1~3일에 지급</option>
+                <option value="daily">{SUPPLIER_CYCLE_LABELS.daily} · 그날 판매분을 그날 지급(입금 확인 후 출고)</option>
               </select>
             </label>
           )}

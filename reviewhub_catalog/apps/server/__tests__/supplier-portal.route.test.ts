@@ -4,6 +4,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { addDays, seoulDateKey } from "@repo/shared/supplier-portal";
 
 // 상품 저장·승인은 기존 저장 함수(db.transaction)를 그대로 씁니다. :memory: DB는 트랜잭션이 새 연결을 열면
 // 내용이 사라지므로, 이 파일만 임시 파일 DB를 씁니다(운영 원격 DB에서는 트랜잭션이 정상 동작).
@@ -294,12 +295,106 @@ describe("공급사 판매·정산", () => {
     expect(week).toMatchObject({ payoutStart: "2026-11-23", netAmount: 40000, commission: 2800 });
   });
 
+  it("매일 정산(입금 확인 후 출고, 2026-11-26): 그날 판매분을 그날 입금하고, 판매 수수료는 다음 달 1~3일 한 달 판매 대금(배송비 제외) 기준", async () => {
+    const admin = await adminToken();
+    const token = await supplierToken(admin);
+    const saved = await json<{ settlement: { type: string; cycle: string; commissionRate: number; explicit: boolean } }>(await putSettlement(admin, "sup-a", { type: "commission", commissionRate: 10, cycle: "daily" }));
+    expect(saved.data.settlement).toMatchObject({ type: "commission", cycle: "daily", commissionRate: 10, explicit: true });
+    // 공급사 센터 계정의 지급 주기도 매일 정산으로 맞춤
+    const list = await json<{ accounts: Array<{ supplierId: string; settlementCycle: string }> }>(await fetchWithAuth(app, admin, "/api/catalog/admin/suppliers"));
+    expect(list.data.accounts.find((item) => item.supplierId === "sup-a")?.settlementCycle).toBe("daily");
+
+    await saleLine("dd1", { saleDate: "2026-11-24", productId: "p-a1", productName: "봄날 사과 5kg", quantity: 2, unitPrice: 20000, purchaseShippingFee: 3000 });
+    await saleLine("dd2", { saleDate: "2026-11-25", productId: "p-a2", productName: "봄날 배 7.5kg", quantity: 1, unitPrice: 30000 });
+    await saleLine("dd3", { saleDate: "2026-11-25", supplierName: "이웃농장(테스트)", productId: "p-b1", productName: "이웃 감귤 3kg", quantity: 2, unitPrice: 10000 });
+
+    // 공급사 센터: 판매가 있는 날마다 정산, 입금일 = 판매일
+    const sales = await json<{
+      cycle: string;
+      settlements: Array<{ start: string; end: string; payoutStart: string; payoutEnd: string; payoutAmount: number; commission: number }>;
+      payoutDays: Array<{ date: string; endDate: string; amount: number }>;
+      fees: Array<{ month: string; netAmount: number; commission: number; payoutStart: string }>;
+    }>(await fetchWithAuth(app, token, "/api/supplier/sales?month=2026-11"));
+    expect(sales.data.cycle).toBe("daily");
+    expect(sales.data.settlements.map((item) => [item.start, item.end, item.payoutStart, item.payoutAmount, item.commission])).toEqual([
+      ["2026-11-24", "2026-11-24", "2026-11-24", 43000, 4000],
+      ["2026-11-25", "2026-11-25", "2026-11-25", 30000, 3000]
+    ]);
+    expect(sales.data.payoutDays.map((item) => [item.date, item.endDate, item.amount])).toEqual([["2026-11-24", "2026-11-24", 43000], ["2026-11-25", "2026-11-25", 30000]]);
+    // 판매 수수료: 배송비를 뺀 한 달 판매 대금 70,000원 × 10% → 다음 달 1~3일
+    expect(sales.data.fees.find((fee) => fee.month === "2026-11")).toMatchObject({ netAmount: 70000, commission: 7000, payoutStart: "2026-12-01" });
+
+    // 관리자 '매일 정산 지급' 탭: 그날 판매분 → 그날 지급(물품 대금 + 배송비)
+    const day = await json<{
+      kind: string;
+      payoutFrom: string;
+      payoutTo: string;
+      rows: Array<{ supplierName: string; cycle: string; goodsAmount: number; shippingFee: number; payoutAmount: number; status: string }>;
+      otherCycle: { suppliers: number; byCycle: Record<string, { suppliers: number; payoutAmount: number }> };
+    }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/settlements?kind=daily&period=2026-11-24"));
+    expect(day.data).toMatchObject({ kind: "daily", payoutFrom: "2026-11-24", payoutTo: "2026-11-24" });
+    expect(day.data.rows.map((row) => [row.supplierName, row.cycle, row.goodsAmount, row.shippingFee, row.payoutAmount, row.status])).toEqual([["봄날농원(테스트)", "daily", 40000, 3000, 43000, "pending"]]);
+    // 주 정산(기본값) 이웃농장은 매일 정산 탭에 없고 다른 지급 주기 안내로만
+    const nextDay = await json<{ rows: Array<{ supplierName: string }>; otherCycle: { byCycle: Record<string, { suppliers: number; payoutAmount: number }> } }>(
+      await fetchWithAuth(app, admin, "/api/baljuora/admin/settlements?kind=daily&period=2026-11-25")
+    );
+    expect(nextDay.data.rows.map((row) => row.supplierName)).toEqual(["봄날농원(테스트)"]);
+    expect(nextDay.data.otherCycle.byCycle.weekly).toEqual({ suppliers: 1, payoutAmount: 20000 });
+    // 주 정산 탭에는 매일 정산 공급사가 나오지 않음
+    const week = await json<{ rows: Array<{ supplierName: string }>; otherCycle: { byCycle: Record<string, { suppliers: number }> } }>(
+      await fetchWithAuth(app, admin, "/api/baljuora/admin/settlements?kind=weekly&period=2026-11-23")
+    );
+    expect(week.data.rows.map((row) => row.supplierName)).toEqual(["이웃농장(테스트)"]);
+    expect(week.data.otherCycle.byCycle.daily).toMatchObject({ suppliers: 1 });
+
+    // 지급 완료(지급 대기 → 지급 완료만, 날짜 형식 검사) → 기록 열쇠 "d:<판매일>"
+    const put = (body: unknown) => fetchWithAuth(app, admin, "/api/baljuora/admin/settlements", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    expect((await put({ supplierName: "봄날농원(테스트)", kind: "daily", period: "2026-11", status: "paid" })).status).toBe(400);
+    expect((await put({ supplierName: "봄날농원(테스트)", kind: "daily", period: "2026-11-24", status: "done" })).status).toBe(400);
+    expect((await fetchWithAuth(app, admin, "/api/baljuora/admin/settlements?kind=daily&period=2026-11-31")).status).toBe(400);
+    expect((await put({ supplierName: "봄날농원(테스트)", kind: "daily", period: "2026-11-24", status: "paid" })).status).toBe(200);
+    expect((await executeSql("SELECT status, payoutAmount FROM supplier_settlements WHERE month = 'd:2026-11-24'")).rows[0]).toMatchObject({ status: "paid", payoutAmount: 43000 });
+    // 지급한 뒤 들어온 주문 → '금액이 바뀜'
+    await saleLine("dd4", { saleDate: "2026-11-24", productId: "p-a1", productName: "봄날 사과 5kg", quantity: 1, unitPrice: 20000 });
+    const after = await json<{ rows: Array<{ payoutAmount: number; status: string; changedAfterRecord: boolean; recorded: { payoutAmount: number } | null }> }>(
+      await fetchWithAuth(app, admin, "/api/baljuora/admin/settlements?kind=daily&period=2026-11-24")
+    );
+    expect(after.data.rows[0]).toMatchObject({ payoutAmount: 63000, status: "paid", changedAfterRecord: true, recorded: { payoutAmount: 43000 } });
+    // 공급사 센터에도 그날 입금 완료
+    const again = await json<{ payoutDays: Array<{ date: string; state: { status: string } | null }> }>(await fetchWithAuth(app, token, "/api/supplier/sales?month=2026-11"));
+    expect(again.data.payoutDays.find((item) => item.date === "2026-11-24")?.state?.status).toBe("paid");
+    // 판매 수수료 탭은 지급 주기와 상관없이 판매수수료 공급사 모두(배송비 뺀 판매 대금 × 수수료율)
+    const fee = await json<{ rows: Array<{ supplierName: string; goodsAmount: number; commission: number }> }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/settlements?kind=fee&period=2026-11"));
+    expect(fee.data.rows.find((row) => row.supplierName === "봄날농원(테스트)")).toMatchObject({ goodsAmount: 90000, commission: 9000 });
+    // 대시보드: 오늘 판매분을 오늘 입금(다음 정산 = 오늘)
+    const dashboard = await json<{ upcomingSettlement: { cycle: string; start: string; payoutStart: string } }>(await fetchWithAuth(app, token, "/api/supplier/dashboard"));
+    expect(dashboard.data.upcomingSettlement).toMatchObject({ cycle: "daily", start: seoulDateKey(), payoutStart: seoulDateKey() });
+  });
+
+  it("매일 정산 탭: 기본은 오늘, 최근 14일 중 지급 대기인 날을 알려 주고 지급하면 빠집니다", async () => {
+    const admin = await adminToken();
+    await putSettlement(admin, "sup-a", { type: "commission", commissionRate: 10, cycle: "daily" });
+    const today = seoulDateKey();
+    const yesterday = addDays(today, -1);
+    await saleLine("pd1", { saleDate: yesterday, productId: "p-a1", productName: "봄날 사과 5kg", quantity: 1, unitPrice: 25000 });
+    await saleLine("pd2", { saleDate: addDays(today, -20), productId: "p-a1", productName: "봄날 사과 5kg", quantity: 1, unitPrice: 25000 });
+    await saleLine("pd3", { saleDate: yesterday, supplierName: "이웃농장(테스트)", productId: "p-b1", productName: "이웃 감귤 3kg", quantity: 1, unitPrice: 10000 });
+    const view = async () => json<{ period: string; pendingDays: Array<{ date: string; suppliers: number; payoutAmount: number }> }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/settlements?kind=daily"));
+    const first = await view();
+    expect(first.data.period).toBe(today);
+    // 14일보다 오래된 날·주 정산 공급사는 세지 않음
+    expect(first.data.pendingDays).toEqual([{ date: yesterday, suppliers: 1, payoutAmount: 25000 }]);
+    const res = await fetchWithAuth(app, admin, "/api/baljuora/admin/settlements", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ supplierName: "봄날농원(테스트)", kind: "daily", period: yesterday, status: "paid" }) });
+    expect(res.status).toBe(200);
+    expect((await view()).data.pendingDays).toEqual([]);
+  });
+
   it("일반 도매(매입) 방식: 원가 × 수량 + 배송비를 주 정산으로, 수수료 없음 — 공급사 화면에는 두고푸드 판매가가 오지 않습니다", async () => {
     const admin = await adminToken();
     const token = await supplierToken(admin);
     // 정산 방식 저장(관리자만, 잘못된 값은 400). 계정 수수료율·주기도 같은 값으로 맞춤
     expect((await putSettlement(token, "sup-a", { type: "wholesale", cycle: "weekly" })).status).toBe(403);
-    expect((await putSettlement(admin, "sup-a", { type: "wholesale", cycle: "daily" })).status).toBe(400);
+    expect((await putSettlement(admin, "sup-a", { type: "wholesale", cycle: "yearly" })).status).toBe(400);
     expect((await putSettlement(admin, "sup-a", { type: "commission", commissionRate: 150, cycle: "weekly" })).status).toBe(400);
     const saved = await json<{ settlement: { type: string; cycle: string; explicit: boolean } }>(await putSettlement(admin, "sup-a", { type: "wholesale", cycle: "weekly" }));
     expect(saved.data.settlement).toMatchObject({ type: "wholesale", cycle: "weekly", explicit: true });

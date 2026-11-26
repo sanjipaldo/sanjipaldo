@@ -4,7 +4,18 @@ import React from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
-import { cleanSettlementSettings, settlementAmounts, supplierFacingAmounts, emptyLedger } from "@repo/shared/supplier-portal";
+import {
+  cleanSettlementSettings,
+  emptyLedger,
+  formatPeriodLabel,
+  isSettlementPeriod,
+  settlementAmounts,
+  settlementPeriodFor,
+  settlementPlanText,
+  settlementRecordKey,
+  supplierFacingAmounts,
+  upcomingSettlement
+} from "@repo/shared/supplier-portal";
 
 const toastMock = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast: toastMock, Toaster: () => null }));
@@ -52,6 +63,20 @@ describe("정산 계산 규칙(공용)", () => {
     expect(cleanSettlementSettings({ type: "commission", commissionRate: 7.25, cycle: "monthly" })).toEqual({ type: "commission", commissionRate: 7.3, cycle: "monthly" });
     expect(cleanSettlementSettings({ type: "consign" })).toBeNull();
     expect(cleanSettlementSettings({ type: "commission", commissionRate: 120 })).toBeNull();
+  });
+
+  it("매일 정산(2026-11-26): 그날 판매분 → 그날 입금, 기록 열쇠 d:판매일, 수수료는 다음 달 1~3일 한 달 판매 대금(배송비 제외)", () => {
+    expect(settlementPeriodFor("2026-11-26", "daily")).toEqual({ cycle: "daily", start: "2026-11-26", end: "2026-11-26", payoutStart: "2026-11-26", payoutEnd: "2026-11-26" });
+    expect(upcomingSettlement("2026-11-26", "daily")).toMatchObject({ start: "2026-11-26", payoutStart: "2026-11-26" });
+    expect(formatPeriodLabel({ start: "2026-11-26", end: "2026-11-26" })).toBe("11.26");
+    expect(settlementRecordKey("daily", "2026-11-26")).toBe("d:2026-11-26");
+    expect(isSettlementPeriod("daily", "2026-11-26")).toBe(true);
+    expect(isSettlementPeriod("daily", "2026-11")).toBe(false);
+    expect(isSettlementPeriod("daily", "2026-02-30")).toBe(false);
+    expect(cleanSettlementSettings({ type: "commission", cycle: "daily" })).toEqual({ type: "commission", commissionRate: 10, cycle: "daily" });
+    expect(cleanSettlementSettings({ type: "commission", cycle: "yearly" })).toBeNull();
+    expect(settlementPlanText({ type: "commission", commissionRate: 10, cycle: "daily" })).toBe("판매수수료 10% · 매일 정산: 그날 판매분은 그날 판매 대금 100%와 배송비를 먼저 입금해요(입금이 확인되면 출고). 판매 수수료 10%는 한 달 판매 대금(배송비 제외) 기준으로 두고푸드가 다음 달 초에 청구하면 1~3일에 보내 주시고, 입금이 확인되면 두고푸드가 '판매대행·마케팅대행 수수료' 세금계산서를 발행해요.");
+    expect(settlementPlanText({ type: "wholesale", commissionRate: 10, cycle: "daily" })).toMatch(/^일반 도매\(매입\) · 매일 정산: 그날 판매분은 그날 공급가\(원가\) × 판매 수량과 배송비를 입금해요\(입금이 확인되면 출고\)/);
   });
 });
 
@@ -127,6 +152,24 @@ describe("공급사 대시보드: 판매 현황 · 자동 계산 정산 금액",
     expect(screen.getByText("2026년 11월 판매 금액")).toBeTruthy();
   });
 
+  it("매일 정산: '오늘 판매분은 오늘 입금', 입금을 확인한 뒤 출고 안내", async () => {
+    const base = dashboard("commission");
+    const daily = {
+      ...base,
+      settlement: { type: "commission", commissionRate: 10, cycle: "daily" },
+      upcomingSettlement: { ...base.upcomingSettlement, cycle: "daily", start: "2026-11-20", end: "2026-11-20", payoutStart: "2026-11-20", payoutEnd: "2026-11-20", netAmount: 40000, goodsAmount: 40000, shippingFee: 3000, payoutAmount: 43000, commission: 4000, netIncome: 39000 }
+    };
+    stubApi((url) => (url.includes("/supplier/dashboard") ? json(daily) : undefined));
+    const { container } = render(<MemoryRouter><SupplierHome profile={profile} reloadKey={0} onCreate={() => undefined} /></MemoryRouter>);
+    expect(await screen.findByRole("heading", { name: "오늘 판매분은 11월 20일(금) 43,000원 입금 예정이에요." })).toBeTruthy();
+    expect(screen.getByText(/11\.20 판매분 · 물품 대금 40,000원 \+ 배송비 3,000원 · 입금을 확인한 뒤 출고해 주세요/)).toBeTruthy();
+    expect(screen.getByText("오늘 입금 예정")).toBeTruthy();
+    // 머리 표시("봄날농원 · 판매수수료 10% · 매일 정산")와 정산 안내 문구 모두
+    expect(screen.getAllByText(/판매수수료 10% · 매일 정산/).length).toBeGreaterThanOrEqual(2);
+    const settle = container.querySelector(".sup-settle-panel") as HTMLElement;
+    expect(within(settle).getByText("11.20 판매분 → 11월 20일(금) 입금")).toBeTruthy();
+  });
+
   it("일반 도매 방식: '공급 금액'으로 부르고 수수료 칸 없이 공급가 × 판매 수량 + 배송비", async () => {
     stubApi((url) => (url.includes("/supplier/dashboard") ? json(dashboard("wholesale")) : undefined));
     const { container } = render(<MemoryRouter><SupplierHome profile={profile} reloadKey={0} onCreate={() => undefined} /></MemoryRouter>);
@@ -160,6 +203,27 @@ describe("관리자: 공급사 정산 방식 고르기", () => {
     expect(calls[0]).toMatchObject({ method: "PUT", body: { type: "wholesale", commissionRate: 10, cycle: "monthly" } });
     expect(calls[0].url).toContain("/catalog/admin/suppliers/sup-a/settlement");
     await expect(saveSupplierSettlement("sup-a", { type: "commission", commissionRate: "", cycle: "weekly" })).rejects.toThrow(/0~100%/);
+  });
+});
+
+describe("관리자: 지급 주기 '매일 정산' 고르기", () => {
+  it("지급 주기 3가지 중 매일 정산을 고르면 안내가 바뀌고 cycle: daily로 저장합니다", async () => {
+    function Harness({ onDraft }: { onDraft: (draft: SettlementDraft) => void }) {
+      const [draft, setDraft] = React.useState(settlementDraft());
+      return <SupplierSettlementFields value={draft} onChange={(next) => { setDraft(next); onDraft(next); }} idPrefix="d" />;
+    }
+    let latest = settlementDraft();
+    render(<Harness onDraft={(draft) => { latest = draft; }} />);
+    const select = screen.getByLabelText("지급 주기") as HTMLSelectElement;
+    expect([...select.options].map((option) => option.value)).toEqual(["weekly", "monthly", "daily"]);
+    expect([...select.options].map((option) => option.textContent)).toContain("매일 정산 (그날 판매분 → 그날 입금)");
+    fireEvent.change(select, { target: { value: "daily" } });
+    expect(latest).toEqual({ type: "commission", commissionRate: "10", cycle: "daily" });
+    expect(screen.getByText(/판매수수료 10% · 매일 정산: 그날 판매분은 그날 판매 대금 100%와 배송비를 먼저 입금해요\(입금이 확인되면 출고\)\. 판매 수수료 10%는 한 달 판매 대금\(배송비 제외\)/)).toBeTruthy();
+    expect(screen.getByText(/입금이 확인돼야 출고하는 공급사용이에요/)).toBeTruthy();
+    const calls = stubApi((url, method) => (url.includes("/settlement") && method === "PUT" ? json({ settlement: { type: "commission", commissionRate: 10, cycle: "daily", explicit: true } }) : undefined));
+    await saveSupplierSettlement("sup-a", latest);
+    expect(calls[0]).toMatchObject({ method: "PUT", body: { type: "commission", commissionRate: 10, cycle: "daily" } });
   });
 });
 
@@ -230,5 +294,55 @@ describe("관리자: 공급사 정산(주 정산 지급 · 월 정산 지급 · 
     await act(async () => { fireEvent.click(await screen.findByRole("button", { name: /1곳 발행 완료로 표시/ })); });
     const mark = calls.find((call) => call.url.includes("/settlements/fee-invoices"));
     expect(mark?.body).toEqual({ month: "2026-10", supplierNames: ["다미"], issued: true });
+  });
+
+  it("매일 정산 지급 탭: 오늘 판매분 지급 합계, 지급 대기 날짜로 옮기기, 하루씩 이동, 지급 완료, 다른 주기 탭으로", async () => {
+    vi.stubGlobal("confirm", () => true);
+    const row = { supplierName: "새벽농장", supplierId: "sup-n", registered: true, hasAccount: true, explicit: true, type: "commission", cycle: "daily", commissionRate: 10, saleAmount: 50000, returnAmount: 0, netAmount: 50000, costAmount: 0, costMissing: 0, quantity: 5, orders: 3, goodsAmount: 50000, shippingFee: 3000, payoutAmount: 53000, commission: 5000, netIncome: 48000, doogoProfit: 5000, status: "pending", paidAt: null, doneAt: null, memo: null, updatedAt: null, updatedBy: null, recorded: null, changedAfterRecord: false };
+    const daily = (period: string) => ({
+      kind: "daily", period, start: period, end: period, payoutFrom: period, payoutTo: period, closed: period < "2026-11-25",
+      rows: [row],
+      totals: { netAmount: 50000, goodsAmount: 50000, shippingFee: 3000, payoutAmount: 53000, commission: 5000, doogoProfit: 5000, done: 0, paid: 0, pending: 1 },
+      otherCycle: { suppliers: 1, payoutAmount: 20000, byCycle: { weekly: { suppliers: 1, payoutAmount: 20000 } } },
+      pendingDays: [{ date: "2026-11-23", suppliers: 1, payoutAmount: 33000 }, { date: "2026-11-25", suppliers: 1, payoutAmount: 53000 }],
+      sync: null
+    });
+    const weekly = { kind: "weekly", period: "2026-11-16", start: "2026-11-16", end: "2026-11-22", payoutFrom: "2026-11-23", payoutTo: "2026-11-23", closed: true, rows: [], totals: { netAmount: 0, goodsAmount: 0, shippingFee: 0, payoutAmount: 0, commission: 0, doogoProfit: 0, done: 0, paid: 0, pending: 0 }, otherCycle: { suppliers: 0, payoutAmount: 0 }, sync: null };
+    const calls = stubApi((url, method) => {
+      if (url.includes("/baljuora/admin/settlements") && method === "GET") {
+        const period = new URL(url, "http://localhost").searchParams.get("period") ?? "";
+        return json(url.includes("kind=daily") ? daily(period) : weekly);
+      }
+      if (url.includes("/baljuora/admin/settlements") && method === "PUT") return json({ state: { status: "paid" } });
+      return undefined;
+    });
+    render(<MemoryRouter><SupplierSettlementsAdmin /></MemoryRouter>);
+    await screen.findByText("11.16 ~ 11.22 판매분");
+    await act(async () => { fireEvent.click(screen.getByRole("tab", { name: /매일 정산 지급/ })); });
+    // 오늘(11월 25일 수요일) 판매분이 먼저
+    expect(await screen.findByText("11월 25일(수) 판매분")).toBeTruthy();
+    expect(calls.some((call) => call.url.includes("kind=daily&period=2026-11-25"))).toBe(true);
+    expect(screen.getAllByText("53,000원").length).toBeGreaterThan(0);
+    expect(screen.getByText(/11월 25일\(수\) 판매분은 아직 끝나지 않았어요.*지급 완료 뒤에 들어온 주문은 '금액이 바뀜'으로 알려 드려요/)).toBeTruthy();
+    expect(screen.getByText(/그날 판매분을 그날 보내고\(공급사는 입금을 확인한 뒤 출고\)/)).toBeTruthy();
+    // 지급 대기(최근 14일): 11월 23일로 옮기기 → '오늘' 버튼으로 돌아오기
+    const pending = screen.getByRole("group", { name: "지급 대기 날짜" });
+    await act(async () => { fireEvent.click(within(pending).getByRole("button", { name: /11월 23일\(월\) 1곳 · 33,000원/ })); });
+    expect(await screen.findByText("11월 23일(월) 판매분")).toBeTruthy();
+    expect(calls.some((call) => call.url.includes("kind=daily&period=2026-11-23"))).toBe(true);
+    // 하루씩 옮기기(다음 날)
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "다음 날" })); });
+    expect(await screen.findByText("11월 24일(화) 판매분")).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "오늘" })); });
+    expect(await screen.findByText("11월 25일(수) 판매분")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "다음 날" }) as HTMLButtonElement).disabled).toBe(true);
+    // 지급 완료로
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "지급 완료로" })); });
+    const put = calls.find((call) => call.method === "PUT");
+    expect(put?.body).toMatchObject({ supplierName: "새벽농장", kind: "daily", period: "2026-11-25", status: "paid" });
+    // 다른 지급 주기(주 정산) 공급사 → 그 탭으로
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /주 정산 1곳 · 20,000원/ })); });
+    expect(await screen.findByText("11.16 ~ 11.22 판매분")).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /주 정산 지급/ }).getAttribute("aria-selected")).toBe("true");
   });
 });

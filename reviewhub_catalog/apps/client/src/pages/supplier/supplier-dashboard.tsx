@@ -220,6 +220,8 @@ export function SupplierHome({ profile, reloadKey, onCreate }: { profile: Suppli
   const onSale = Math.max(0, products.total - products.soldOut);
   const goods = upcoming.goodsAmount ?? upcoming.netAmount;
   const shipping = upcoming.shippingFee ?? 0;
+  // 매일 정산(입금이 확인돼야 출고): 오늘 판매분을 오늘 입금
+  const daily = settings.cycle === "daily";
   const chart = {
     from: `${data.month}-01`,
     to: data.today,
@@ -235,14 +237,18 @@ export function SupplierHome({ profile, reloadKey, onCreate }: { profile: Suppli
       <section className="admin-home-hero sup-hero sup-dash-hero">
         <div>
           <span className="sup-hero-kicker">{profile.supplier.name} · {settlementSettingsLabel(settings)}</span>
-          <h2>다음 정산은 <mark>{formatPayoutLabel(upcoming)}</mark> {won(upcoming.payoutAmount)} 입금 예정이에요.</h2>
-          <p>{formatPeriodLabel(upcoming)} 판매분 · 물품 대금 {won(goods)}{shipping ? ` + 배송비 ${won(shipping)}` : ""}{commission && upcoming.commission ? ` · 판매 수수료 ${settings.commissionRate}%(${won(upcoming.commission)})는 다음 달 1~3일에 한 달 치를 보내 주세요` : ""}</p>
+          {daily
+            ? upcoming.payoutAmount > 0
+              ? <h2>오늘 판매분은 <mark>{formatPayoutLabel(upcoming)}</mark> {won(upcoming.payoutAmount)} 입금 예정이에요.</h2>
+              : <h2>매일 정산이에요. 오늘(<mark>{formatPayoutLabel(upcoming)}</mark>) 판매가 들어오면 그날 입금해요.</h2>
+            : <h2>다음 정산은 <mark>{formatPayoutLabel(upcoming)}</mark> {won(upcoming.payoutAmount)} 입금 예정이에요.</h2>}
+          <p>{formatPeriodLabel(upcoming)} 판매분 · 물품 대금 {won(goods)}{shipping ? ` + 배송비 ${won(shipping)}` : ""}{daily ? " · 입금을 확인한 뒤 출고해 주세요" : ""}{commission && upcoming.commission ? ` · 판매 수수료 ${settings.commissionRate}%(${won(upcoming.commission)})는 다음 달 1~3일에 한 달 치를 보내 주세요` : ""}</p>
         </div>
         <Link to="/supplier/sales" className="admin-home-live"><span className="live-dot" /> 정산 달력 보기</Link>
       </section>
       <section className="admin-home-stat-grid">
         <Link to="/supplier/sales" className="admin-home-stat featured"><span>{monthLabel(data.month)} {amountLabel}</span><strong>{won(sales.totals.netAmount)}</strong><small>{commission ? "판매" : "공급"} {won(sales.totals.saleAmount)} · 반품 {won(sales.totals.returnAmount)}</small></Link>
-        <Link to="/supplier/sales" className="admin-home-stat"><span>다음 정산 입금</span><strong>{won(upcoming.payoutAmount)}</strong><small>{formatPayoutLabel(upcoming)} · <PayoutStatus state={upcoming.state} /></small></Link>
+        <Link to="/supplier/sales" className="admin-home-stat"><span>{daily ? "오늘 입금 예정" : "다음 정산 입금"}</span><strong>{won(upcoming.payoutAmount)}</strong><small>{formatPayoutLabel(upcoming)} · <PayoutStatus state={upcoming.state} /></small></Link>
         {commission ? (
           <Link to="/supplier/sales" className="admin-home-stat"><span>{monthLabel(data.month)} 판매 수수료</span><strong>{won(thisMonthFee?.commission ?? sales.totals.commission)}</strong><small>{settings.commissionRate}% · {nextMonthKey(data.month).slice(5).replace(/^0/, "")}월 1~3일 두고푸드로 · {COMMISSION_INVOICE_ITEM} 세금계산서</small></Link>
         ) : (

@@ -368,13 +368,13 @@ const SupplierAccountCreateSchema = z.object({
   username: z.string().trim().min(1).max(60),
   password: z.string().min(1).max(128),
   commissionRate: z.number().min(0).max(100).nullable().optional(),
-  settlementCycle: z.enum(["monthly", "weekly"]).optional()
+  settlementCycle: z.enum(["monthly", "weekly", "daily"]).optional()
 });
 const SupplierAccountUpdateSchema = z.object({
   password: z.string().min(1).max(128).nullable().optional(),
   isActive: z.boolean().optional(),
   commissionRate: z.number().min(0).max(100).nullable().optional(),
-  settlementCycle: z.enum(["monthly", "weekly"]).optional()
+  settlementCycle: z.enum(["monthly", "weekly", "daily"]).optional()
 });
 const SupplierApproveSchema = z.object({
   aPrice: z.number().int().min(0).max(100_000_000).nullable().optional(),
@@ -717,11 +717,11 @@ catalogRouter.get("/admin/suppliers", adminRoute, async (c) => {
   return c.json(apiSuccess({ ...base, ...extras, settlements }));
 });
 
-// 공급사 정산 방식 저장(2026-11-25): 판매수수료(수수료율) · 일반 도매(매입), 지급 주기(주 정산 · 월 정산)
+// 공급사 정산 방식 저장(2026-11-25): 판매수수료(수수료율) · 일반 도매(매입), 지급 주기(주 정산 · 월 정산 · 2026-11-26 매일 정산)
 const SupplierSettlementSchema = z.object({
   type: z.enum(["commission", "wholesale"]),
   commissionRate: z.number().min(0).max(100).optional(),
-  cycle: z.enum(["weekly", "monthly"])
+  cycle: z.enum(["weekly", "monthly", "daily"])
 });
 
 catalogRouter.put("/admin/suppliers/:id/settlement", adminRoute, async (c) => {
@@ -1296,7 +1296,7 @@ catalogRouter.put("/admin/partner/:id/deal", adminRoute, async (c) => {
 // 입점 성공 → 공급사로 등록(이름이 같은 공급사가 있으면 연결)하고 계약 형태대로 정산 방식을 맞춥니다(2026-11-25).
 const PartnerSupplierSchema = z.object({
   name: z.string().trim().max(160).nullable().optional(),
-  cycle: z.enum(["weekly", "monthly"]).nullable().optional()
+  cycle: z.enum(["weekly", "monthly", "daily"]).nullable().optional()
 });
 
 catalogRouter.post("/admin/partner/:id/register-supplier", adminRoute, async (c) => {

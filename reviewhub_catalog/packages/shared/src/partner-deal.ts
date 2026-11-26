@@ -87,7 +87,7 @@ export function parsePartnerProfile(details: string | null | undefined): Partner
 }
 
 // 입점 성공 → 공급사 연결(2026-11-25): 입점 신청을 공급사 관리의 공급사와 잇고, 계약 형태대로 정산 방식을 맞춥니다.
-export type PartnerSupplierSettlement = { type: "commission" | "wholesale"; commissionRate: number; cycle: "weekly" | "monthly"; explicit: boolean };
+export type PartnerSupplierSettlement = { type: "commission" | "wholesale"; commissionRate: number; cycle: "weekly" | "monthly" | "daily"; explicit: boolean };
 export type PartnerSupplierLink = {
   supplierId: string;
   supplierName: string;

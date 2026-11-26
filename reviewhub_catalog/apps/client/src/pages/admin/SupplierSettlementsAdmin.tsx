@@ -1,7 +1,8 @@
-// 관리자 > 공급사 정산(2026-11-23, 2026-11-25 정산 방식 개편).
-// 공급사마다 정산 방식(판매수수료 n% · 일반 도매(매입))과 지급 주기(주 정산 · 월 정산)는 공급사 관리에서 정합니다.
+// 관리자 > 공급사 정산(2026-11-23, 2026-11-25 정산 방식 개편, 2026-11-26 매일 정산).
+// 공급사마다 정산 방식(판매수수료 n% · 일반 도매(매입))과 지급 주기(주 정산 · 월 정산 · 매일 정산)는 공급사 관리에서 정합니다.
 // - 주 정산 지급: 월~일 판매분 → 다음 주 월요일 지급(물품 대금 + 배송비). 판매수수료 = 판매 금액, 일반 도매 = 원가 × 수량.
 // - 월 정산 지급: 1일~말일 판매분 → 다음 달 1~3일 지급.
+// - 매일 정산 지급(입금이 확인돼야 출고하는 공급사): 그날 판매분 → 그날 지급. 날짜를 하루씩 옮기고, 최근 14일 중 지급 대기인 날을 위에 보여 줘요.
 // - 판매 수수료 청구(2026-11-25 관리자 확정 순서): 판매수수료 방식 공급사의 한 달 판매 대금(배송비 제외) × 수수료율을
 //   달이 끝나면 '한 번에 청구하기'(청구 전 → 청구함·입금 대기, 공급사 센터 달력에 1~3일 입금일·금액이 보임) → 공급사가 입금하면
 //   '입금 확인'(정산 완료) → 입금 확인한 공급사의 '판매대행·마케팅대행 수수료' 세금계산서를 홈택스 일괄발급 파일로 받아 발행하고
@@ -9,7 +10,7 @@
 // 공급사 센터에서도 같은 상태(입금 예정·입금 완료, 수수료 상태)가 보여요.
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, BadgePercent, CheckCircle2, ChevronLeft, ChevronRight, FileSpreadsheet, HandCoins, Receipt, Send, Truck, Undo2, Wallet } from "lucide-react";
+import { AlertTriangle, BadgePercent, CalendarCheck, CheckCircle2, ChevronLeft, ChevronRight, FileSpreadsheet, HandCoins, Receipt, Send, Truck, Undo2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import {
   COMMISSION_INVOICE_ITEM,
@@ -21,6 +22,7 @@ import {
   nextMonthKey,
   seoulDateKey,
   weekStartOf,
+  weekdayOf,
   type SettlementRecordKind,
   type SupplierSettlementCycle,
   type SupplierSettlementStatus,
@@ -84,31 +86,38 @@ type Data = {
   closed: boolean;
   rows: Row[];
   totals: { netAmount: number; goodsAmount: number; shippingFee: number; payoutAmount: number; commission: number; doogoProfit: number; done: number; paid: number; pending: number };
-  otherCycle?: { suppliers: number; payoutAmount: number };
+  otherCycle?: { suppliers: number; payoutAmount: number; byCycle?: Partial<Record<SupplierSettlementCycle, { suppliers: number; payoutAmount: number }>> };
   invoice?: InvoiceInfo | null;
+  /** 매일 정산 탭: 최근 14일 중 지급 대기인 날 */
+  pendingDays?: Array<{ date: string; suppliers: number; payoutAmount: number }>;
   sync: SalesSyncState;
 };
 
 const KIND_TABS: Array<{ kind: SettlementRecordKind; label: string; icon: typeof Wallet }> = [
   { kind: "weekly", label: "주 정산 지급", icon: Wallet },
   { kind: "monthly", label: "월 정산 지급", icon: HandCoins },
+  { kind: "daily", label: "매일 정산 지급", icon: CalendarCheck },
   { kind: "fee", label: "판매 수수료 청구", icon: BadgePercent }
 ];
+const CYCLE_TAB: Record<SupplierSettlementCycle, SettlementRecordKind> = { weekly: "weekly", monthly: "monthly", daily: "daily" };
 
 const NEXT: Record<SettlementRecordKind, Partial<Record<SupplierSettlementStatus, SupplierSettlementStatus>>> = {
   weekly: { pending: "paid" },
   monthly: { pending: "paid" },
+  daily: { pending: "paid" },
   fee: { pending: "paid", paid: "done" }
 };
 const PREVIOUS: Record<SupplierSettlementStatus, SupplierSettlementStatus | null> = { pending: null, paid: "pending", done: "paid" };
 const NEXT_LABEL: Record<SettlementRecordKind, Partial<Record<SupplierSettlementStatus, string>>> = {
   weekly: { pending: "지급 완료로" },
   monthly: { pending: "지급 완료로" },
+  daily: { pending: "지급 완료로" },
   fee: { pending: "청구하기", paid: "입금 확인" }
 };
 
 function defaultPeriod(kind: SettlementRecordKind, today = seoulDateKey()) {
-  // 주 정산은 지난주 판매분(이번 주 월요일 지급), 월 정산·수수료는 지난달 판매분(이번 달 1~3일)을 먼저 보여 줍니다.
+  // 주 정산은 지난주 판매분(이번 주 월요일 지급), 월 정산·수수료는 지난달 판매분(이번 달 1~3일), 매일 정산은 오늘 판매분을 먼저 보여 줍니다.
+  if (kind === "daily") return today;
   return kind === "weekly" ? weekStartOf(addDays(today, -7)) : nextMonthKey(today.slice(0, 7), -1);
 }
 
@@ -117,10 +126,23 @@ function shortDay(date: string) {
   return `${month}.${day}`;
 }
 
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+/** "11월 26일(목)" */
+function dayTitle(date: string) {
+  const [, month, day] = date.split("-").map(Number);
+  return `${month}월 ${day}일(${WEEKDAYS[weekdayOf(date)]})`;
+}
+
 function periodTitle(kind: SettlementRecordKind, period: string) {
+  if (kind === "daily") return `${dayTitle(period)} 판매분`;
   if (kind === "weekly") return `${shortDay(period)} ~ ${shortDay(addDays(period, 6))} 판매분`;
   return `${monthLabel(period)} 판매분`;
 }
+
+/** 지금 진행 중인 기간 이름(빈 화면의 "진행 중인 ○○ 판매분 보기") */
+const CURRENT_NAME: Record<SettlementRecordKind, string> = { weekly: "이번 주", monthly: "이번 달", daily: "오늘", fee: "이번 달" };
+const MOVE_LABELS: Record<SettlementRecordKind, [string, string]> = { weekly: ["지난주", "다음 주"], monthly: ["이전 달", "다음 달"], daily: ["전날", "다음 날"], fee: ["이전 달", "다음 달"] };
 
 function statusLabel(kind: SettlementRecordKind, status: SupplierSettlementStatus) {
   return kind === "fee" ? FEE_STATUS_LABELS[status] : PAYOUT_STATUS_LABELS[status];
@@ -199,15 +221,17 @@ export function SupplierSettlementsAdmin() {
   const move = (step: number) => {
     setData(null);
     setMemoDraft({});
-    setPeriod((current) => (kind === "weekly" ? addDays(current, step * 7) : nextMonthKey(current, step)));
+    setPeriod((current) => (kind === "daily" ? addDays(current, step) : kind === "weekly" ? addDays(current, step * 7) : nextMonthKey(current, step)));
   };
-  const currentPeriod = kind === "weekly" ? weekStartOf(today) : today.slice(0, 7);
+  const currentPeriod = kind === "daily" ? today : kind === "weekly" ? weekStartOf(today) : today.slice(0, 7);
   const nextDisabled = period >= currentPeriod;
-  const showCurrent = () => {
+  const goTo = (next: string) => {
+    if (next === period) return;
     setData(null);
     setMemoDraft({});
-    setPeriod(currentPeriod);
+    setPeriod(next);
   };
+  const showCurrent = () => goTo(currentPeriod);
 
   const send = async (row: Row, status: SupplierSettlementStatus, memo?: string) => {
     await readData(await apiFetch("/baljuora/admin/settlements", jsonInit("PUT", { supplierName: row.supplierName, kind, period, status, ...(memo !== undefined ? { memo } : {}) })));
@@ -321,9 +345,10 @@ export function SupplierSettlementsAdmin() {
       <div className="admin-page-heading">
         <div><span>SETTLEMENT</span><h1>공급사 정산</h1><p>공급사 관리에서 정한 정산 방식(판매수수료 · 일반 도매)대로 지급할 금액과 받을 수수료를 자동으로 계산해요. 공급사 센터에서도 같은 상태가 보여요.</p></div>
         <div className="sa-month" role="group" aria-label="정산 기간">
-          <button type="button" onClick={() => move(-1)} aria-label={kind === "weekly" ? "지난주" : "이전 달"}><ChevronLeft size={17} /></button>
+          <button type="button" onClick={() => move(-1)} aria-label={MOVE_LABELS[kind][0]}><ChevronLeft size={17} /></button>
           <strong>{periodTitle(kind, period)}</strong>
-          <button type="button" onClick={() => move(1)} aria-label={kind === "weekly" ? "다음 주" : "다음 달"} disabled={nextDisabled}><ChevronRight size={17} /></button>
+          <button type="button" onClick={() => move(1)} aria-label={MOVE_LABELS[kind][1]} disabled={nextDisabled}><ChevronRight size={17} /></button>
+          {kind === "daily" && period !== currentPeriod && <button type="button" className="ssa-today" onClick={showCurrent}>오늘</button>}
         </div>
       </div>
       <div className="sa-period ssa-tabs" role="tablist" aria-label="정산 종류">
@@ -352,16 +377,35 @@ export function SupplierSettlementsAdmin() {
               <article className={view.totals.pending ? "is-warning" : ""}><span>지급 대기</span><strong>{view.totals.pending.toLocaleString("ko-KR")}곳</strong><small>지급 완료 {(view.totals.paid + view.totals.done).toLocaleString("ko-KR")}곳</small></article>
             </section>
           )}
-          {!view.closed && <p className="sa-notice"><AlertTriangle size={15} aria-hidden="true" /><span>{periodTitle(kind, period)}은 아직 끝나지 않았어요. 금액은 지금까지 판매 기준이에요.{isFee ? " 판매 수수료는 달이 끝난 뒤(다음 달 1일부터) 청구할 수 있어요." : ""}</span></p>}
+          {kind === "daily" && (view.pendingDays?.length ?? 0) > 0 && (
+            <div className="ssa-pending-days" role="group" aria-label="지급 대기 날짜">
+              <span><AlertTriangle size={15} aria-hidden="true" /> 지급 대기(최근 14일)</span>
+              {view.pendingDays?.map((day) => (
+                <button key={day.date} type="button" className={day.date === period ? "is-active" : ""} onClick={() => goTo(day.date)} aria-pressed={day.date === period}>
+                  <b>{dayTitle(day.date)}</b> {day.suppliers.toLocaleString("ko-KR")}곳 · {won(day.payoutAmount)}
+                </button>
+              ))}
+            </div>
+          )}
+          {!view.closed && <p className="sa-notice"><AlertTriangle size={15} aria-hidden="true" /><span>{periodTitle(kind, period)}은 아직 끝나지 않았어요. 금액은 지금까지 판매 기준이에요.{isFee ? " 판매 수수료는 달이 끝난 뒤(다음 달 1일부터) 청구할 수 있어요." : ""}{kind === "daily" ? " 지급 완료 뒤에 들어온 주문은 '금액이 바뀜'으로 알려 드려요." : ""}</span></p>}
           {isFee && view.closed && billable.length > 0 && (
             <div className="ssa-bulk">
               <span><BadgePercent size={16} aria-hidden="true" /> 청구 전 <b>{billable.length.toLocaleString("ko-KR")}곳</b> · 합계 <b>{won(billable.reduce((sum, row) => sum + payable(row), 0))}</b></span>
               <button type="button" className="primary-action" onClick={() => void billAll()} disabled={busy !== ""}><Send size={15} aria-hidden="true" /> 한 번에 청구하기</button>
             </div>
           )}
-          {!isFee && view.otherCycle && view.otherCycle.suppliers > 0 && <p className="sa-notice ssa-info"><span>{kind === "weekly" ? "월 정산" : "주 정산"} 공급사 {view.otherCycle.suppliers.toLocaleString("ko-KR")}곳(이 기간 지급 예정 {won(view.otherCycle.payoutAmount)})은 '{kind === "weekly" ? "월 정산 지급" : "주 정산 지급"}' 탭에서 봐요.</span></p>}
+          {!isFee && view.otherCycle && view.otherCycle.suppliers > 0 && (
+            <p className="sa-notice ssa-info ssa-other-cycle">
+              <span>다른 지급 주기 공급사(이 기간 판매분)는 각 탭에서 봐요:</span>
+              {view.otherCycle.byCycle
+                ? (Object.entries(view.otherCycle.byCycle) as Array<[SupplierSettlementCycle, { suppliers: number; payoutAmount: number }]>).map(([cycle, entry]) => (
+                  <button key={cycle} type="button" onClick={() => switchKind(CYCLE_TAB[cycle] ?? "weekly")}>{SUPPLIER_CYCLE_LABELS[cycle] ?? cycle} {entry.suppliers.toLocaleString("ko-KR")}곳 · {won(entry.payoutAmount)} ›</button>
+                ))
+                : <span>{view.otherCycle.suppliers.toLocaleString("ko-KR")}곳 · {won(view.otherCycle.payoutAmount)}</span>}
+            </p>
+          )}
           {view.rows.length === 0 ? (
-            <section className="admin-card sa-empty"><HandCoins size={30} aria-hidden="true" /><strong>{periodTitle(kind, period)} {isFee ? "받을 판매 수수료가" : "지급할 공급사가"} 없어요.</strong><p>발주오라 판매를 불러오면 DB센터 상품의 공급사로 나눠 정산 금액이 계산됩니다. 정산 방식은 공급사 관리에서 정해요.</p>{period < currentPeriod && <button type="button" className="outline-button" onClick={showCurrent}>진행 중인 {kind === "weekly" ? "이번 주" : "이번 달"} 판매분 보기</button>}</section>
+            <section className="admin-card sa-empty"><HandCoins size={30} aria-hidden="true" /><strong>{periodTitle(kind, period)} {isFee ? "받을 판매 수수료가" : "지급할 공급사가"} 없어요.</strong><p>발주오라 판매를 불러오면 DB센터 상품의 공급사로 나눠 정산 금액이 계산됩니다. 정산 방식은 공급사 관리에서 정해요.</p>{period < currentPeriod && <button type="button" className="outline-button" onClick={showCurrent}>진행 중인 {CURRENT_NAME[kind]} 판매분 보기</button>}</section>
           ) : (
             <section className="admin-card">
               <div className="admin-table-wrap">
@@ -429,7 +473,7 @@ export function SupplierSettlementsAdmin() {
               <p className="sa-foot">
                 {isFee
                   ? <>판매 수수료 = 판매수수료 방식 공급사의 한 달 판매 대금(배송비 제외) × 수수료율. 달이 끝나면 <b>청구하기</b>(공급사 센터 달력에 1~3일 입금일·금액) → 공급사가 보내면 <b>입금 확인</b>(정산 완료) → 아래에서 <b>{COMMISSION_INVOICE_ITEM}</b> 세금계산서를 발행해요.</>
-                  : <>지급 금액 = 물품 대금(판매수수료 = 판매 금액 100%, 일반 도매 = 원가 × 판매 수량) + 배송비(100%). {kind === "weekly" ? "월~일 판매분을 다음 주 월요일에" : "1일~말일 판매분을 다음 달 1~3일에"} 보내고 <b>지급 완료로</b> 바꿔요. 물품 대금 세금계산서(면세 상품은 계산서)는 공급사가 지급 금액으로 두고푸드에 발행해요. 판매수수료 방식의 수수료는 '판매 수수료 청구' 탭에서 따로 받아요.</>}
+                  : <>지급 금액 = 물품 대금(판매수수료 = 판매 금액 100%, 일반 도매 = 원가 × 판매 수량) + 배송비(100%). {kind === "daily" ? "그날 판매분을 그날 보내고(공급사는 입금을 확인한 뒤 출고)" : kind === "weekly" ? "월~일 판매분을 다음 주 월요일에 보내고" : "1일~말일 판매분을 다음 달 1~3일에 보내고"} <b>지급 완료로</b> 바꿔요. 물품 대금 세금계산서(면세 상품은 계산서)는 공급사가 지급 금액으로 두고푸드에 발행해요. 판매수수료 방식의 수수료는 '판매 수수료 청구' 탭에서 {kind === "daily" ? "다음 달 1~3일에 한 달 판매 대금(배송비 제외) 기준으로 " : ""}따로 받아요.</>}
               </p>
             </section>
           )}
