@@ -24,7 +24,8 @@ const baseBytes = () => {
 };
 
 let fontCache: { regular: Uint8Array; bold: Uint8Array } | null = null;
-function fontBytes() {
+/** 두고푸드 글꼴(KS X 1001 한글 + 기호) — 제안서·거래명세서 PDF 공용 */
+export function doogoSansFontBytes() {
   if (!fontCache) {
     fontCache = {
       regular: new Uint8Array(gunzipSync(Buffer.from(DOOGO_SANS_REGULAR_GZ_BASE64, "base64"))),
@@ -49,8 +50,8 @@ export async function buildPartnerProposalPdf(input: ProposalInput = {}) {
   if (!company) return baseBytes();
   const doc = await PDFDocument.load(baseBytes());
   doc.registerFontkit(fontkit);
-  const bold = await doc.embedFont(fontBytes().bold, { subset: false });
-  const regular = await doc.embedFont(fontBytes().regular, { subset: false });
+  const bold = await doc.embedFont(doogoSansFontBytes().bold, { subset: false });
+  const regular = await doc.embedFont(doogoSansFontBytes().regular, { subset: false });
   const page = doc.getPage(0);
   const box = SUPPLIER_PROPOSAL_ADDRESSEE_BOX;
   const name = safeText(bold, company);

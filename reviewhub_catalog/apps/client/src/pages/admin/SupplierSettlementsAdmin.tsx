@@ -8,9 +8,11 @@
 //   '입금 확인'(정산 완료) → 입금 확인한 공급사의 '판매대행·마케팅대행 수수료' 세금계산서를 홈택스 일괄발급 파일로 받아 발행하고
 //   '발행 완료로 표시'(inv:YYYY-MM 기록, 공급사 센터에도 보임).
 // 공급사 센터에서도 같은 상태(입금 예정·입금 완료, 수수료 상태)가 보여요.
+// - 거래명세서(2026-11-26): 지급 탭의 공급사 카드 오른쪽 위 '거래명세서' → 판매 줄별(판매일·주문자·상품·수량·단가·배송비) 인보이스 팝업,
+//   PDF·엑셀 내려받기, 공급사 입금 계좌 넣기(supplier-invoice-modal.tsx).
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, BadgePercent, CalendarCheck, CheckCircle2, ChevronLeft, ChevronRight, FileSpreadsheet, HandCoins, Receipt, Send, Truck, Undo2, Wallet } from "lucide-react";
+import { AlertTriangle, BadgePercent, CalendarCheck, CheckCircle2, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, HandCoins, Receipt, Send, Truck, Undo2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import {
   COMMISSION_INVOICE_ITEM,
@@ -30,6 +32,7 @@ import {
 } from "@repo/shared/supplier-portal";
 import { apiFetch } from "@/lib/api";
 import { SalesSyncCard, formatDateTime, jsonInit, monthLabel, readData, saveResponseFile, won, type SalesSyncState } from "./sales-admin-shared";
+import { SupplierInvoiceModal } from "./supplier-invoice-modal";
 import "./sales-admin.css";
 
 type Row = {
@@ -115,6 +118,9 @@ const NEXT_LABEL: Record<SettlementRecordKind, Partial<Record<SupplierSettlement
   fee: { pending: "청구하기", paid: "입금 확인" }
 };
 
+// 공급사 이름 없는 판매(정산 장부 "(공급사 미지정)")는 거래명세서를 만들지 않습니다.
+const UNNAMED_SUPPLIER = "(공급사 미지정)";
+
 function defaultPeriod(kind: SettlementRecordKind, today = seoulDateKey()) {
   // 주 정산은 지난주 판매분(이번 주 월요일 지급), 월 정산·수수료는 지난달 판매분(이번 달 1~3일), 매일 정산은 오늘 판매분을 먼저 보여 줍니다.
   if (kind === "daily") return today;
@@ -198,6 +204,7 @@ export function SupplierSettlementsAdmin() {
   const [data, setData] = useState<Data | null>(null);
   const [busy, setBusy] = useState("");
   const [memoDraft, setMemoDraft] = useState<Record<string, string>>({});
+  const [invoiceFor, setInvoiceFor] = useState<string | null>(null);
   const today = seoulDateKey();
 
   const load = useCallback(async () => {
@@ -423,9 +430,14 @@ export function SupplierSettlementsAdmin() {
                       const owed = isFee ? row.commission > 0 : row.payoutAmount > 0;
                       return (
                         <tr key={row.supplierName} className={`is-${row.status}`}>
-                          <td data-label="공급사" className="stack-wide">
+                          <td data-label="공급사" className="stack-wide ssa-supplier-cell">
                             <strong>{row.supplierName}</strong>
                             <small><TypeBadge row={row} /> {SUPPLIER_CYCLE_LABELS[row.cycle]}{row.registered ? (row.explicit ? "" : " · 기본값") : " · 공급사 목록에 없음"}{row.hasAccount ? " · 공급사 센터 계정" : ""}</small>
+                            {!isFee && row.supplierName !== UNNAMED_SUPPLIER && (
+                              <button type="button" className="ssa-invoice-open" onClick={() => setInvoiceFor(row.supplierName)} aria-label={`${row.supplierName} 거래명세서 보기`} title="판매 줄별 거래명세서 · PDF·엑셀 받기">
+                                <FileText size={14} aria-hidden="true" /> 거래명세서
+                              </button>
+                            )}
                           </td>
                           {isFee ? (
                             <>
@@ -490,6 +502,7 @@ export function SupplierSettlementsAdmin() {
           )}
         </>
       )}
+      {invoiceFor && kind !== "fee" && <SupplierInvoiceModal kind={kind} period={period} supplierName={invoiceFor} onClose={() => setInvoiceFor(null)} />}
     </div>
   );
 }

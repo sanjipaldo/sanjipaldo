@@ -42,6 +42,9 @@ import {
 } from "../services/baljuora-sales";
 import { BUYER_OVERRIDE_FIELDS } from "@repo/shared/baljuora-sales";
 import { SUPPLIER_SETTLEMENT_STATUSES } from "@repo/shared/supplier-portal";
+import { BANK_ACCOUNT_LIMITS, invoiceFileName } from "@repo/shared/supplier-invoice";
+import { getSupplierInvoice, saveSupplierBankAccount } from "../services/supplier-invoice";
+import { buildSupplierInvoicePdf, buildSupplierInvoiceXlsx } from "../services/supplier-invoice-files";
 import { catalogRevisionMiddleware } from "../services/catalog-version";
 import { applyDailySync, getDailySyncStatus } from "../services/baljuora-daily";
 
@@ -400,6 +403,64 @@ baljuoraRouter.post("/admin/settlements/fee-invoices", adminRoute, async (c) => 
   try {
     const user = c.var.currentUser;
     return c.json(apiSuccess(await markFeeInvoices(parsed.data, user?.username || user?.email || null)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 공급사 거래명세서(정산 인보이스): 지급 탭(주·월·매일 정산)의 공급사 한 곳 — 판매 줄별 단가·수량·배송비와 합계, From(두고홀딩스)·To(공급사·입금 계좌).
+const InvoiceQuerySchema = z.object({
+  kind: z.enum(["weekly", "monthly", "daily"]),
+  period: z.string().trim().min(7).max(10),
+  supplier: z.string().trim().min(1).max(120)
+});
+
+function invoiceQuery(c: Context) {
+  return InvoiceQuerySchema.safeParse({ kind: c.req.query("kind"), period: c.req.query("period"), supplier: c.req.query("supplier") });
+}
+
+baljuoraRouter.get("/admin/settlements/invoice", adminRoute, async (c) => {
+  const parsed = invoiceQuery(c);
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "공급사와 정산 기간을 확인해 주세요."), 400);
+  try {
+    c.header("Cache-Control", "no-store");
+    return c.json(apiSuccess(await getSupplierInvoice(parsed.data)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 거래명세서 내려받기: format = pdf(두고푸드 인보이스) · xlsx(발주서 예시와 같은 칸 + 합계)
+baljuoraRouter.get("/admin/settlements/invoice/file", adminRoute, async (c) => {
+  const parsed = invoiceQuery(c);
+  const format = z.enum(["pdf", "xlsx"]).safeParse(c.req.query("format"));
+  if (!parsed.success || !format.success) return c.json(apiFailure("INVALID_INPUT", "공급사·정산 기간·파일 종류(PDF/엑셀)를 확인해 주세요."), 400);
+  try {
+    const invoice = await getSupplierInvoice(parsed.data);
+    const bytes = format.data === "pdf" ? await buildSupplierInvoicePdf(invoice) : await buildSupplierInvoiceXlsx(invoice);
+    return c.body(bytes as unknown as ArrayBuffer, 200, {
+      "Content-Type": format.data === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": `attachment; filename="doogo-invoice-${invoice.number}.${format.data}"; filename*=UTF-8''${encodeURIComponent(invoiceFileName(invoice, format.data))}`,
+      "Cache-Control": "no-store"
+    });
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 공급사 입금 계좌(거래명세서 To) 저장 — 세 칸을 모두 비우면 지웁니다. 공급사 관리에 등록된 공급사만.
+baljuoraRouter.put("/admin/settlements/bank-account", adminRoute, async (c) => {
+  const parsed = z.object({
+    supplierId: z.string().trim().min(1).max(120),
+    bankName: z.string().max(BANK_ACCOUNT_LIMITS.bankName * 2).optional().default(""),
+    accountNumber: z.string().max(BANK_ACCOUNT_LIMITS.accountNumber * 2).optional().default(""),
+    accountHolder: z.string().max(BANK_ACCOUNT_LIMITS.accountHolder * 2).optional().default("")
+  }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "입금 계좌를 확인해 주세요."), 400);
+  try {
+    const user = c.var.currentUser;
+    const { supplierId, ...account } = parsed.data;
+    return c.json(apiSuccess({ bank: await saveSupplierBankAccount(supplierId, account, user?.username || user?.email || null) }));
   } catch (error) {
     return errorResponse(c, error);
   }

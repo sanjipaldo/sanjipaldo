@@ -360,3 +360,124 @@
   .ssa-vat label { flex: 1 1 100%; }
   .ssa-bulk button, .ssa-invoice-actions button { width: 100%; justify-content: center; }
 }
+
+/* 공급사 거래명세서(2026-11-26, supplier-invoice-modal.tsx): 지급 탭 공급사 카드 오른쪽 위 버튼 + 인보이스 팝업 */
+.ssa-invoice-open { display: inline-flex; align-items: center; gap: 5px; width: fit-content; min-height: 30px; margin-top: 7px; padding: 0 11px; border: 1px solid #b7dfa0; border-radius: 999px; color: #163300; background: #f6fbf1; font-size: 12.5px; font-weight: 800; white-space: nowrap; cursor: pointer; }
+.ssa-invoice-open:hover { border-color: #163300; background: #e2f6d5; }
+.ssa-invoice-open:focus-visible { outline: 2px solid #163300; outline-offset: 2px; }
+.sa-modal.inv-modal { width: min(1080px, 100%); gap: 12px; }
+.inv-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
+.inv-downloads { display: flex; flex-wrap: wrap; gap: 8px; }
+.inv-downloads button { display: inline-flex; align-items: center; gap: 6px; }
+.inv-toolbar p { margin: 0; color: var(--w-mute, #868685); font-size: 12.5px; }
+.inv-warnings { display: grid; gap: 6px; margin: 0; padding: 10px 12px; border: 1px solid #f3d39c; border-radius: 12px; color: #7a4b00; background: #fffbf3; font-size: 13px; line-height: 1.5; list-style: none; }
+.inv-warnings li { display: flex; align-items: flex-start; gap: 6px; }
+.inv-warnings svg { flex: 0 0 auto; margin-top: 3px; }
+.inv-warnings a { color: #163300; font-weight: 800; }
+.inv-failure { margin: 0; padding: 12px 14px; border-radius: 12px; color: #b3261e; background: #fdecec; font-size: 13.5px; }
+.inv-loading { margin: 0; padding: 36px 0; color: var(--w-mute, #868685); text-align: center; font-size: 13.5px; }
+
+.inv-paper { container-type: inline-size; display: grid; gap: 22px; min-width: 0; padding: 34px 36px 20px; border: 1px solid #e3e6e0; border-radius: 14px; color: #1a1d17; background: #fff; box-shadow: 0 8px 26px rgba(22, 51, 0, .06); font-variant-numeric: tabular-nums; }
+.inv-paper-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 24px; align-items: start; }
+.inv-from img { display: block; width: 104px; height: auto; margin-bottom: 12px; }
+.inv-label { display: block; margin-bottom: 4px; color: #868685; font-size: 11px; font-weight: 800; letter-spacing: .04em; }
+.inv-from strong, .inv-to strong { display: block; margin-bottom: 3px; color: #1a1d17; font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+.inv-from p, .inv-to p { margin: 0; color: #454745; font-size: 12.5px; line-height: 1.6; overflow-wrap: anywhere; }
+.inv-title { display: grid; justify-items: end; gap: 2px; text-align: right; }
+.inv-title b { color: #4b9a2f; font-size: 38px; font-weight: 500; line-height: 1; letter-spacing: .01em; }
+.inv-title strong { margin-top: 6px; font-size: 15px; font-weight: 800; }
+.inv-title small { color: #454745; font-size: 12px; }
+.inv-due-label { margin-top: 10px; color: #868685; font-size: 11.5px; }
+.inv-due { color: #1a1d17; font-size: 25px; font-weight: 800; line-height: 1.2; }
+.inv-status { margin-top: 5px; padding: 3px 11px; border-radius: 999px; color: #8a5a00; background: #fff4cc; font-size: 12px; font-weight: 800; }
+.inv-status.is-paid { color: #163300; background: #e2f6d5; }
+.inv-parties { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 18px 32px; align-items: start; }
+.inv-bank { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 7px; font-size: 12.5px; }
+.inv-bank > svg { color: #4b9a2f; }
+.inv-bank > span { color: #868685; }
+.inv-bank b { color: #163300; overflow-wrap: anywhere; }
+.inv-bank b.is-missing { color: #c0262d; }
+.inv-bank-edit { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 0 10px; border: 1px solid #d8dcd5; border-radius: 999px; color: #163300; background: #fff; font-size: 12px; font-weight: 800; cursor: pointer; }
+.inv-bank-edit:hover { border-color: #163300; background: #f6fbf1; }
+.inv-hint { margin-top: 6px !important; color: #868685 !important; }
+.inv-hint a { color: #163300; font-weight: 800; }
+.inv-bank-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; padding: 12px; border: 1px solid #e1e6dc; border-radius: 12px; background: #fbfcfa; }
+.inv-bank-form label { display: grid; gap: 4px; min-width: 0; color: #454745; font-size: 12px; font-weight: 800; }
+.inv-bank-form input { width: 100%; min-width: 0; min-height: 38px; padding: 0 10px; border: 1px solid #d8dcd5; border-radius: 10px; background: #fff; font-size: 14px; }
+.inv-bank-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; grid-column: 1 / -1; }
+.inv-bank-actions .inv-bank-clear { margin-right: auto; border-color: #e7b9bb; color: #b3261e; }
+.inv-meta { display: grid; gap: 6px; margin: 16px 0 0; }
+.inv-meta div { display: flex; justify-content: space-between; gap: 14px; font-size: 12.5px; }
+.inv-meta dt { flex: 0 0 auto; color: #868685; }
+.inv-meta dd { margin: 0; color: #1a1d17; text-align: right; }
+
+.inv-table-wrap { min-width: 0; }
+.inv-unit { margin: 0 0 4px; color: #868685; font-size: 11px; text-align: right; }
+.inv-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.inv-table thead th { padding: 9px 8px; color: #fff; background: #163300; font-size: 11.5px; font-weight: 800; text-align: left; white-space: nowrap; }
+.inv-table td { padding: 8px; border-bottom: 1px solid #e3e6e0; vertical-align: top; }
+.inv-table td small { display: block; margin-top: 2px; color: #868685; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+.inv-table .inv-c-num { text-align: right; white-space: nowrap; }
+.inv-table small.is-return { color: #c0262d; }
+.inv-c-date { white-space: nowrap; }
+.inv-c-buyer { min-width: 90px; overflow-wrap: anywhere; }
+.inv-c-product span { display: block; overflow-wrap: anywhere; }
+.inv-table .inv-subtotal td { color: #163300; background: #f3f5f1; font-size: 12px; font-weight: 800; }
+.inv-table .inv-empty td, .inv-table .inv-more td { padding: 16px 8px; color: #868685; text-align: center; }
+.inv-totals { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 14px 24px; align-items: start; }
+.inv-summary { display: grid; gap: 4px; margin: 0; padding: 0; color: #454745; font-size: 12.5px; list-style: none; }
+.inv-summary .is-warn { color: #c0262d; }
+.inv-sum { display: grid; margin: 0; }
+.inv-sum div { display: flex; justify-content: space-between; gap: 12px; padding: 5px 12px; font-size: 13px; }
+.inv-sum dt small { color: #868685; font-size: 11px; font-weight: 500; }
+.inv-sum dd { margin: 0; white-space: nowrap; }
+.inv-sum .is-total { margin-top: 4px; padding-top: 10px; border-top: 1px solid #d8dcd5; font-weight: 800; }
+.inv-sum .is-due { margin-top: 6px; padding: 12px; background: #f3f5f1; font-size: 14px; font-weight: 800; }
+.inv-sum .is-due dd { color: #163300; font-size: 17px; }
+.inv-notes { display: grid; gap: 3px; }
+.inv-notes h3 { margin: 8px 0 4px; font-size: 14px !important; font-weight: 600; }
+.inv-notes p { margin: 0; color: #454745; font-size: 12.5px; line-height: 1.6; overflow-wrap: anywhere; }
+.inv-notes .is-warn { color: #c0262d; }
+.inv-paper-foot { padding-top: 12px; border-top: 1px solid #e3e6e0; color: #868685; font-size: 11px; text-align: center; }
+
+/* 좁은 화면(팝업 너비 기준): 머리·받는 곳·합계를 한 줄씩, 판매 줄은 카드로 */
+@container (max-width: 680px) {
+  .inv-paper-head, .inv-parties, .inv-totals { grid-template-columns: minmax(0, 1fr); }
+  .inv-title { justify-items: start; padding: 14px; border-radius: 12px; background: #f6fbf1; text-align: left; }
+  .inv-title b { font-size: 30px; }
+  .inv-meta { margin-top: 0; padding-top: 12px; border-top: 1px dashed #e3e6e0; }
+  .inv-bank-form { grid-template-columns: minmax(0, 1fr); }
+  .inv-table, .inv-table tbody { display: block; }
+  .inv-table thead { display: none; }
+  .inv-table tr.inv-line, .inv-table tr.inv-subtotal { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px 8px; padding: 10px 4px; border-bottom: 1px solid #e3e6e0; }
+  .inv-table tr.inv-line { grid-template-areas: "date buyer buyer total" "product product product product" "qty unit amount ship"; }
+  .inv-table tr.inv-subtotal { grid-template-areas: "label label label total" "qty unit amount ship"; padding: 10px 8px; background: #f3f5f1; }
+  .inv-table tr td { display: block; min-width: 0; padding: 0; border: 0; background: none; }
+  .inv-table .inv-c-date { grid-area: date; }
+  .inv-table .inv-c-date small { display: inline; margin-left: 2px; }
+  .inv-table .inv-c-buyer { grid-area: buyer; min-width: 0; font-weight: 800; }
+  .inv-table .inv-c-product { grid-area: product; }
+  .inv-table .inv-c-qty { grid-area: qty; }
+  .inv-table .inv-c-unit { grid-area: unit; }
+  .inv-table .inv-c-amount { grid-area: amount; }
+  .inv-table .inv-c-ship { grid-area: ship; }
+  .inv-table .inv-c-total { grid-area: total; font-size: 13.5px; }
+  .inv-table .inv-subtotal td:first-child { grid-area: label; }
+  .inv-table .inv-c-num { text-align: left; }
+  .inv-table .inv-c-total, .inv-table .inv-c-ship { text-align: right; }
+  .inv-table td[data-label]::before { content: attr(data-label); display: block; color: #868685; font-size: 10.5px; font-weight: 700; }
+  .inv-table .inv-c-total[data-label]::before { content: none; }
+  .inv-table .inv-c-qty small { display: inline; margin-left: 4px; }
+}
+
+@media (max-width: 720px) {
+  /* 휴대폰 카드: '공급사' 글자 줄 오른쪽 끝(카드 오른쪽 위)에 거래명세서 버튼 */
+  .ssa-table td.ssa-supplier-cell { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; }
+  .ssa-table td.ssa-supplier-cell::before { grid-row: 1; grid-column: 1; }
+  .ssa-table td.ssa-supplier-cell > strong, .ssa-table td.ssa-supplier-cell > small { grid-column: 1 / -1; }
+  .ssa-table td.ssa-supplier-cell > .ssa-invoice-open { grid-row: 1; grid-column: 2; min-height: 34px; margin-top: 0; padding: 0 13px; font-size: 13px; }
+  .sa-modal.inv-modal { gap: 10px; }
+  .inv-downloads { width: 100%; }
+  .inv-downloads button { flex: 1 1 0; justify-content: center; }
+  .inv-paper { padding: 18px 14px 14px; border-radius: 12px; box-shadow: none; }
+}
