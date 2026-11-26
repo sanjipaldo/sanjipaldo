@@ -1,6 +1,7 @@
 // 상품 수정 창(관리자)에서 DB센터 가격 옆에 보여 줄 발주오라 가격(2026-11-23 관리자 요청).
 // 값은 마지막 "발주오라와 비교"·동기화 때 읽은 것입니다(GET /api/baljuora/admin/products/:id).
 // 같음/다름 판단은 동기화 화면의 변경 목록(packages/shared/src/baljuora-sync.ts diffBaljuoraProduct)과 같게 맞춥니다.
+import type { BaljuoraSnapshotExtra } from "@repo/shared/baljuora-sync";
 
 export type BaljuoraProductPrices = {
   linked: boolean;
@@ -15,6 +16,11 @@ export type BaljuoraProductPrices = {
   groupPriceKnown: boolean;
   purchaseCost: number | null;
   consumerPrice: number | null;
+  // 판매 상태·과세 여부·상품 정보 칸(마지막으로 읽은 발주오라 값, 2026-11-26)
+  isSoldOut?: boolean | null;
+  isVisible?: boolean | null;
+  isTaxable?: boolean | null;
+  extra?: BaljuoraSnapshotExtra | null;
 };
 
 export type EditorPriceKey = "costPrice" | "aPrice" | "generalPrice";

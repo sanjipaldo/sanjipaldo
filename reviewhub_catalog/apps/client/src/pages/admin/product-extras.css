@@ -1,0 +1,44 @@
+/* 관리자 상품 창 > 발주오라 상품 정보(상품 창 아래쪽 한 묶음, 상품 창 레이아웃은 그대로) */
+.product-extras { display: grid; gap: 12px; padding: 16px 18px 18px; border: 1px solid var(--w-line); border-radius: 16px; background: var(--w-soft-2); }
+.product-extras .pe-head { display: grid; gap: 4px; }
+.product-extras .pe-head h3 { margin: 0; color: var(--w-ink); font-size: 15px; font-weight: 800; }
+.product-extras .pe-head p { margin: 0; color: var(--w-body); font-size: 12.5px; font-weight: 600; line-height: 1.5; }
+.product-extras .pe-note { display: flex; align-items: center; gap: 6px; margin: 0; padding: 8px 12px; border-radius: 10px; color: #1d4f91; background: #eef4fd; font-size: 12.5px; font-weight: 700; }
+.product-extras .pe-note.is-warn { color: #8a4b00; background: #fff4e5; }
+.product-extras .pe-spin { animation: pe-spin 1s linear infinite; }
+@keyframes pe-spin { to { transform: rotate(360deg); } }
+.product-extras .pe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.product-extras .pe-grid:disabled { opacity: .55; }
+.product-extras .pe-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; color: #3c4b60; font-size: 12px; font-weight: 800; }
+.product-extras .pe-wide { grid-column: 1 / -1; }
+.product-extras .pe-label { display: flex; align-items: baseline; gap: 6px; color: #3c4b60; font-size: 12px; font-weight: 800; }
+.product-extras .pe-label em { margin-left: auto; color: var(--w-mute); font-size: 11.5px; font-style: normal; font-weight: 600; }
+.product-extras .pe-label small { color: var(--w-mute); font-size: 11.5px; font-weight: 600; }
+.product-extras .pe-field > small { color: var(--w-body); font-size: 11.5px; font-weight: 600; line-height: 1.45; }
+.product-extras .pe-field > small.pe-remote { color: #8a4b00; font-weight: 700; }
+.product-extras .pe-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.product-extras .pe-row input { flex: 1 1 90px; min-width: 0; }
+.product-extras .pe-row select { flex: 0 1 120px; min-width: 0; }
+.product-extras .pe-times { flex: 0 0 auto; color: var(--w-mute); font-weight: 800; }
+.product-extras .pe-segment { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.product-extras .pe-segment label { display: flex !important; flex-direction: row !important; align-items: center; justify-content: center; gap: 6px !important; min-height: 46px; padding: 0 8px; border: 1px solid #d9e2ed; border-radius: 10px; color: var(--w-body); background: #fff; font-size: 13px !important; font-weight: 700; text-align: center; cursor: pointer; }
+.product-extras .pe-segment label.active { border-color: var(--w-ink); color: var(--w-ink); box-shadow: inset 0 0 0 1px var(--w-ink); }
+.product-extras .pe-segment input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.product-extras .pe-segment label:focus-within { outline: 2px solid var(--w-primary); outline-offset: 1px; }
+.product-extras .pe-readonly { padding: 10px 12px; border: 1px dashed #d9e2ed; border-radius: 12px; background: #fff; }
+.product-extras .pe-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.product-extras .pe-chips span { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; color: var(--w-positive-deep); background: #e9f6df; font-size: 12px; font-weight: 800; }
+.product-extras .pe-empty { color: var(--w-mute); font-size: 13px; font-weight: 600; }
+.product-extras .pe-value { color: var(--w-ink); font-size: 13px; font-weight: 700; }
+.editor-status-sync { grid-column: 1 / -1; margin: 0; color: var(--w-body); font-size: 12px; font-weight: 600; line-height: 1.5; }
+.editor-status-sync b { color: var(--w-ink); }
+.editor-field-hint { color: var(--w-body); font-size: 11.5px !important; font-weight: 600; }
+@media (max-width: 720px) {
+  .product-extras { padding: 14px 12px 16px; }
+  .product-extras .pe-grid { grid-template-columns: minmax(0, 1fr); }
+  .product-extras .pe-wide { grid-column: auto; }
+  .product-extras .pe-row { flex-wrap: wrap; }
+  .product-extras .pe-row input { flex: 1 1 calc(50% - 8px); }
+  .product-extras .pe-row select { flex: 1 1 calc(50% - 8px); }
+  .product-extras .pe-times { display: none; }
+}

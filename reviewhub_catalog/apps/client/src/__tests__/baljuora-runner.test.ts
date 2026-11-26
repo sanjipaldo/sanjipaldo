@@ -1434,3 +1434,155 @@ describe("매입원가 보내기(매입처 목록 productSuppliers)", () => {
     expect(internals.defaultSupplierName({ supplier: { id: "a" } })).toBeNull();
   });
 });
+
+// 상품 정보 칸(1.9.0, 2026-11-26): 판매 상태(품절·도매몰 노출)·원산지·관리코드·바코드·내용량·발주상품명 등.
+// 발주오라 상품 수정 화면처럼 PUT products/:id 에 바뀐 칸만 보내고, 판매 상태를 받지 않으면 PUT products/:id/status 로 보냅니다.
+function createExtrasFake(options: { putAllowed?: string[]; badCourier?: boolean } = {}) {
+  const product: any = {
+    id: "bj-x", code: "EXT-1", name: "사과 5kg", supplyPrice: 26000, imageUrls: [], categoryIds: ["bj-cat"], isVisible: true, isSoldOut: false, isTaxable: false,
+    originText: "국내산", managementCode: null, barcode: "880111", contentAmount: null, contentUnit: null, contentCount: null, contentAmountBasis: null,
+    purchaseProductName: null, purchaseQuantity: 1, shippingUnitType: null, shippingUnitValue: null, purchaseDeadline: "09:30:00", description: null,
+    shippingLocation: null, manufacturingDate: null, expirationDate: null, courier: "CJ대한통운", tradeType: null,
+    certificationStatus: "HAS_CERT", certifications: [{ kind: "gap", number: "G-1" }, { kind: "haccp", number: "H-1" }], taxonomyItem: { id: "tx-1", name: "사과" }
+  };
+  const putAllowed = options.putAllowed ?? ["isVisible", "isSoldOut", "isTaxable", "originText", "managementCode", "barcode", "contentAmount", "contentUnit", "contentCount", "contentAmountBasis", "purchaseProductName", "purchaseQuantity", "shippingUnitType", "shippingUnitValue", "purchaseDeadline", "description", "shippingLocation", "manufacturingDate", "expirationDate", "courier", "tradeType"];
+  const calls: Array<{ method: string; path: string; body?: any }> = [];
+  const fetch = async (input: string, init: RequestInit = {}) => {
+    const method = (init.method || "GET").toUpperCase();
+    const body = typeof init.body === "string" ? JSON.parse(init.body) : undefined;
+    const url = new URL(input);
+    if (url.pathname === "/api/auth/refresh") return jsonResponse(200, { accessToken: "t1" });
+    const path = url.pathname.replace(/^\//, "");
+    calls.push({ method, path, body });
+    if (method === "GET" && path === "products/bj-x") return jsonResponse(200, { statusCode: 200, data: product });
+    if (method === "PUT" && path === "products/bj-x") {
+      const extra = Object.keys(body).filter((key) => !putAllowed.includes(key));
+      if (extra.length) return jsonResponse(400, { statusCode: 400, message: extra.map((key) => `property ${key} should not exist`) });
+      if (options.badCourier && "courier" in body) return jsonResponse(400, { statusCode: 400, message: ["courier must be one of the following values: cj, lotte, epost"] });
+      Object.assign(product, body);
+      return jsonResponse(200, { statusCode: 200, data: { id: product.id } });
+    }
+    if (method === "PUT" && path === "products/bj-x/status") {
+      Object.assign(product, body);
+      return jsonResponse(200, { statusCode: 200, data: { id: product.id } });
+    }
+    return jsonResponse(404, { message: `not found ${input}` });
+  };
+  return { fetch, product, calls };
+}
+
+const EXTRA_VALUES = {
+  isSoldOut: true, isVisible: true, isTaxable: false, originText: "국내산", managementCode: "APL-5", barcode: "880222", contentAmount: 5, contentUnit: "kg", contentCount: 18, contentBasis: "total",
+  purchaseName: "부사 5kg", purchaseQuantity: 1, shippingUnitType: "box", shippingUnitValue: 1, purchaseDeadline: "09:30", description: "아삭한 부사", shippingLocation: "경북 영주", manufacturingDate: null, expirationDate: null, courier: "롯데택배", tradeType: null, taxonomyItemId: null
+};
+
+function extrasItem(fields: string[], extra: Record<string, unknown> = EXTRA_VALUES) {
+  return { productId: "p-x", action: "update", baljuoraId: "bj-x", templateId: null, code: "EXT-1", name: "사과 5kg", supplierName: "봄날농원", fields, values: { name: "사과 5kg", supplyPrice: 26000, groupPrice: 26000, consumerPrice: null, purchaseCost: null, categoryId: null, imageUrl: null, isTaxable: false, extra } };
+}
+
+describe("상품 정보 칸(1.9.0)", () => {
+  it("읽기: 응답에 있는 칸만 읽고, 인증은 '인증 있음'일 때 인증 종류, 발주상품명 칸 이름을 기억합니다", () => {
+    const fake = createExtrasFake();
+    const snapshot = internals.normalizeProduct(fake.product, {});
+    expect(snapshot.extra).toMatchObject({ originText: "국내산", barcode: "880111", purchaseQuantity: 1, purchaseDeadline: "09:30:00", courier: "CJ대한통운", tradeType: null, purchaseName: null, purchaseNameKey: "purchaseProductName", certificationKinds: ["gap", "haccp"], taxonomyItemId: "tx-1", taxonomyName: "사과" });
+    expect(internals.extractExtra({ certificationStatus: "NOT_SUBJECT", certifications: [{ kind: "gap" }] })).toEqual({ certificationKinds: [] });
+    expect(internals.extractExtra({ contentAmount: "0.50", contentAmountBasis: "each", purchaseName: "배" })).toEqual({ contentAmount: 0.5, contentBasis: "each", purchaseName: "배", purchaseNameKey: "purchaseName" });
+    expect(internals.extractExtra({ name: "칸 없음" })).toBeUndefined();
+    expect(internals.extraBodyFor("summary", { description: "한 줄" }, {})).toEqual({ description: "한 줄" });
+    expect(internals.extraBodyFor("purchaseName", { purchaseName: "배" }, { purchaseName: null })).toEqual({ purchaseName: "배" });
+    expect(internals.extraBodyFor("purchaseQuantity", { purchaseQuantity: null }, {})).toEqual({ purchaseQuantity: 1 });
+    expect(internals.extraBodyFor("certification", { }, {})).toBeNull();
+    expect(internals.sameExtraValue("5.00", 5)).toBe(true);
+    expect(internals.sameExtraValue(null, "")).toBe(true);
+    expect(internals.sameExtraValue("09:30:00", "09:30")).toBe(true);
+    expect(internals.sameExtraValue("2026-11-01T00:00:00.000Z", "2026-11-01")).toBe(true);
+    expect(internals.sameExtraValue("국내산", "국내산 경북")).toBe(false);
+  });
+
+  it("보내기: 바뀐 칸만 PUT products/:id 한 번으로 보내고, 이미 같은 칸(원산지)은 보내지 않고 반영됨", async () => {
+    const fake = createExtrasFake();
+    const report = createReport();
+    await internals.createRunner({ fetch: fake.fetch, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" })
+      .runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [extrasItem(["soldOut", "origin", "barcode", "content", "purchaseName", "shippingUnit", "summary"])] }, report, "ABCDE23456");
+    const puts = fake.calls.filter((call) => call.method === "PUT");
+    expect(puts).toEqual([{ method: "PUT", path: "products/bj-x", body: { isSoldOut: true, barcode: "880222", contentAmount: 5, contentUnit: "kg", contentCount: 18, contentAmountBasis: "total", purchaseProductName: "부사 5kg", shippingUnitType: "box", shippingUnitValue: 1, description: "아삭한 부사" } }]);
+    const [result] = report.posted[0].items;
+    expect(result.ok).toBe(true);
+    expect(result.applied.sort()).toEqual(["barcode", "content", "origin", "purchaseName", "shippingUnit", "soldOut", "summary"]);
+    expect(result.snapshot).toMatchObject({ isSoldOut: true, extra: { barcode: "880222", purchaseName: "부사 5kg", description: "아삭한 부사" } });
+  });
+
+  it("판매 상태를 PUT products/:id 가 받지 않으면 PUT products/:id/status 로 보내고, 거절된 칸(택배사)만 따로 찾아 알려 줍니다", async () => {
+    const fake = createExtrasFake({ putAllowed: ["barcode", "courier", "description"], badCourier: true });
+    const report = createReport();
+    await internals.createRunner({ fetch: fake.fetch, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" })
+      .runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [extrasItem(["soldOut", "visible", "barcode", "courier"], { ...EXTRA_VALUES, isVisible: false })] }, report, "ABCDE23456");
+    const status = fake.calls.find((call) => call.path === "products/bj-x/status");
+    expect(status?.body).toEqual({ isSoldOut: true, isVisible: false });
+    expect(fake.product).toMatchObject({ isSoldOut: true, isVisible: false, barcode: "880222", courier: "CJ대한통운" });
+    const [result] = report.posted[0].items;
+    expect(result.applied.sort()).toEqual(["barcode", "soldOut", "visible"]);
+    expect(result.skipped).toEqual([{ field: "courier", reason: expect.stringContaining("courier must be one of") }]);
+  });
+
+  it("신규 등록: 상품마다 다른 칸은 복사한 상품 값을 지우고 DB센터 값으로, 택배사·발주마감 등은 DB센터 값이 없으면 복사한 상품 값 그대로", () => {
+    const template = { id: "bj-t", code: "T-1", name: "복사용", supplyPrice: 1000, isVisible: true, isSoldOut: false, isTaxable: false, supplier: { id: "sup-1" }, managementCode: "OLD-M", barcode: "OLD-B", originText: "수입산 중국", description: "복사용 설명", contentAmount: 3, contentUnit: "kg", purchaseProductName: "복사용 발주명", purchaseQuantity: 2, courier: "한진택배", purchaseDeadline: "11:00", shippingLocation: "경기 이천", taxonomyItemId: "tx-old" };
+    const item = { ...extrasItem(["name", "supplyPrice", "soldOut", "visible", "taxable", "barcode", "tradeType"], { isSoldOut: false, isVisible: false, isTaxable: true, barcode: "NEW-B", tradeType: null }), action: "create", baljuoraId: null, templateId: "bj-t" };
+    const body = internals.buildCreateBody(template, item);
+    expect(body).toMatchObject({ name: "사과 5kg", barcode: "NEW-B", isVisible: false, isSoldOut: false, isTaxable: true, tradeType: null, courier: "한진택배", purchaseDeadline: "11:00", shippingLocation: "경기 이천", supplierId: "sup-1" });
+    ["managementCode", "originText", "description", "contentAmount", "contentUnit", "purchaseProductName", "purchaseQuantity", "taxonomyItemId"].forEach((key) => expect(body).not.toHaveProperty(key));
+  });
+});
+
+describe("상품 정보 칸 신규 등록(1.9.0)", () => {
+  it("등록 때 발주오라가 조용히 버린 칸(원산지)·받지 않은 판매 상태만 등록 뒤 다시 보냅니다", async () => {
+    const products: Record<string, any> = {
+      "bj-t": { id: "bj-t", code: "T-1", name: "복사용", supplyPrice: 1000, imageUrls: [], prices: [], isVisible: true, isSoldOut: false, isTaxable: false, supplier: { id: "sup-1", name: "봄날농원" }, originText: "수입산", barcode: "OLD", courier: "한진택배" }
+    };
+    const calls: Array<{ method: string; path: string; body?: any }> = [];
+    const fetch = async (input: string, init: RequestInit = {}) => {
+      const method = (init.method || "GET").toUpperCase();
+      const body = typeof init.body === "string" ? JSON.parse(init.body) : undefined;
+      const url = new URL(input);
+      if (url.pathname === "/api/auth/refresh") return jsonResponse(200, { accessToken: "t1" });
+      const path = url.pathname.replace(/^\//, "");
+      calls.push({ method, path, body });
+      if (method === "GET" && path === "products") return jsonResponse(200, { statusCode: 200, data: { items: [{ id: "bj-t", code: "T-1", name: "복사용", supplier: { name: "봄날농원" } }], meta: { hasNext: false } } });
+      if (method === "GET" && path.startsWith("products/")) {
+        const product = products[path.slice("products/".length)];
+        return product ? jsonResponse(200, { statusCode: 200, data: product }) : jsonResponse(404, { statusCode: 404, message: "Not Found" });
+      }
+      if (method === "POST" && path === "products") {
+        // 등록 화면 DTO: isSoldOut은 받지 않음(400), originText는 오류 없이 버림
+        if ("isSoldOut" in body) return jsonResponse(400, { statusCode: 400, message: ["property isSoldOut should not exist"] });
+        const created = { ...body, id: "bj-n", code: body.code, imageUrls: [], prices: [], isSoldOut: false, originText: null, supplier: { id: body.supplierId, name: "봄날농원" } };
+        products["bj-n"] = created;
+        return jsonResponse(201, { statusCode: 201, data: created });
+      }
+      if (method === "PUT" && path === "products/bj-n") {
+        if ("isSoldOut" in body) return jsonResponse(400, { statusCode: 400, message: ["property isSoldOut should not exist"] });
+        Object.assign(products["bj-n"], body);
+        return jsonResponse(200, { statusCode: 200, data: { id: "bj-n" } });
+      }
+      if (method === "PUT" && path === "products/bj-n/status") {
+        Object.assign(products["bj-n"], body);
+        return jsonResponse(200, { statusCode: 200, data: { id: "bj-n" } });
+      }
+      return jsonResponse(404, { message: `not found ${input}` });
+    };
+    const report = createReport();
+    const item = { productId: "p-n", action: "create", baljuoraId: null, templateId: "bj-t", templateMatch: "supplier", code: "NEW-1", name: "새 사과", supplierName: "봄날농원", fields: ["name", "supplyPrice", "soldOut", "visible", "origin", "barcode"], values: { name: "새 사과", supplyPrice: 20000, groupPrice: 20000, consumerPrice: null, purchaseCost: null, categoryId: null, imageUrl: null, isTaxable: false, extra: { isSoldOut: true, isVisible: true, isTaxable: false, originText: "국내산 경북", barcode: "880999", tradeType: null } } };
+    await internals.createRunner({ fetch, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" }).runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [item] }, report, "ABCDE23456");
+    const create = calls.find((call) => call.method === "POST" && call.path === "products");
+    expect(create?.body).toMatchObject({ name: "새 사과", originText: "국내산 경북", barcode: "880999", isVisible: true, courier: "한진택배" });
+    expect(calls.filter((call) => call.method === "PUT").map((call) => [call.path, call.body])).toEqual([
+      ["products/bj-n", { isSoldOut: true, originText: "국내산 경북" }],
+      ["products/bj-n", { originText: "국내산 경북" }],
+      ["products/bj-n/status", { isSoldOut: true }]
+    ]);
+    const [result] = report.posted[0].items;
+    expect(result).toMatchObject({ ok: true, baljuoraId: "bj-n" });
+    expect(result.applied.sort()).toEqual(["barcode", "name", "origin", "soldOut", "supplyPrice", "visible"]);
+    expect(products["bj-n"]).toMatchObject({ isSoldOut: true, originText: "국내산 경북", barcode: "880999" });
+  });
+});

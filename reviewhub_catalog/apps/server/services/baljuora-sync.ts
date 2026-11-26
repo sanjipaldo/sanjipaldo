@@ -32,8 +32,20 @@ import {
   suggestCategoryMapping,
   suggestShippingPolicyMapping,
   baljuoraPolicyRate,
+  canPullDiff,
+  canPushDiff,
+  carryBaseline,
+  courierComparable,
+  syncDateText,
+  syncText,
+  fillBaselineGaps,
+  isExtraField,
   toPrice,
+  BALJUORA_PULL_ONLY_FIELDS,
   type BaljuoraBaseline,
+  type BaljuoraExtraField,
+  type BaljuoraPushExtra,
+  type BaljuoraSnapshotExtra,
   type BaljuoraCategory,
   type BaljuoraFieldDiff,
   type BaljuoraLinkState,
@@ -48,6 +60,8 @@ import { baljuoraSalesLines, baljuoraSyncJobs, baljuoraSyncStore, categories, ex
 import { finalizeSalesSync, ingestBuyers, ingestProductTax, ingestSalesLines, isMissingSalesTable, knownTaxProductIds, salesRangeFor } from "./baljuora-sales";
 import { asProductInput } from "./catalog-excel";
 import { createCategory, createProduct, createShippingPolicy, createSubcategory, getAdminCatalog, updateProduct } from "./catalog";
+import { emptyProductExtras, type ProductExtras } from "@repo/shared/product-extras";
+import { EXTRAS_NOT_READY_MESSAGE, loadProductExtrasMap, saveProductExtras } from "./product-extras";
 
 const PROVIDER = "baljuora";
 const STORE_SETTINGS = "settings";
@@ -120,6 +134,9 @@ export type PushPlanItem = {
     baljuoraShippingPolicyId: string | null;
     // DB센터 카테고리 id: 같은 작업에서 발주오라에 새로 만든 카테고리로 보낼 때 씀(카테고리 트리 맞추기)
     doogoCategoryId?: string | null;
+    // 상품 정보 칸(판매 상태·원산지·관리코드 등) 보낼 값(발주오라 칸 이름)과, 저장 뒤 확인할 비교 값(2026-11-26)
+    extra?: BaljuoraPushExtra;
+    expected?: Partial<Record<BaljuoraExtraField, string | number | null>>;
   };
 };
 
@@ -263,9 +280,31 @@ export async function saveBaljuoraSettings(input: Partial<BaljuoraSettings>) {
   });
 }
 
+// 비교에 쓰는 DB센터 쪽 덧붙일 값: 상품 정보 칸(product_extras, 표가 없으면 null)과 카테고리 이름(과세 여부 자동값)
+type SyncContext = { extras: Map<string, ProductExtras> | null; categoryNames: Map<string, string> };
+
+async function loadSyncContext(productIds?: string[]): Promise<SyncContext> {
+  const [extras, categoryRows] = await Promise.all([
+    loadProductExtrasMap(productIds),
+    getDb().select({ id: categories.id, name: categories.name }).from(categories)
+  ]);
+  return { extras, categoryNames: new Map(categoryRows.map((category) => [category.id, category.name])) };
+}
+
 // DB센터 상품 → 비교용 값(카테고리 연결 두 방향·배송비 정책 연결을 설정에서 씀)
-function syncValues(product: Parameters<typeof doogoSyncValues>[0], settings: BaljuoraSettings) {
-  return doogoSyncValues(product, settings.categoryMap, settings.shippingPolicyMap, settings.baljuoraCategoryMap);
+function syncValues(product: Parameters<typeof doogoSyncValues>[0], settings: BaljuoraSettings, context?: SyncContext) {
+  const extras = context ? (context.extras ? context.extras.get(product.id) ?? emptyProductExtras() : null) : product.extras;
+  const taxableDefault = context && product.categoryId ? isHealthCategoryName(context.categoryNames.get(product.categoryId)) : product.taxableDefault;
+  return doogoSyncValues({ ...product, extras, taxableDefault }, settings.categoryMap, settings.shippingPolicyMap, settings.baljuoraCategoryMap);
+}
+
+// 상품 정보 칸 중 보낸 뒤 확인할 비교 값(인증은 보내지 않음)
+function expectedExtra(values: DoogoSyncValues, fields: BaljuoraSyncField[]) {
+  const expected: Partial<Record<BaljuoraExtraField, string | number | null>> = {};
+  for (const field of fields) {
+    if (isExtraField(field) && values.extra[field] !== undefined) expected[field] = values.extra[field] as string | number | null;
+  }
+  return expected;
 }
 
 function generateCode() {
@@ -320,6 +359,9 @@ type ProductRow = {
   supplierName: string | null;
   isVisible: boolean;
   isSoldOut: boolean;
+  isSeasonEnded: boolean;
+  origin: string | null;
+  courier: string | null;
   shippingType: "domestic" | "overseas";
   shippingPolicyId: string | null;
 };
@@ -340,6 +382,9 @@ async function loadProductRows(ids?: string[]): Promise<ProductRow[]> {
     supplierName: products.supplierName,
     isVisible: products.isVisible,
     isSoldOut: products.isSoldOut,
+    isSeasonEnded: products.isSeasonEnded,
+    origin: products.origin,
+    courier: products.courier,
     shippingType: products.shippingType,
     shippingPolicyId: products.shippingPolicyId
   };
@@ -491,11 +536,12 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
   }
   const treeOps = tree.plan.ops.length > 0 ? { ops: tree.plan.ops, excludeNames: settings.categoryTreeExclude } : null;
   const wanted = [...new Set(input.productIds)].slice(0, 2000);
-  const [productRows, links, { doogoCategories, baljuoraCategories }, group] = await Promise.all([
+  const [productRows, links, { doogoCategories, baljuoraCategories }, group, context] = await Promise.all([
     loadProductRows(),
     loadLinks(),
     loadCategoryContext(),
-    readStore<{ id: string; name: string } | null>(STORE_GROUP, null)
+    readStore<{ id: string; name: string } | null>(STORE_GROUP, null),
+    loadSyncContext(wanted)
   ]);
   const productById = new Map(productRows.map((row) => [row.id, row]));
   const linkByProduct = new Map(links.map((link) => [link.productId, link]));
@@ -508,7 +554,7 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
   for (const productId of wanted) {
     const product = productById.get(productId);
     if (!product) continue;
-    const values = syncValues(product, settings);
+    const values = syncValues(product, settings, context);
     const anyLink = linkByProduct.get(productId);
     // 예전 형식 연결(비교 때 발주오라에서 찾지 못한 상품)은 새로 등록합니다.
     const link = anyLink && linkState(anyLink) ? anyLink : undefined;
@@ -516,14 +562,23 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
     let fields: BaljuoraSyncField[];
     if (!link) {
       // 배송비 정책은 DB센터 정책과 연결한 발주오라 정책이 있을 때만 넣습니다(없으면 설정 복사용 상품의 정책을 따름).
-      fields = BALJUORA_SYNC_FIELDS.filter((field) => (field !== "groupPrice" || values.groupPrice !== values.supplyPrice) && (field !== "shippingPolicy" || Boolean(values.baljuoraShippingPolicyId)));
+      // 상품 정보 칸은 DB센터에 값이 있는 칸만 넣습니다(비어 있으면 복사한 상품의 값을 쓰지 않고 비워 둠 — 책갈피 buildCreateBody).
+      fields = BALJUORA_SYNC_FIELDS.filter((field) => {
+        if (isExtraField(field)) return !BALJUORA_PULL_ONLY_FIELDS.includes(field) && values.extra[field] !== undefined && (values.extra[field] !== null || field === "tradeType" || field === "soldOut" || field === "visible");
+        return (field !== "groupPrice" || values.groupPrice !== values.supplyPrice) && (field !== "shippingPolicy" || Boolean(values.baljuoraShippingPolicyId));
+      });
     } else {
       const state = linkState(link);
       const diffs = state ? diffBaljuoraProduct(values, state, baljuoraCategories) : [];
-      const diffFields = diffs.map((diff) => diff.field);
+      const diffByField = new Map(diffs.map((diff) => [diff.field, diff]));
+      // 고른 칸(DB센터에서 바꿈·맞추기): 지금 다른 칸만(이미지는 같아 보여도 다시 올릴 수 있음). 상품 정보 칸은 canPushDiff 규칙(빈 값으로 지우지 않음).
+      // 고르지 않은 보내기(보낼 변경 전체): 가격 등은 '발주오라에서 바뀜'만 빼고, 상품 정보 칸은 DB센터에서 바꾼 칸만.
       fields = requested?.length
-        ? requested.filter((field) => diffFields.includes(field) || field === "image")
-        : diffs.filter((diff) => diff.direction !== "pull").map((diff) => diff.field);
+        ? requested.filter((field) => {
+          const diff = diffByField.get(field);
+          return diff ? canPushDiff(diff, true) : field === "image";
+        })
+        : diffs.filter((diff) => canPushDiff(diff, false)).map((diff) => diff.field);
       // 배송비 정책은 DB센터 정책과 연결한 발주오라 매출배송정책이 있을 때만 보냅니다. 연결이 없으면 빼서(화면에 '연결 필요' 표시)
       // 같은 상품의 다른 칸(썸네일·가격)까지 실패로 보이지 않게 합니다(2026-11-23 운영: 완숙토마토 '국내 무료배송').
       if (!values.baljuoraShippingPolicyId && fields.includes("shippingPolicy")) {
@@ -561,9 +616,12 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
         purchaseCost: values.purchaseCost,
         categoryId: values.baljuoraCategoryId,
         imageUrl: values.imageUrl,
-        isTaxable: isHealthCategoryName(categoryName.get(product.categoryId)),
+        // 과세 여부: DB센터에서 정한 값, 없으면 카테고리 자동값(건강식품 과세)
+        isTaxable: typeof values.extraPush.isTaxable === "boolean" ? values.extraPush.isTaxable : isHealthCategoryName(categoryName.get(product.categoryId)),
         baljuoraShippingPolicyId: values.baljuoraShippingPolicyId,
-        doogoCategoryId: product.categoryId ?? null
+        doogoCategoryId: product.categoryId ?? null,
+        extra: values.extraPush,
+        expected: expectedExtra(values, fields)
       }
     });
   }
@@ -732,7 +790,37 @@ function sanitizeSnapshot(input: unknown): BaljuoraProductSnapshot | null {
   if ("shippingPolicyId" in record && record.shippingPolicyId !== undefined) {
     snapshot.shippingPolicyId = typeof record.shippingPolicyId === "string" && record.shippingPolicyId.trim() ? record.shippingPolicyId.trim().slice(0, 80) : null;
   }
+  const extra = sanitizeSnapshotExtra(record.extra);
+  if (extra) snapshot.extra = extra;
   return snapshot;
+}
+
+// 책갈피가 읽은 상품 정보 칸(1.9.0): 아는 칸만 형식·길이를 맞춰 받습니다. 없는 칸은 undefined(그 칸을 읽지 못함).
+function sanitizeSnapshotExtra(input: unknown): BaljuoraSnapshotExtra | undefined {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return undefined;
+  const record = input as Record<string, unknown>;
+  const result: BaljuoraSnapshotExtra = {};
+  const textKeys: Array<[keyof BaljuoraSnapshotExtra, number]> = [
+    ["originText", 120], ["managementCode", 80], ["barcode", 80], ["contentUnit", 10], ["contentBasis", 10], ["purchaseName", 200],
+    ["purchaseNameKey", 40], ["shippingUnitType", 20], ["purchaseDeadline", 20], ["description", 300], ["shippingLocation", 120],
+    ["manufacturingDate", 60], ["expirationDate", 60], ["courier", 60], ["tradeType", 30], ["taxonomyItemId", 80], ["taxonomyName", 200]
+  ];
+  for (const [key, max] of textKeys) {
+    if (!(key in record) || record[key] === undefined) continue;
+    const value = record[key];
+    (result as Record<string, unknown>)[key] = typeof value === "string" ? (collapseName(value).slice(0, max) || null) : typeof value === "number" && Number.isFinite(value) ? String(value).slice(0, max) : null;
+  }
+  for (const key of ["contentAmount", "contentCount", "purchaseQuantity", "shippingUnitValue"] as const) {
+    if (!(key in record) || record[key] === undefined) continue;
+    const number = typeof record[key] === "number" ? record[key] as number : Number(String(record[key] ?? "").replace(/,/g, ""));
+    result[key] = record[key] !== null && record[key] !== "" && Number.isFinite(number) ? Math.round(number * 100) / 100 : null;
+  }
+  if ("certificationKinds" in record && record.certificationKinds !== undefined) {
+    result.certificationKinds = Array.isArray(record.certificationKinds)
+      ? record.certificationKinds.filter((kind): kind is string => typeof kind === "string" && kind.length > 0 && kind.length <= 60).slice(0, 30)
+      : null;
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 // 발주오라 배송비 정책 목록(책갈피가 읽어 보냄)을 정리합니다. 값은 정책 이름·코드·배송비 구간뿐입니다.
@@ -815,7 +903,7 @@ async function removeConflictingLinks(rows: Array<{ externalProductId: string; e
 }
 
 async function ingestCompareBatch(row: BaljuoraSyncJob, snapshots: BaljuoraProductSnapshot[], results: JobResults) {
-  const [productRows, links, settings] = await Promise.all([loadProductRows(), loadLinks(), getBaljuoraSettings()]);
+  const [productRows, links, settings, context] = await Promise.all([loadProductRows(), loadLinks(), getBaljuoraSettings(), loadSyncContext()]);
   const byCode = new Map<string, ProductRow>();
   for (const product of productRows) {
     const code = product.productCode?.trim();
@@ -847,9 +935,10 @@ async function ingestCompareBatch(row: BaljuoraSyncJob, snapshots: BaljuoraProdu
     usedCodes.add(externalCode);
     const previous = linkByExternal.get(snapshot.id);
     const previousState = previous && previous.productId === product.id ? linkState(previous) : null;
-    const values = syncValues(product, settings);
+    const values = syncValues(product, settings, context);
     // 처음 연결하는 상품은 지금 값을 기준으로 삼습니다(이미지는 발주오라에 이미지가 있으면 같다고 봄).
-    const baseline: BaljuoraBaseline = previousState?.baseline ?? {
+    // 예전 기준에 없는 상품 정보 칸(판매 상태·원산지 등, 2026-11-26 추가)은 지금 양쪽 값으로 채워 그 뒤 바뀐 쪽을 알 수 있게 합니다.
+    const baseline: BaljuoraBaseline = previousState?.baseline ? fillBaselineGaps(previousState.baseline, values, snapshot) : {
       doogo: doogoComparable(values),
       baljuora: baljuoraComparable(snapshot),
       pushedImageUrl: snapshot.imageUrls.length > 0 ? values.imageUrl : null,
@@ -915,7 +1004,7 @@ async function ingestPushItems(plan: PushPlan, items: RunnerItemResult[], result
   const db = getDb();
   const planById = new Map(plan.items.map((item) => [item.productId, item]));
   const productIds = items.map((item) => item.productId).filter((id) => planById.has(id));
-  const [productRows, links, settings] = await Promise.all([loadProductRows(productIds), loadLinks(productIds), getBaljuoraSettings()]);
+  const [productRows, links, settings, context, { baljuoraCategories }] = await Promise.all([loadProductRows(productIds), loadLinks(productIds), getBaljuoraSettings(), loadSyncContext(productIds), loadCategoryContext()]);
   const productById = new Map(productRows.map((product) => [product.id, product]));
   const linkByProduct = new Map(links.map((link) => [link.productId, link]));
   const now = nowIso();
@@ -943,8 +1032,26 @@ async function ingestPushItems(plan: PushPlan, items: RunnerItemResult[], result
       continue;
     }
     const snapshot = sanitizeSnapshot(item.snapshot) ?? (link ? linkState(link)?.snapshot : null) ?? null;
-    const values = syncValues(product, settings);
+    const values = syncValues(product, settings, context);
     const previous = link ? linkState(link) : null;
+    // 상품 정보 칸은 서버에서 저장 뒤 값을 확인합니다(발주오라가 모르는 칸을 오류 없이 버리거나 다른 모양으로 저장할 수 있음).
+    if (snapshot) {
+      const saved = baljuoraComparable(snapshot);
+      const expected = planned.values.expected ?? {};
+      const show = (value: string | number | null | undefined) => value === null || value === undefined || value === "" ? "없음" : String(value);
+      for (const field of [...record.applied]) {
+        if (!isExtraField(field)) continue;
+        const want = expected[field];
+        const got = saved[field];
+        if (want === undefined || got === undefined || want === got) continue;
+        record.applied = record.applied.filter((entry) => entry !== field);
+        record.skipped.push({ field, reason: `보낸 값(${show(want)})과 발주오라에 저장된 값(${show(got)})이 다릅니다. 발주오라가 이 칸을 받지 않았거나 다른 형식으로 저장했어요.` });
+      }
+      if (planned.action === "update" && record.applied.length === 0) {
+        record.ok = false;
+        record.error = record.error ?? (record.skipped.map((entry) => entry.reason).join(" / ").slice(0, 600) || "바뀐 칸이 없습니다.");
+      }
+    }
     const after: BaljuoraProductSnapshot = snapshot ?? {
       id: record.baljuoraId,
       kind: "product",
@@ -959,12 +1066,15 @@ async function ingestPushItems(plan: PushPlan, items: RunnerItemResult[], result
       updatedAt: now
     };
     const imagePushed = record.applied.includes("image");
-    const baseline: BaljuoraBaseline = {
+    const fresh: BaljuoraBaseline = {
       doogo: doogoComparable(values),
       baljuora: baljuoraComparable(after),
       pushedImageUrl: imagePushed ? values.imageUrl : previous?.baseline?.pushedImageUrl ?? (after.imageUrls.length > 0 ? values.imageUrl : null),
       at: now
     };
+    // 이번에 보내지 않았는데(또는 반영 안 됨) 아직 다른 칸은 예전 기준을 그대로 둡니다(방향 유지).
+    const keep = diffBaljuoraProduct(values, { snapshot: after, baseline: fresh }, baljuoraCategories).map((diff) => diff.field).filter((field) => !record.applied.includes(field));
+    const baseline = carryBaseline(previous?.baseline, fresh, keep);
     const externalCode = after.code || record.code || `id:${record.baljuoraId}`;
     upserts.push({
       provider: PROVIDER,
@@ -1156,13 +1266,14 @@ export type BaljuoraChangeItem = {
 
 export async function listBaljuoraChanges() {
   return guard(async () => {
-    const [productRows, links, settings, { doogoCategories, baljuoraCategories }, onlyList, lastCompare] = await Promise.all([
+    const [productRows, links, settings, { doogoCategories, baljuoraCategories }, onlyList, lastCompare, context] = await Promise.all([
       loadProductRows(),
       loadLinks(),
       getBaljuoraSettings(),
       loadCategoryContext(),
       readStore<BaljuoraProductSnapshot[]>(STORE_ONLY, []),
-      getDb().select({ finishedAt: baljuoraSyncJobs.finishedAt }).from(baljuoraSyncJobs).where(and(eq(baljuoraSyncJobs.type, "compare"), eq(baljuoraSyncJobs.status, "done"))).orderBy(desc(baljuoraSyncJobs.finishedAt)).limit(1)
+      getDb().select({ finishedAt: baljuoraSyncJobs.finishedAt }).from(baljuoraSyncJobs).where(and(eq(baljuoraSyncJobs.type, "compare"), eq(baljuoraSyncJobs.status, "done"))).orderBy(desc(baljuoraSyncJobs.finishedAt)).limit(1),
+      loadSyncContext()
     ]);
     const linkByProduct = new Map(links.map((link) => [link.productId, link]));
     // 발주오라 상품과 연결된 상품이 있는 매입처(DB센터 매입처명) — 없으면 신규 등록 때 "새 매입처"로 알립니다.
@@ -1176,7 +1287,7 @@ export async function listBaljuoraChanges() {
     let groupPriceRead = 0;
     for (const product of productRows) {
       const link = linkByProduct.get(product.id);
-      const values: DoogoSyncValues = syncValues(product, settings);
+      const values: DoogoSyncValues = syncValues(product, settings, context);
       const state = link ? linkState(link) : null;
       // 연결이 없거나, 예전 형식 연결만 있는 상품(비교 때 발주오라에서 찾지 못함)은 신규 등록 대상입니다.
       if (!link || !state) {
@@ -1199,7 +1310,9 @@ export async function listBaljuoraChanges() {
       productCount: productRows.length,
       items,
       baljuoraOnly: (Array.isArray(onlyList) ? onlyList : []).filter((snapshot) => !linkByProductCode(links, snapshot)),
-      unmappedCategories
+      unmappedCategories,
+      // 상품 정보 칸 표(037)가 있는지. false면 원산지·택배사·판매 상태 밖의 상품 정보 칸은 비교하지 않습니다(운영 배포 전).
+      extrasReady: context.extras !== null
     };
   });
 }
@@ -1220,6 +1333,11 @@ export type BaljuoraProductPrices = {
   groupPriceKnown: boolean;
   purchaseCost: number | null;
   consumerPrice: number | null;
+  // 판매 상태·과세 여부·상품 정보 칸(마지막으로 읽은 발주오라 값, 상품 창의 '발주오라: …' 표시용)
+  isSoldOut?: boolean | null;
+  isVisible?: boolean | null;
+  isTaxable?: boolean | null;
+  extra?: BaljuoraSnapshotExtra | null;
 };
 
 export async function getBaljuoraProductPrices(productId: string): Promise<BaljuoraProductPrices> {
@@ -1246,7 +1364,11 @@ export async function getBaljuoraProductPrices(productId: string): Promise<Balju
       groupPrice: known ? toPrice(state.snapshot.groupPrice) : null,
       groupPriceKnown: known,
       purchaseCost: toPrice(state.snapshot.purchaseCost),
-      consumerPrice: toPrice(state.snapshot.consumerPrice)
+      consumerPrice: toPrice(state.snapshot.consumerPrice),
+      isSoldOut: state.snapshot.isSoldOut,
+      isVisible: state.snapshot.isVisible,
+      isTaxable: typeof state.snapshot.isTaxable === "boolean" ? state.snapshot.isTaxable : null,
+      extra: state.snapshot.extra ?? null
     };
   });
 }
@@ -1370,6 +1492,38 @@ async function doogoPolicyFor(baljuoraPolicyId: string, shippingType: "domestic"
   return created.id;
 }
 
+// product_extras에 저장하는 상품 정보 칸(판매 상태·원산지·택배사·해외배송은 products 칸)
+const EXTRAS_TABLE_FIELDS = new Set<BaljuoraSyncField>(["taxable", "managementCode", "barcode", "content", "purchaseName", "purchaseQuantity", "shippingUnit", "purchaseDeadline", "certification", "summary", "shippingLocation", "manufacturingDate", "expirationDate"]);
+
+// 발주오라 상품 정보 칸 → DB센터 product_extras 값(고른 칸만). 발주오라 상품 분류는 읽었으면 늘 함께 적습니다.
+function extrasPatchFromSnapshot(snapshot: BaljuoraProductSnapshot, fields: BaljuoraSyncField[]): Partial<ProductExtras> {
+  const extra = snapshot.extra ?? {};
+  const patch: Partial<ProductExtras> = {};
+  const want = new Set(fields);
+  if (want.has("taxable") && typeof snapshot.isTaxable === "boolean") patch.isTaxable = snapshot.isTaxable;
+  if (want.has("managementCode") && extra.managementCode !== undefined) patch.managementCode = extra.managementCode;
+  if (want.has("barcode") && extra.barcode !== undefined) patch.barcode = extra.barcode;
+  if (want.has("content") && (extra.contentAmount !== undefined || extra.contentCount !== undefined)) {
+    Object.assign(patch, { contentAmount: extra.contentAmount ?? null, contentUnit: extra.contentUnit ?? null, contentCount: extra.contentCount ?? null, contentBasis: extra.contentBasis === "each" ? "each" : extra.contentAmount || extra.contentCount ? "total" : null });
+  }
+  if (want.has("purchaseName") && extra.purchaseName !== undefined) patch.purchaseName = extra.purchaseName;
+  if (want.has("purchaseQuantity") && extra.purchaseQuantity !== undefined) patch.purchaseQuantity = extra.purchaseQuantity;
+  if (want.has("shippingUnit") && (extra.shippingUnitType !== undefined || extra.shippingUnitValue !== undefined)) {
+    Object.assign(patch, { shippingUnitType: extra.shippingUnitType ?? null, shippingUnitValue: extra.shippingUnitValue ?? null });
+  }
+  if (want.has("purchaseDeadline") && extra.purchaseDeadline !== undefined) patch.purchaseDeadline = extra.purchaseDeadline;
+  if (want.has("certification") && extra.certificationKinds !== undefined) patch.certificationKinds = extra.certificationKinds ?? [];
+  if (want.has("summary") && extra.description !== undefined) patch.summary = extra.description;
+  if (want.has("shippingLocation") && extra.shippingLocation !== undefined) patch.shippingLocation = extra.shippingLocation;
+  if (want.has("manufacturingDate") && extra.manufacturingDate !== undefined) patch.manufacturingDate = syncDateText(extra.manufacturingDate);
+  if (want.has("expirationDate") && extra.expirationDate !== undefined) patch.expirationDate = syncDateText(extra.expirationDate);
+  if (extra.taxonomyItemId !== undefined) {
+    patch.taxonomyItemId = extra.taxonomyItemId;
+    if (extra.taxonomyName !== undefined) patch.taxonomyName = extra.taxonomyName;
+  }
+  return patch;
+}
+
 // 발주오라 → DB센터: 고른 상품에서 지금 발주오라와 다른 칸만 발주오라 값으로 바꿉니다(같은 칸은 그대로).
 // onlyPulled: '가져올 변경' 탭처럼 발주오라에서 바뀐 칸(pull·both)만. 없으면 '발주오라 기준 맞추기'처럼 다른 칸 전부(fields로 고름).
 export async function pullFromBaljuora(input: { productIds?: string[]; fields?: BaljuoraSyncField[]; baljuoraIds?: string[]; onlyPulled?: boolean }, changedBy: string) {
@@ -1391,7 +1545,7 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
 
     // 1) 연결된 상품: 발주오라 값으로 DB센터 상품을 바꿉니다(가격 변경은 가격변동 이력에 남습니다).
     const productIds = [...new Set(input.productIds ?? [])].slice(0, 500);
-    const links = await loadLinks(productIds);
+    const [links, context] = await Promise.all([loadLinks(productIds), loadSyncContext(productIds)]);
     for (const link of links) {
       const state = linkState(link);
       const product = productById.get(link.productId);
@@ -1399,47 +1553,85 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
       const snapshot = state.snapshot;
       try {
         // 지금 다른 칸만 바꿉니다(예: 같은 그림인데 주소만 다른 이미지를 바꾸거나, 맞는 카테고리를 다른 연결 카테고리로 옮기지 않게).
-        const before = syncValues(product, settings);
-        // '이대로 두기'로 뺀 칸은 화면 목록과 같게 건너뜁니다(보여 준 칸만 바꿈).
-        const differing = new Set(diffBaljuoraProduct(before, state, baljuoraCategories)
-          .filter((diff) => !input.onlyPulled || diff.direction === "pull" || diff.direction === "both")
-          .map((diff) => diff.field));
-        const wants = (field: BaljuoraSyncField) => fields.includes(field) && differing.has(field);
-        if (![...differing].some((field) => fields.includes(field))) {
+        // '이대로 두기'로 뺀 칸은 화면 목록과 같게 건너뜁니다(보여 준 칸만 바꿈). 상품 정보 칸은 발주오라가 비어 있으면 DB센터 값을 지우지 않습니다
+        // (발주오라에서 직접 지운 경우만 — canPullDiff). onlyPulled('발주오라에서 바뀜' 탭)는 발주오라에서 바뀐 칸만.
+        const before = syncValues(product, settings, context);
+        const pullable = diffBaljuoraProduct(before, state, baljuoraCategories).filter((diff) => fields.includes(diff.field) && canPullDiff(diff, !input.onlyPulled));
+        const wanted = new Set(pullable.map((diff) => diff.field));
+        const wants = (field: BaljuoraSyncField) => wanted.has(field);
+        if (wanted.size === 0) {
           result.unchanged += 1;
           continue;
         }
+        const skippedFields = new Set<BaljuoraSyncField>();
+        const skip = (field: BaljuoraSyncField, reason: string) => {
+          skippedFields.add(field);
+          result.skipped.push({ id: product.id, name: product.name, field, reason });
+        };
         const next = asProductInput(product);
-        if (wants("name") && snapshot.name) next.name = snapshot.name;
-        if (wants("supplyPrice") && snapshot.supplyPrice !== null) next.generalPrice = snapshot.supplyPrice;
-        if (wants("groupPrice") && snapshot.groupPrice !== undefined) next.aPrice = snapshot.groupPrice ?? next.generalPrice;
+        let productChanged = false;
+        const change = (apply: () => void) => {
+          apply();
+          productChanged = true;
+        };
+        if (wants("name") && snapshot.name) change(() => { next.name = snapshot.name; });
+        if (wants("supplyPrice") && snapshot.supplyPrice !== null) change(() => { next.generalPrice = snapshot.supplyPrice as number; });
+        if (wants("groupPrice") && snapshot.groupPrice !== undefined) change(() => { next.aPrice = snapshot.groupPrice ?? next.generalPrice; });
         if (wants("consumerPrice")) {
-          next.salePrice = snapshot.consumerPrice;
-          next.salePriceMode = snapshot.consumerPrice ? "fixed" : "autonomous";
+          change(() => {
+            next.salePrice = snapshot.consumerPrice;
+            next.salePriceMode = snapshot.consumerPrice ? "fixed" : "autonomous";
+          });
         }
-        if (wants("purchaseCost") && snapshot.purchaseCost !== null) next.costPrice = snapshot.purchaseCost;
-        if (wants("image") && snapshot.imageUrls[0]) next.imageUrl = snapshot.imageUrls[0];
+        if (wants("purchaseCost") && snapshot.purchaseCost !== null) change(() => { next.costPrice = snapshot.purchaseCost as number; });
+        if (wants("image") && snapshot.imageUrls[0]) change(() => { next.imageUrl = snapshot.imageUrls[0]; });
         if (wants("category")) {
           const categoryId = reverseCategory(snapshot, settings, baljuoraCategories, doogoCategories);
           const category = doogoCategories.find((item) => item.id === categoryId);
-          if (category && category.shippingType === next.shippingType) next.categoryId = category.id;
+          if (category && category.shippingType === next.shippingType) change(() => { next.categoryId = category.id; });
           else {
             const path = (snapshot.categoryIds ?? []).map((id) => categoryPath.get(id) ?? id).join(", ") || "없음";
-            result.skipped.push({ id: product.id, name: product.name, field: "category", reason: category ? `연결된 DB센터 카테고리 '${category.name}'의 배송유형이 상품과 달라 바꾸지 않았습니다.` : `발주오라 카테고리(${path})와 연결된 DB센터 카테고리가 없습니다. 동기화 설정 > 카테고리 맞추기에서 연결하거나 만들어 주세요.` });
+            skip("category", category ? `연결된 DB센터 카테고리 '${category.name}'의 배송유형이 상품과 달라 바꾸지 않았습니다.` : `발주오라 카테고리(${path})와 연결된 DB센터 카테고리가 없습니다. 동기화 설정 > 카테고리 맞추기에서 연결하거나 만들어 주세요.`);
           }
         }
         if (wants("shippingPolicy") && snapshot.shippingPolicyId && policyContext) {
           try {
-            next.shippingPolicyId = await doogoPolicyFor(snapshot.shippingPolicyId, next.shippingType, policyContext);
+            const policyId = await doogoPolicyFor(snapshot.shippingPolicyId, next.shippingType, policyContext);
+            change(() => { next.shippingPolicyId = policyId; });
           } catch (error) {
-            result.skipped.push({ id: product.id, name: product.name, field: "shippingPolicy", reason: error instanceof Error ? error.message : "배송비 정책을 가져오지 못했습니다." });
+            skip("shippingPolicy", error instanceof Error ? error.message : "배송비 정책을 가져오지 못했습니다.");
           }
         }
-        const saved = await updateProduct(product.id, next, changedBy);
-        const values = syncValues(saved, settings);
-        const baseline: BaljuoraBaseline = { doogo: doogoComparable(values), baljuora: baljuoraComparable(snapshot), pushedImageUrl: state.baseline?.pushedImageUrl ?? null, at: now };
+        // 판매 상태: 발주오라 품절 → DB센터 품절, 발주오라 판매 중 → DB센터 판매중(품절·시즌종료 모두 끔). 도매몰 노출 → 공개 노출.
+        if (wants("soldOut") && typeof snapshot.isSoldOut === "boolean") change(() => { next.isSoldOut = snapshot.isSoldOut as boolean; next.isSeasonEnded = false; });
+        if (wants("visible") && typeof snapshot.isVisible === "boolean") change(() => { next.isVisible = snapshot.isVisible as boolean; });
+        if (wants("origin")) change(() => { next.origin = syncText(snapshot.extra?.originText)?.slice(0, 100) ?? null; });
+        if (wants("courier")) change(() => { next.courier = syncText(snapshot.extra?.courier)?.slice(0, 100) ?? null; });
+        // 상품 정보 칸(product_extras)
+        const extraFields = [...wanted].filter((field) => EXTRAS_TABLE_FIELDS.has(field));
+        if (extraFields.length > 0) {
+          if (!context.extras) extraFields.forEach((field) => skip(field, EXTRAS_NOT_READY_MESSAGE));
+          else {
+            const current = context.extras.get(product.id) ?? emptyProductExtras();
+            const savedExtras = await saveProductExtras(product.id, { ...current, ...extrasPatchFromSnapshot(snapshot, extraFields) });
+            context.extras.set(product.id, savedExtras);
+          }
+        }
+        const saved = productChanged ? await updateProduct(product.id, next, changedBy) : product;
+        // 가져오면서 새로 만든·연결한 배송 정책 연결을 반영해 비교합니다(설정 저장은 끝에서 한 번).
+        const values = syncValues(saved, policyContext?.changed ? { ...settings, shippingPolicyMap: policyContext.map } : settings, context);
+        const fresh: BaljuoraBaseline = { doogo: doogoComparable(values), baljuora: baljuoraComparable(snapshot), pushedImageUrl: state.baseline?.pushedImageUrl ?? null, at: now };
+        const still = diffBaljuoraProduct(values, { snapshot, baseline: fresh }, baljuoraCategories).map((diff) => diff.field);
+        // 저장했는데도 다른 칸(예: 배송 정책의 택배사를 따르는 상품의 택배사)은 알려 줍니다.
+        for (const field of wanted) {
+          if (skippedFields.has(field) || !still.includes(field)) continue;
+          skip(field, field === "courier" ? "이 상품은 배송 정책의 택배사를 따라 바꾸지 않았습니다(배송 정책에서 택배사를 바꿔 주세요)." : "DB센터에 저장했지만 값이 발주오라와 같아지지 않았습니다(DB센터 형식에 맞지 않는 값).");
+        }
+        const applied = [...wanted].filter((field) => !skippedFields.has(field));
+        const baseline = carryBaseline(state.baseline, fresh, still.filter((field) => !applied.includes(field)));
         await getDb().update(externalProductLinks).set({ rawSnapshot: stateJson({ snapshot, baseline, ignored: state.ignored }), syncStatus: "imported", updatedAt: now }).where(eq(externalProductLinks.id, link.id));
-        result.updated += 1;
+        if (applied.length > 0) result.updated += 1;
+        else result.unchanged += 1;
       } catch (error) {
         result.failed.push({ id: product.id, name: product.name, error: error instanceof Error ? error.message : "저장 실패" });
       }
@@ -1450,6 +1642,8 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
     if (wanted.size > 0) {
       const fallback = doogoCategories.find((category) => category.isActive && category.shippingType === "domestic" && UNCATEGORIZED_NAMES.has(category.name))
         ?? doogoCategories.find((category) => category.isActive && category.shippingType === "domestic");
+      // 새로 만드는 상품의 상품 정보 칸을 담을 곳(표가 없으면 null — 037 전 DB)
+      const onlyContext = await loadSyncContext([]);
       const upserts: Array<typeof externalProductLinks.$inferInsert> = [];
       for (const snapshot of (Array.isArray(onlyList) ? onlyList : []).filter((item) => wanted.has(item.id))) {
         try {
@@ -1470,9 +1664,18 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
             categoryId: category.id,
             isVisible: false,
             isSoldOut: snapshot.isSoldOut ?? false,
-            isAlwaysOnSale: true
+            isAlwaysOnSale: true,
+            origin: syncText(snapshot.extra?.originText)?.slice(0, 100) ?? null,
+            courier: snapshot.extra && courierComparable(snapshot.extra.courier) ? syncText(snapshot.extra.courier)?.slice(0, 100) ?? null : null
           });
-          const values = syncValues(created, settings);
+          // 상품 정보 칸(과세 여부·관리코드·바코드 등)도 발주오라 값으로 채웁니다(표가 있을 때).
+          if (onlyContext.extras && snapshot.extra) {
+            const fromBaljuora = await saveProductExtras(created.id, { ...emptyProductExtras(), ...extrasPatchFromSnapshot(snapshot, [...EXTRAS_TABLE_FIELDS]) });
+            onlyContext.extras.set(created.id, fromBaljuora);
+          } else if (onlyContext.extras && typeof snapshot.isTaxable === "boolean") {
+            onlyContext.extras.set(created.id, await saveProductExtras(created.id, { ...emptyProductExtras(), isTaxable: snapshot.isTaxable }));
+          }
+          const values = syncValues(created, settings, onlyContext);
           upserts.push({
             provider: PROVIDER,
             externalProductId: snapshot.id,
@@ -1560,7 +1763,7 @@ export async function createDoogoCategoriesFromBaljuora(input: { baljuoraCategor
 export async function ignoreBaljuoraDifferences(productIds: string[], fields?: BaljuoraSyncField[]) {
   return guard(async () => {
     const ids = [...new Set(productIds)].slice(0, 2000);
-    const [productRows, links, settings, { baljuoraCategories }] = await Promise.all([loadProductRows(ids), loadLinks(ids), getBaljuoraSettings(), loadCategoryContext()]);
+    const [productRows, links, settings, { baljuoraCategories }, context] = await Promise.all([loadProductRows(ids), loadLinks(ids), getBaljuoraSettings(), loadCategoryContext(), loadSyncContext(ids)]);
     const productById = new Map(productRows.map((product) => [product.id, product]));
     const now = nowIso();
     let ignoredCount = 0;
@@ -1568,7 +1771,7 @@ export async function ignoreBaljuoraDifferences(productIds: string[], fields?: B
       const state = linkState(link);
       const product = productById.get(link.productId);
       if (!state || !product) continue;
-      const values = syncValues(product, settings);
+      const values = syncValues(product, settings, context);
       const diffs = diffBaljuoraProduct(values, { ...state, ignored: undefined }, baljuoraCategories).filter((diff) => !fields?.length || fields.includes(diff.field));
       if (diffs.length === 0) continue;
       const ignored = { ...(state.ignored ?? {}) };

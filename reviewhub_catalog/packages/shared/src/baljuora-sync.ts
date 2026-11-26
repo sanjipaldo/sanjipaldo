@@ -4,6 +4,8 @@
 // 그 창이 DB센터가 만든 작업(비교 또는 보내기)을 실행하고 결과를 돌려줍니다.
 // 이 파일은 "무엇이 다른가"를 정하는 규칙만 둡니다(값 정리·비교·방향).
 
+import { normalizeDeadline, type ProductExtras } from "./product-extras";
+
 export const BALJUORA_CONSOLE_ORIGIN = "https://console.baljuora.com";
 export const BALJUORA_DEFAULT_MERCHANT_SLUG = "doogobiz24";
 // 수강생 단가는 발주오라 매출처 그룹 중 이름에 이 단어가 들어간 그룹의 공급가입니다(단가관리 엑셀과 같은 기준).
@@ -13,9 +15,31 @@ export const BALJUORA_JOB_TTL_MINUTES = 30;
 export const BALJUORA_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 export const BALJUORA_CODE_LENGTH = 10;
 
-export type BaljuoraSyncField = "name" | "supplyPrice" | "groupPrice" | "consumerPrice" | "purchaseCost" | "category" | "image" | "shippingPolicy";
-export const BALJUORA_SYNC_FIELDS: BaljuoraSyncField[] = ["name", "supplyPrice", "groupPrice", "consumerPrice", "purchaseCost", "category", "image", "shippingPolicy"];
+export type BaljuoraCoreField = "name" | "supplyPrice" | "groupPrice" | "consumerPrice" | "purchaseCost" | "category" | "image" | "shippingPolicy";
+// 상품 정보 칸(2026-11-26 관리자 요청 "발주오라 상품관리자 페이지와 빠지는 거 없이 양방향으로"): 판매 상태(품절·도매몰 노출)와
+// 발주오라 상품 등록 화면의 칸. DB센터 값은 products 칸(품절·시즌종료·노출·원산지·택배사·배송유형)과 product_extras(migration 037)에 있습니다.
+export type BaljuoraExtraField =
+  | "soldOut" | "visible" | "taxable" | "origin" | "managementCode" | "barcode" | "content" | "purchaseName" | "purchaseQuantity"
+  | "shippingUnit" | "purchaseDeadline" | "certification" | "summary" | "shippingLocation" | "manufacturingDate" | "expirationDate"
+  | "courier" | "tradeType";
+export type BaljuoraSyncField = BaljuoraCoreField | BaljuoraExtraField;
+export const BALJUORA_CORE_FIELDS: BaljuoraCoreField[] = ["name", "supplyPrice", "groupPrice", "consumerPrice", "purchaseCost", "category", "image", "shippingPolicy"];
+export const BALJUORA_EXTRA_FIELDS: BaljuoraExtraField[] = [
+  "soldOut", "visible", "taxable", "origin", "managementCode", "barcode", "content", "purchaseName", "purchaseQuantity",
+  "shippingUnit", "purchaseDeadline", "certification", "summary", "shippingLocation", "manufacturingDate", "expirationDate", "courier", "tradeType"
+];
+export const BALJUORA_SYNC_FIELDS: BaljuoraSyncField[] = [...BALJUORA_CORE_FIELDS, ...BALJUORA_EXTRA_FIELDS];
 export const BALJUORA_PRICE_FIELDS: BaljuoraSyncField[] = ["supplyPrice", "groupPrice", "consumerPrice", "purchaseCost"];
+// 판매 상태(발주오라 상품 화면 "판매 상태: 도매몰 노출 · 품절")
+export const BALJUORA_STATUS_FIELDS: BaljuoraExtraField[] = ["soldOut", "visible"];
+// 인증은 발주오라에서 인증번호와 함께 관리해 가져오기만 합니다(DB센터에서 보내지 않음).
+export const BALJUORA_PULL_ONLY_FIELDS: BaljuoraSyncField[] = ["certification"];
+// 해외배송은 DB센터 배송유형(국내/해외 카테고리)으로 정해져 보내기만 합니다(가져오면 카테고리까지 바뀌어야 함).
+export const BALJUORA_PUSH_ONLY_FIELDS: BaljuoraSyncField[] = ["tradeType"];
+
+export function isExtraField(field: BaljuoraSyncField): field is BaljuoraExtraField {
+  return (BALJUORA_EXTRA_FIELDS as string[]).includes(field);
+}
 
 // 화면 이름: 발주오라 칸 ← DB센터 칸
 export const BALJUORA_FIELD_LABELS: Record<BaljuoraSyncField, string> = {
@@ -26,7 +50,25 @@ export const BALJUORA_FIELD_LABELS: Record<BaljuoraSyncField, string> = {
   purchaseCost: "매입원가 ← 원가",
   category: "카테고리",
   image: "대표 이미지",
-  shippingPolicy: "매출배송정책 ← 배송 정책"
+  shippingPolicy: "매출배송정책 ← 배송 정책",
+  soldOut: "품절 ← 판매 상태(품절·시즌종료)",
+  visible: "도매몰 노출 ← 공개 노출",
+  taxable: "과세 여부",
+  origin: "원산지",
+  managementCode: "관리코드",
+  barcode: "바코드",
+  content: "내용량",
+  purchaseName: "발주상품명",
+  purchaseQuantity: "발주단위",
+  shippingUnit: "배송 단위",
+  purchaseDeadline: "발주마감",
+  certification: "인증(발주오라에서 가져오기만)",
+  summary: "상품 간략설명",
+  shippingLocation: "출고지",
+  manufacturingDate: "제조연월일",
+  expirationDate: "소비기한",
+  courier: "택배사",
+  tradeType: "해외배송 ← 배송유형(보내기만)"
 };
 export const BALJUORA_FIELD_SHORT_LABELS: Record<BaljuoraSyncField, string> = {
   name: "상품명",
@@ -36,7 +78,25 @@ export const BALJUORA_FIELD_SHORT_LABELS: Record<BaljuoraSyncField, string> = {
   purchaseCost: "매입원가",
   category: "카테고리",
   image: "이미지",
-  shippingPolicy: "배송비 정책"
+  shippingPolicy: "배송비 정책",
+  soldOut: "품절",
+  visible: "노출",
+  taxable: "과세",
+  origin: "원산지",
+  managementCode: "관리코드",
+  barcode: "바코드",
+  content: "내용량",
+  purchaseName: "발주상품명",
+  purchaseQuantity: "발주단위",
+  shippingUnit: "배송 단위",
+  purchaseDeadline: "발주마감",
+  certification: "인증",
+  summary: "간략설명",
+  shippingLocation: "출고지",
+  manufacturingDate: "제조연월일",
+  expirationDate: "소비기한",
+  courier: "택배사",
+  tradeType: "해외배송"
 };
 
 // 발주오라 상품을 비교용으로 줄인 값(책갈피 스크립트가 읽어서 보냄). undefined = 그 칸을 읽지 못함.
@@ -58,6 +118,35 @@ export type BaljuoraProductSnapshot = {
   updatedAt: string | null;
   // 과세 여부(1.7.0부터 읽음). undefined = 읽지 못함. 홈택스 세금계산서(과세)/계산서(면세) 나누기에 씀.
   isTaxable?: boolean;
+  // 상품 정보 칸(책갈피 1.9.0부터 읽음). undefined = 읽지 못함(예전 책갈피·목록만 읽음). 안쪽 칸이 undefined면 그 칸이 응답에 없음.
+  extra?: BaljuoraSnapshotExtra;
+};
+
+// 발주오라 상품 정보 칸(발주오라 응답 칸 이름 그대로: originText·description·contentAmountBasis 등)
+export type BaljuoraSnapshotExtra = {
+  originText?: string | null;
+  managementCode?: string | null;
+  barcode?: string | null;
+  contentAmount?: number | null;
+  contentUnit?: string | null;
+  contentCount?: number | null;
+  contentBasis?: string | null;
+  purchaseName?: string | null;
+  // 발주상품명이 들어 있던 칸 이름(purchaseProductName 또는 purchaseName)
+  purchaseNameKey?: string | null;
+  purchaseQuantity?: number | null;
+  shippingUnitType?: string | null;
+  shippingUnitValue?: number | null;
+  purchaseDeadline?: string | null;
+  certificationKinds?: string[] | null;
+  description?: string | null;
+  shippingLocation?: string | null;
+  manufacturingDate?: string | null;
+  expirationDate?: string | null;
+  courier?: string | null;
+  tradeType?: string | null;
+  taxonomyItemId?: string | null;
+  taxonomyName?: string | null;
 };
 
 export type BaljuoraCategory = { id: string; name: string; parentId: string | null; path: string };
@@ -96,6 +185,43 @@ export type DoogoProductForSync = {
   categoryId: string | null;
   imageUrl: string | null;
   shippingPolicyId?: string | null;
+  // 판매 상태·상품 정보 칸(없으면 그 칸은 비교하지 않음)
+  isVisible?: boolean;
+  isSoldOut?: boolean;
+  isSeasonEnded?: boolean;
+  origin?: string | null;
+  courier?: string | null;
+  shippingType?: string;
+  // product_extras 값. null = 표가 아직 없음(037 전 DB) → 그 칸들은 비교하지 않음
+  extras?: ProductExtras | null;
+  // 과세 여부 자동값(카테고리 기준). extras.isTaxable이 null일 때 씀
+  taxableDefault?: boolean;
+};
+
+// 발주오라에 보낼 상품 정보 칸(발주오라 칸 이름). 칸이 없으면 그 칸을 모름(보내지 않음).
+export type BaljuoraPushExtra = {
+  isSoldOut?: boolean;
+  isVisible?: boolean;
+  isTaxable?: boolean;
+  originText?: string | null;
+  managementCode?: string | null;
+  barcode?: string | null;
+  contentAmount?: number | null;
+  contentUnit?: string | null;
+  contentCount?: number | null;
+  contentBasis?: string | null;
+  purchaseName?: string | null;
+  purchaseQuantity?: number | null;
+  shippingUnitType?: string | null;
+  shippingUnitValue?: number | null;
+  purchaseDeadline?: string | null;
+  description?: string | null;
+  shippingLocation?: string | null;
+  manufacturingDate?: string | null;
+  expirationDate?: string | null;
+  courier?: string | null;
+  tradeType?: string | null;
+  taxonomyItemId?: string | null;
 };
 
 export type DoogoSyncValues = {
@@ -113,6 +239,11 @@ export type DoogoSyncValues = {
   // DB센터 배송 정책 id와, 연결한 발주오라 매출배송정책 id(연결 없으면 null)
   shippingPolicyId: string | null;
   baljuoraShippingPolicyId: string | null;
+  // 상품 정보 칸 비교용 값(undefined = 모름 → 비교 안 함)과 보낼 값
+  extra: Partial<Record<BaljuoraExtraField, string | number | null>>;
+  extraPush: BaljuoraPushExtra;
+  // 과세 여부를 DB센터에서 직접 정했는지(false = 카테고리 자동값 → 비어 있는 것으로 봄)
+  taxableExplicit: boolean;
 };
 
 // 연결(external_product_links.rawSnapshot)에 저장하는 기준: 마지막으로 맞춘 때의 양쪽 값
@@ -134,6 +265,9 @@ export type BaljuoraFieldDiff = {
   doogo: string | number | null;
   baljuora: string | number | null;
   direction: BaljuoraDiffDirection;
+  // 상품 정보 칸: 그쪽 값이 비어 있음(빈 값으로는 상대 값을 지우지 않습니다 — 그쪽에서 직접 지운 경우만)
+  doogoEmpty?: boolean;
+  baljuoraEmpty?: boolean;
 };
 
 export const BALJUORA_DIRECTION_LABELS: Record<BaljuoraDiffDirection, string> = {
@@ -160,10 +294,142 @@ function priceOrNull(value: unknown) {
   return price && price > 0 ? price : null;
 }
 
+// ─── 상품 정보 칸 비교 값(양쪽 같은 모양으로 바꿔 비교) ─────────────────────────────
+
+export function syncText(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value !== "string") return null;
+  return collapseName(value) || null;
+}
+
+// 날짜 칸: 발주오라가 날짜를 "2026-11-01T00:00:00.000Z"처럼 돌려줘도 "2026-11-01"과 같게 봅니다.
+export function syncDateText(value: unknown) {
+  const text = syncText(value);
+  if (!text) return null;
+  const iso = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}/u.exec(text);
+  return iso ? iso[1] : text;
+}
+
+function decimalOrNull(value: unknown, decimals = 2) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = typeof value === "number" ? value : Number(String(value).replace(/,/gu, "").trim());
+  if (!Number.isFinite(number) || number <= 0) return null;
+  const scale = 10 ** decimals;
+  return Math.round(number * scale) / scale;
+}
+
+// 내용량: "전체 양|단위|개수|기준(total·each)" (개수만 있거나 양만 있어도 됨)
+export function contentComparable(amount: unknown, unit: unknown, count: unknown, basis: unknown) {
+  const value = decimalOrNull(amount);
+  const unitText = value !== null && typeof unit === "string" && unit.trim() ? unit.trim() : null;
+  const countValue = decimalOrNull(count, 0);
+  if ((value === null || unitText === null) && countValue === null) return null;
+  const basisText = basis === "each" && countValue !== null && countValue > 1 ? "each" : "total";
+  return [unitText ? value : "", unitText ?? "", countValue ?? "", basisText].join("|");
+}
+
+// 배송 단위: "box|1"
+export function shippingUnitComparable(type: unknown, value: unknown) {
+  const amount = decimalOrNull(value);
+  return typeof type === "string" && type.trim() && amount !== null ? `${type.trim()}|${amount}` : null;
+}
+
+// 발주단위: 1(기본)은 비어 있는 것과 같게 봅니다.
+export function purchaseQuantityComparable(value: unknown) {
+  const number = decimalOrNull(value, 0);
+  return number !== null && number > 1 ? number : null;
+}
+
+export function certificationComparable(kinds: unknown) {
+  if (!Array.isArray(kinds)) return null;
+  const list = [...new Set(kinds.filter((kind): kind is string => typeof kind === "string" && Boolean(kind.trim())).map((kind) => kind.trim()))].sort();
+  return list.length > 0 ? list.join(",") : null;
+}
+
+// 택배사: 발주오라가 택배사를 코드(영문)로 저장하면 이름과 비교할 수 없어 비교하지 않습니다(한글 이름일 때만).
+export function courierComparable(value: unknown) {
+  const text = syncText(value);
+  if (text === null) return null;
+  return /[가-힣]/u.test(text) ? text : undefined;
+}
+
+const flag = (value: boolean) => (value ? 1 : 0);
+
+function doogoExtraValues(product: DoogoProductForSync) {
+  const extra: Partial<Record<BaljuoraExtraField, string | number | null>> = {};
+  const push: BaljuoraPushExtra = {};
+  if (typeof product.isSoldOut === "boolean") {
+    const soldOut = product.isSoldOut || product.isSeasonEnded === true;
+    extra.soldOut = flag(soldOut);
+    push.isSoldOut = soldOut;
+  }
+  if (typeof product.isVisible === "boolean") {
+    extra.visible = flag(product.isVisible);
+    push.isVisible = product.isVisible;
+  }
+  if (product.origin !== undefined) {
+    extra.origin = syncText(product.origin);
+    push.originText = extra.origin;
+  }
+  if (product.courier !== undefined) {
+    const courier = syncText(product.courier);
+    extra.courier = courier;
+    push.courier = courier;
+  }
+  if (product.shippingType !== undefined) {
+    extra.tradeType = product.shippingType === "overseas" ? "overseas" : null;
+    push.tradeType = extra.tradeType;
+  }
+  const extras = product.extras;
+  const taxableExplicit = Boolean(extras && typeof extras.isTaxable === "boolean");
+  const taxable = extras && typeof extras.isTaxable === "boolean" ? extras.isTaxable : product.taxableDefault;
+  if (typeof taxable === "boolean") {
+    extra.taxable = flag(taxable);
+    push.isTaxable = taxable;
+  }
+  if (extras) {
+    extra.managementCode = syncText(extras.managementCode);
+    extra.barcode = syncText(extras.barcode);
+    extra.content = contentComparable(extras.contentAmount, extras.contentUnit, extras.contentCount, extras.contentBasis);
+    extra.purchaseName = syncText(extras.purchaseName);
+    extra.purchaseQuantity = purchaseQuantityComparable(extras.purchaseQuantity);
+    extra.shippingUnit = shippingUnitComparable(extras.shippingUnitType, extras.shippingUnitValue);
+    extra.purchaseDeadline = normalizeDeadline(extras.purchaseDeadline);
+    extra.certification = certificationComparable(extras.certificationKinds);
+    extra.summary = syncText(extras.summary);
+    extra.shippingLocation = syncText(extras.shippingLocation);
+    extra.manufacturingDate = syncDateText(extras.manufacturingDate);
+    extra.expirationDate = syncDateText(extras.expirationDate);
+    Object.assign(push, {
+      managementCode: extra.managementCode,
+      barcode: extra.barcode,
+      contentAmount: extra.content ? extras.contentAmount : null,
+      contentUnit: extra.content ? extras.contentUnit : null,
+      contentCount: extra.content ? extras.contentCount : null,
+      contentBasis: extra.content ? extras.contentBasis ?? "total" : null,
+      purchaseName: extra.purchaseName,
+      purchaseQuantity: extras.purchaseQuantity ?? null,
+      shippingUnitType: extra.shippingUnit ? extras.shippingUnitType : null,
+      shippingUnitValue: extra.shippingUnit ? extras.shippingUnitValue : null,
+      purchaseDeadline: extra.purchaseDeadline,
+      description: extra.summary,
+      shippingLocation: extra.shippingLocation,
+      manufacturingDate: extra.manufacturingDate,
+      expirationDate: extra.expirationDate,
+      taxonomyItemId: extras.taxonomyItemId ?? null
+    } satisfies BaljuoraPushExtra);
+  }
+  return { extra, push, taxableExplicit };
+}
+
 export function doogoSyncValues(product: DoogoProductForSync, categoryMap: Record<string, string>, shippingPolicyMap: Record<string, string> = {}, baljuoraCategoryMap: Record<string, string> = {}): DoogoSyncValues {
   const generalPrice = toPrice(product.generalPrice) ?? 0;
   const aPrice = priceOrNull(product.aPrice);
+  const extraValues = doogoExtraValues(product);
   return {
+    extra: extraValues.extra,
+    extraPush: extraValues.push,
+    taxableExplicit: extraValues.taxableExplicit,
     code: collapseName(product.productCode) || null,
     name: collapseName(product.name),
     supplyPrice: generalPrice,
@@ -191,8 +457,39 @@ export function doogoComparable(values: DoogoSyncValues): BaljuoraBaseline["doog
     purchaseCost: values.purchaseCost,
     category: values.categoryId,
     image: values.imageUrl,
-    shippingPolicy: values.shippingPolicyId
+    shippingPolicy: values.shippingPolicyId,
+    ...(values.extra ?? {})
   };
+}
+
+// 발주오라 상품 정보 칸 비교 값(읽지 못한 칸은 undefined)
+export function baljuoraExtraComparable(snapshot: BaljuoraProductSnapshot): Partial<Record<BaljuoraExtraField, string | number | null>> {
+  const result: Partial<Record<BaljuoraExtraField, string | number | null>> = {};
+  if (typeof snapshot.isSoldOut === "boolean") result.soldOut = flag(snapshot.isSoldOut);
+  if (typeof snapshot.isVisible === "boolean") result.visible = flag(snapshot.isVisible);
+  if (typeof snapshot.isTaxable === "boolean") result.taxable = flag(snapshot.isTaxable);
+  const extra = snapshot.extra;
+  if (!extra || typeof extra !== "object") return result;
+  const has = (key: keyof BaljuoraSnapshotExtra) => extra[key] !== undefined;
+  if (has("originText")) result.origin = syncText(extra.originText);
+  if (has("managementCode")) result.managementCode = syncText(extra.managementCode);
+  if (has("barcode")) result.barcode = syncText(extra.barcode);
+  if (has("contentAmount") || has("contentCount")) result.content = contentComparable(extra.contentAmount, extra.contentUnit, extra.contentCount, extra.contentBasis);
+  if (has("purchaseName")) result.purchaseName = syncText(extra.purchaseName);
+  if (has("purchaseQuantity")) result.purchaseQuantity = purchaseQuantityComparable(extra.purchaseQuantity);
+  if (has("shippingUnitType") || has("shippingUnitValue")) result.shippingUnit = shippingUnitComparable(extra.shippingUnitType, extra.shippingUnitValue);
+  if (has("purchaseDeadline")) result.purchaseDeadline = normalizeDeadline(extra.purchaseDeadline);
+  if (has("certificationKinds")) result.certification = certificationComparable(extra.certificationKinds);
+  if (has("description")) result.summary = syncText(extra.description);
+  if (has("shippingLocation")) result.shippingLocation = syncText(extra.shippingLocation);
+  if (has("manufacturingDate")) result.manufacturingDate = syncDateText(extra.manufacturingDate);
+  if (has("expirationDate")) result.expirationDate = syncDateText(extra.expirationDate);
+  if (has("courier")) {
+    const courier = courierComparable(extra.courier);
+    if (courier !== undefined) result.courier = courier;
+  }
+  if (has("tradeType")) result.tradeType = syncText(extra.tradeType) ? "overseas" : null;
+  return result;
 }
 
 export function baljuoraComparable(snapshot: BaljuoraProductSnapshot): BaljuoraBaseline["baljuora"] {
@@ -204,7 +501,8 @@ export function baljuoraComparable(snapshot: BaljuoraProductSnapshot): BaljuoraB
     purchaseCost: priceOrNull(snapshot.purchaseCost),
     category: snapshot.categoryIds === undefined ? undefined : [...snapshot.categoryIds].sort().join(",") || null,
     image: snapshot.imageUrls[0] ?? null,
-    shippingPolicy: snapshot.shippingPolicyId === undefined ? undefined : snapshot.shippingPolicyId ?? null
+    shippingPolicy: snapshot.shippingPolicyId === undefined ? undefined : snapshot.shippingPolicyId ?? null,
+    ...baljuoraExtraComparable(snapshot)
   };
 }
 
@@ -343,11 +641,90 @@ export function diffBaljuoraProduct(values: DoogoSyncValues, state: BaljuoraLink
       diffs.push({ field: "shippingPolicy", doogo: values.shippingPolicyId, baljuora: current, direction });
     }
   }
+  diffs.push(...diffExtraFields(values, baljuora, baseline));
   const ignored = state.ignored ?? {};
   return diffs.filter((diff) => {
     const entry = ignored[diff.field];
     return !entry || entry.doogo !== diff.doogo || entry.baljuora !== diff.baljuora;
   });
+}
+
+// 상품 정보 칸이 비어 있는지(빈 값으로는 상대 값을 지우지 않음). 품절·노출·해외배송은 늘 값이 있는 칸입니다.
+// 과세 여부는 DB센터에서 직접 정하지 않았으면(카테고리 자동값) 비어 있는 것으로 봅니다.
+export function extraValueIsEmpty(field: BaljuoraExtraField, value: string | number | null | undefined, side: "doogo" | "baljuora", taxableExplicit = true) {
+  if (field === "soldOut" || field === "visible" || field === "tradeType") return false;
+  if (field === "taxable" && side === "doogo") return !taxableExplicit;
+  return value === null || value === undefined;
+}
+
+// 상품 정보 칸 비교 규칙(2026-11-26):
+// - 한쪽이라도 읽지 못한 칸은 비교하지 않습니다.
+// - 처음부터 다른 칸(initial)은 저절로 보내지 않습니다. DB센터가 비어 있으면 발주오라 값을 가져올 변경(pull)으로 올리고,
+//   발주오라가 품절이면 품절을 가져올 변경으로 올립니다. 그 밖(양쪽 값이 다름·도매몰 노출)은 관리자가 '맞추기'에서 방향을 고릅니다.
+// - 인증은 가져오기만, 해외배송은 보내기만 합니다.
+function diffExtraFields(values: DoogoSyncValues, baljuora: BaljuoraBaseline["baljuora"], baseline: BaljuoraBaseline | null): BaljuoraFieldDiff[] {
+  const doogo = values.extra ?? {};
+  const result: BaljuoraFieldDiff[] = [];
+  for (const field of BALJUORA_EXTRA_FIELDS) {
+    const doogoValue = doogo[field];
+    const baljuoraValue = baljuora[field];
+    if (doogoValue === undefined || baljuoraValue === undefined || doogoValue === baljuoraValue) continue;
+    const doogoEmpty = extraValueIsEmpty(field, doogoValue, "doogo", values.taxableExplicit);
+    const baljuoraEmpty = extraValueIsEmpty(field, baljuoraValue, "baljuora");
+    let direction = directionFor(field, doogoValue, baljuoraValue, baseline);
+    if (BALJUORA_PULL_ONLY_FIELDS.includes(field)) direction = "pull";
+    else if (BALJUORA_PUSH_ONLY_FIELDS.includes(field)) direction = direction === "both" ? "push" : direction === "pull" ? "initial" : direction;
+    else if (direction === "initial" && ((doogoEmpty && !baljuoraEmpty) || (field === "soldOut" && baljuoraValue === 1))) direction = "pull";
+    result.push({ field, doogo: doogoValue, baljuora: baljuoraValue, direction, doogoEmpty, baljuoraEmpty });
+  }
+  return result;
+}
+
+// DB센터 → 발주오라로 보낼 수 있는 차이인지. explicit = 관리자가 이 칸을 골라 보냄('DB센터에서 바꿈'·'DB센터 기준으로 맞추기').
+// 가격·상품명 등 원래 칸은 예전과 같고(고르지 않으면 '발주오라에서 바뀜'만 뺌), 상품 정보 칸은 DB센터에서 바꾼 칸(push·both)만 저절로 보내고
+// 고른 칸이라도 DB센터 값이 비어 있으면 보내지 않습니다(발주오라 값을 지우지 않게).
+export function canPushDiff(diff: BaljuoraFieldDiff, explicit: boolean) {
+  if (!isExtraField(diff.field)) return explicit || diff.direction !== "pull";
+  if (BALJUORA_PULL_ONLY_FIELDS.includes(diff.field)) return false;
+  if (diff.direction === "push" || diff.direction === "both") return true;
+  return explicit && !diff.doogoEmpty;
+}
+
+// 발주오라 → DB센터로 가져올 수 있는 차이인지(explicit = '발주오라 기준으로 맞추기'에서 고른 칸).
+export function canPullDiff(diff: BaljuoraFieldDiff, explicit: boolean) {
+  if (!isExtraField(diff.field)) return explicit || diff.direction === "pull" || diff.direction === "both";
+  if (BALJUORA_PUSH_ONLY_FIELDS.includes(diff.field)) return false;
+  if (diff.direction === "pull" || diff.direction === "both") return true;
+  return explicit && !diff.baljuoraEmpty;
+}
+
+// 예전 기준(새 칸이 생기기 전 저장)에 없는 상품 정보 칸은 지금 양쪽 값으로 채웁니다(그 뒤 바뀐 쪽을 알 수 있게).
+export function fillBaselineGaps(baseline: BaljuoraBaseline, values: DoogoSyncValues, snapshot: BaljuoraProductSnapshot): BaljuoraBaseline {
+  const doogo = doogoComparable(values);
+  const baljuora = baljuoraComparable(snapshot);
+  let changed = false;
+  const next: BaljuoraBaseline = { ...baseline, doogo: { ...baseline.doogo }, baljuora: { ...baseline.baljuora } };
+  for (const field of BALJUORA_EXTRA_FIELDS) {
+    if (next.doogo[field] !== undefined || next.baljuora[field] !== undefined) continue;
+    if (doogo[field] === undefined || baljuora[field] === undefined) continue;
+    next.doogo[field] = doogo[field];
+    next.baljuora[field] = baljuora[field];
+    changed = true;
+  }
+  return changed ? next : baseline;
+}
+
+// 보내기·가져오기 뒤 새 기준: 이번에 맞춘 칸은 지금 값으로 바꾸고, 맞추지 않았는데 아직 다른 칸(keep)은 예전 기준을 그대로 둡니다
+// (그래야 '발주오라에서 바뀜'·'DB센터에서 바뀜'이 다른 칸을 보낸 뒤에도 '처음부터 다름'으로 바뀌지 않음).
+export function carryBaseline(previous: BaljuoraBaseline | null | undefined, fresh: BaljuoraBaseline, keep: Iterable<BaljuoraSyncField>): BaljuoraBaseline {
+  if (!previous) return fresh;
+  const next: BaljuoraBaseline = { ...fresh, doogo: { ...fresh.doogo }, baljuora: { ...fresh.baljuora } };
+  for (const field of keep) {
+    if (previous.doogo[field] === undefined && previous.baljuora[field] === undefined) continue;
+    next.doogo[field] = previous.doogo[field];
+    next.baljuora[field] = previous.baljuora[field];
+  }
+  return next;
 }
 
 export function formatBaljuoraCode(code: string) {

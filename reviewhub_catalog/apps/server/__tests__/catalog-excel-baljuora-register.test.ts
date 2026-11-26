@@ -17,6 +17,11 @@ vi.mock("../services/catalog", () => ({
   getAdminCatalog: vi.fn(async () => ({ products, categories }))
 }));
 
+// 상품 정보 칸(migration 037): 표고버섯만 값이 있음(과세 여부를 직접 '과세'로 정함)
+vi.mock("../services/product-extras", () => ({
+  loadProductExtrasMap: vi.fn(async () => new Map([["p-1", { isTaxable: true, managementCode: "PYO-1", barcode: "8801", purchaseName: "표고 1kg(가정용)", purchaseQuantity: 2, shippingUnitType: "box", shippingUnitValue: 1, summary: "향 좋은 표고", shippingLocation: "충북 괴산", manufacturingDate: null, expirationDate: "수령 후 7일" }]]))
+}));
+
 const { buildBaljuoraRegisterWorkbook, baljuoraTaxType } = await import("../services/catalog-excel");
 
 describe("선택 상품 → 발주오라 대량상품등록 양식", () => {
@@ -31,11 +36,14 @@ describe("선택 상품 → 발주오라 대량상품등록 양식", () => {
     expect(sheet.getRow(2).getCell(1).value).toBe("선택");
     const rows = [3, 4, 5].map((n) => [1, 2, 3, 4, 5, 6, 7, 10].map((c) => sheet.getRow(n).getCell(c).value ?? null));
     expect(rows).toEqual([
-      ["ass00057", "표고버섯 가정용 1kg", null, 5250, null, 6600, null, "비과세"],
+      ["ass00057", "표고버섯 가정용 1kg", null, 5250, null, 6600, null, "과세"],
       ["hf-1", "폴리코사놀 60캡슐", null, 20000, null, 25000, null, "과세"],
       ["hf-2", "해외 오메가3", null, 30000, null, 37500, null, "과세"]
     ]);
     expect(sheet.getRow(6).getCell(1).value ?? null).toBeNull();
+    // 상품 정보 칸: 발주상품명·발주단위·단위·단위명·간략설명·관리코드·바코드·출고지·소비기한
+    expect([8, 9, 12, 13, 15, 16, 17, 20, 22].map((c) => sheet.getRow(3).getCell(c).value ?? null)).toEqual(["표고 1kg(가정용)", 2, 1, "박스", "향 좋은 표고", "PYO-1", "8801", "충북 괴산", "수령 후 7일"]);
+    expect([8, 15, 16].map((c) => sheet.getRow(4).getCell(c).value ?? null)).toEqual([null, null, null]);
   });
 
   it("건강식품 카테고리만 과세입니다", () => {

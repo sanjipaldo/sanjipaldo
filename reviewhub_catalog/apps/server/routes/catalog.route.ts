@@ -52,6 +52,8 @@ import {
   updateSourcingStatus
 } from "../services/catalog";
 import { buildPriceChangeNoticeWorkbook } from "../services/price-notice-excel";
+import { productExtrasProblems } from "@repo/shared/product-extras";
+import { EXTRAS_NOT_READY_MESSAGE, getProductExtras, isMissingExtrasTable, saveEditableProductExtras } from "../services/product-extras";
 import {
   assignProductsToGroup,
   getAdminProductGroups,
@@ -110,6 +112,28 @@ const ProductOptionSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).max(999).optional()
 });
 
+// 발주오라 상품 등록 화면과 같은 상품 정보 칸(migration 037). 값 정리·검사는 공용 규칙(product-extras)이 합니다.
+// 보내지 않으면(undefined) 저장된 값을 그대로 둡니다(일괄 변경·예전 화면).
+const looseExtra = z.union([z.string().max(500), z.number()]).nullable().optional();
+const ProductExtrasSchema = z.object({
+  isTaxable: z.boolean().nullable().optional(),
+  managementCode: looseExtra,
+  barcode: looseExtra,
+  contentAmount: looseExtra,
+  contentUnit: looseExtra,
+  contentCount: looseExtra,
+  contentBasis: z.enum(["total", "each"]).nullable().optional(),
+  purchaseName: looseExtra,
+  purchaseQuantity: looseExtra,
+  shippingUnitType: looseExtra,
+  shippingUnitValue: looseExtra,
+  purchaseDeadline: looseExtra,
+  summary: looseExtra,
+  shippingLocation: looseExtra,
+  manufacturingDate: looseExtra,
+  expirationDate: looseExtra
+});
+
 const ProductSchema = z.object({
   productCode: z.string().trim().max(80).nullable().optional(),
   name: z.string().trim().min(1).max(200),
@@ -137,7 +161,8 @@ const ProductSchema = z.object({
   isSoldOut: z.boolean().optional(),
   isSeasonEnded: z.boolean().optional(),
   // 옵션 기능은 사용하지 않습니다(발주오라 일반상품처럼 규격마다 상품을 따로 등록).
-  options: z.array(ProductOptionSchema).max(0, "옵션 대신 규격마다 상품을 따로 등록해 주세요.").optional()
+  options: z.array(ProductOptionSchema).max(0, "옵션 대신 규격마다 상품을 따로 등록해 주세요.").optional(),
+  extras: ProductExtrasSchema.optional()
 }).refine(
   (value) => value.isAlwaysOnSale
     ? value.saleStartMonth == null && value.saleEndMonth == null
@@ -150,7 +175,7 @@ const PRODUCT_FIELD_LABELS: Record<string, string> = {
   costPrice: "원가", aPrice: "수강생 단가", generalPrice: "일반공급가", salePrice: "판매가", salePriceMode: "판매가 방식",
   saleStartMonth: "판매 시작월", saleEndMonth: "판매 종료월", shippingFee: "배송비", releaseInfo: "출고 안내",
   notes: "상품 간략설명", optionsInfo: "옵션 안내", packaging: "포장", courier: "택배사", shippingType: "배송유형",
-  shippingPolicyId: "배송 정책", categoryId: "카테고리", options: "옵션", sortOrder: "옵션 순서"
+  shippingPolicyId: "배송 정책", categoryId: "카테고리", options: "옵션", sortOrder: "옵션 순서", extras: "상품 정보(과세·관리코드 등)"
 };
 
 // 상품 입력 검증 실패 시 어느 항목이 문제인지 알려 줍니다.
@@ -1070,13 +1095,37 @@ catalogRouter.put("/admin/products/display-order", adminRoute, async (c) => {
   }
 });
 
+// 상품 정보 칸 저장(상품을 저장한 뒤). 표가 없으면(037 전, 운영 DB를 쓰는 미리보기) 상품은 저장하고 안내만 돌려줍니다.
+async function saveExtrasAfterProduct(productId: string, extras: z.infer<typeof ProductExtrasSchema> | undefined) {
+  if (!extras) return { extras: undefined, extrasWarning: null as string | null };
+  try {
+    return { extras: await saveEditableProductExtras(productId, extras), extrasWarning: null };
+  } catch (error) {
+    if (isMissingExtrasTable(error) || (error instanceof DatabaseError && error.message === EXTRAS_NOT_READY_MESSAGE)) return { extras: undefined, extrasWarning: EXTRAS_NOT_READY_MESSAGE };
+    throw error;
+  }
+}
+
 catalogRouter.post("/admin/products", adminRoute, async (c) => {
   const parsed = ProductSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", productInputMessage(parsed.error)), 400);
   // 신규 상품은 상품코드가 꼭 있어야 합니다(발주오라·단가관리 코드와 1:1).
   if (!parsed.data.productCode?.trim()) return c.json(apiFailure("INVALID_INPUT", "상품코드를 입력해 주세요."), 400);
+  const extrasProblem = productExtrasProblems(parsed.data.extras)[0];
+  if (extrasProblem) return c.json(apiFailure("INVALID_INPUT", extrasProblem), 400);
   try {
-    return c.json(apiSuccess({ product: await createProduct(parsed.data) }), 201);
+    const { extras, ...input } = parsed.data;
+    const product = await createProduct(input);
+    return c.json(apiSuccess({ product, ...await saveExtrasAfterProduct(product.id, extras) }), 201);
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 상품 수정 창: 상품 정보 칸(발주오라 상품 등록 화면과 같은 칸). ready false = DB 업데이트(037) 전.
+catalogRouter.get("/admin/products/:id/extras", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess(await getProductExtras(c.req.param("id"))));
   } catch (error) {
     return errorResponse(c, error);
   }
@@ -1117,9 +1166,13 @@ catalogRouter.post("/admin/products/bulk-update", adminRoute, async (c) => {
 catalogRouter.put("/admin/products/:id", adminRoute, async (c) => {
   const parsed = ProductSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", productInputMessage(parsed.error)), 400);
+  const extrasProblem = productExtrasProblems(parsed.data.extras)[0];
+  if (extrasProblem) return c.json(apiFailure("INVALID_INPUT", extrasProblem), 400);
   try {
     const user = c.var.currentUser;
-    return c.json(apiSuccess({ product: await updateProduct(c.req.param("id"), parsed.data, user.username || user.email) }));
+    const { extras, ...input } = parsed.data;
+    const product = await updateProduct(c.req.param("id"), input, user.username || user.email);
+    return c.json(apiSuccess({ product, ...await saveExtrasAfterProduct(product.id, extras) }));
   } catch (error) {
     return errorResponse(c, error);
   }

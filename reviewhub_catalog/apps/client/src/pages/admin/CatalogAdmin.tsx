@@ -64,6 +64,8 @@ import { CategoriesAdmin } from "./CategoriesAdmin";
 import type { SupplierAccountView } from "./SupplierPortalAdmin";
 import { SettlementBadge, SupplierSettlementFields, parseSettlementDraft, saveSupplierSettlement, settlementDraft, type SettlementDraft, type SupplierSettlementView } from "./SupplierSettlementFields";
 import { PartnerSupplierPanel } from "./PartnerSupplierPanel";
+import { ProductExtrasSection, type ProductExtrasStatus } from "./ProductExtrasSection";
+import { COURIER_SUGGESTIONS, DOMESTIC_REGIONS, ORIGIN_KINDS, emptyProductExtras, hasProductExtras, type ProductExtras } from "@repo/shared/product-extras";
 import { isSupplierAccount } from "@/components/auth/AdminGuard";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
 import { authClient, clearAuthToken } from "@/lib/auth";
@@ -657,6 +659,20 @@ const blankProduct = {
 
 type ProductDraft = typeof blankProduct;
 
+// 상품 창 저장 때 보내는 상품 정보 칸(관리자가 고치는 칸만. 인증·상품 분류는 발주오라에서 가져온 값이라 보내지 않음)
+function editableExtras(value: ProductExtras) {
+  const editable: Partial<ProductExtras> = { ...value };
+  delete editable.certificationKinds;
+  delete editable.taxonomyItemId;
+  delete editable.taxonomyName;
+  return editable;
+}
+// 복사본: 상품마다 하나뿐인 칸(관리코드·바코드)은 비웁니다.
+function copiedExtras(value: ProductExtras): ProductExtras {
+  return { ...value, managementCode: null, barcode: null };
+}
+const ORIGIN_SUGGESTIONS = [...ORIGIN_KINDS, ...DOMESTIC_REGIONS.map((region) => `국내산 ${region}`)];
+
 const seasonalCategoryNames = new Set(["농산", "수산", "축산", "선물세트", "식품"]);
 
 function plainCategoryName(name: string) {
@@ -1012,6 +1028,23 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     })();
     return () => { cancelled = true; };
   }, [editingProductId]);
+  // 상품 창 > 발주오라 상품 정보(과세 여부·관리코드·바코드 등, migration 037). key = 상품 id(신규·복사는 "new").
+  // 불러오지 못했으면(error) 저장 때 보내지 않고, 표가 없으면(missing, 운영 배포 전) 다른 칸만 저장합니다.
+  const [extrasState, setExtrasState] = useState<{ key: string; status: ProductExtrasStatus; value: ProductExtras; touched: boolean } | null>(null);
+  useEffect(() => {
+    if (!editingProductId) return;
+    let cancelled = false;
+    setExtrasState({ key: editingProductId, status: "loading", value: emptyProductExtras(), touched: false });
+    void (async () => {
+      try {
+        const result = await readData<{ ready: boolean; extras: ProductExtras }>(await apiFetch(`/catalog/admin/products/${encodeURIComponent(editingProductId)}/extras`, { silent: true }));
+        if (!cancelled) setExtrasState({ key: editingProductId, status: result.ready ? "ready" : "missing", value: result.extras, touched: false });
+      } catch {
+        if (!cancelled) setExtrasState({ key: editingProductId, status: "error", value: emptyProductExtras(), touched: false });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [editingProductId]);
   // "복사"로 연 신규 등록 창이면 원본 상품명·상품코드를 기억해 안내합니다.
   const [copySource, setCopySource] = useState<{ name: string; productCode: string } | null>(null);
   const [sortOpen, setSortOpen] = useState(false);
@@ -1350,6 +1383,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   });
   const startEdit = (product?: Product) => {
     setCopySource(null);
+    if (!product) setExtrasState({ key: "new", status: "ready", value: emptyProductExtras(), touched: false });
     setEditing(product ? productDraft(product) : { ...blankProduct, categoryId: data.categories[0]?.id || "" });
     // 옵션 묶음 칸: 저장한 묶음 ID / "따로 보이기" / ""(자동으로 묶기)
     const groupId = product ? groupTools.memberships[product.id]?.groupId ?? (groupTools.excluded.has(product.id) ? SINGLE_GROUP_VALUE : "") : "";
@@ -1374,6 +1408,17 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const startCopy = (product: Product) => {
     setCopySource({ name: product.name, productCode: product.productCode || "" });
     setEditing(toCopyDraft(productDraft(product)));
+    // 원본의 상품 정보 칸도 복사합니다(관리코드·바코드는 비움).
+    setExtrasState({ key: "new", status: "loading", value: emptyProductExtras(), touched: false });
+    void (async () => {
+      try {
+        const result = await readData<{ ready: boolean; extras: ProductExtras }>(await apiFetch(`/catalog/admin/products/${encodeURIComponent(product.id)}/extras`, { silent: true }));
+        const value = copiedExtras(result.extras);
+        setExtrasState((state) => state && state.key === "new" && state.status === "loading" ? { key: "new", status: result.ready ? "ready" : "missing", value, touched: hasProductExtras(value) } : state);
+      } catch {
+        setExtrasState((state) => state && state.key === "new" && state.status === "loading" ? { key: "new", status: "ready", value: emptyProductExtras(), touched: false } : state);
+      }
+    })();
     // 복사본은 원본과 같은 묶음(같은 상품의 다른 사이즈)에 넣도록 미리 골라 둡니다.
     setEditingGroupId(groupTools.memberships[product.id]?.groupId ?? "");
     setOriginalGroupId("");
@@ -1381,6 +1426,10 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const copyEditing = () => {
     if (!editing) return;
     setCopySource({ name: editing.name, productCode: editing.productCode });
+    setExtrasState((state) => {
+      const value = state && state.status === "ready" ? copiedExtras(state.value) : emptyProductExtras();
+      return { key: "new", status: state?.status === "missing" ? "missing" : "ready", value, touched: hasProductExtras(value) };
+    });
     setEditing(toCopyDraft(editing));
     setOriginalGroupId("");
     toast.success("복사본을 만들었습니다. 상품코드를 확인한 뒤 저장하면 새 상품으로 등록됩니다.");
@@ -1390,6 +1439,9 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
 
   const editingCategory = editing ? data.categories.find((category) => category.id === editing.categoryId) : undefined;
   const editingHealthProduct = isHealthCategory(editingCategory);
+  const editingExtras = editing && extrasState && extrasState.key === (editing.id || "new") ? extrasState : null;
+  // 마지막으로 읽은 발주오라 값(연결된 상품만): 판매 상태·상품 정보 칸 옆에 '발주오라: …'로 보여 줍니다.
+  const editingBaljuora = editing?.id && baljuoraPrices?.productId === editing.id && baljuoraPrices.data?.linked ? baljuoraPrices.data : null;
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1397,12 +1449,15 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     const editingId = editing.id;
     setSaving(true);
     try {
+      // 상품 정보 칸은 불러온 뒤 고쳤을 때만 함께 보냅니다(못 불러왔으면 저장된 값을 건드리지 않음).
+      const extras = editingExtras && editingExtras.status === "ready" && editingExtras.touched ? editableExtras(editingExtras.value) : undefined;
       const response = await apiFetch(editingId ? `/catalog/admin/products/${editingId}` : "/catalog/admin/products", {
         method: editingId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editing)
+        body: JSON.stringify(extras ? { ...editing, extras } : editing)
       });
-      const payload = await readData<{ product: Product }>(response);
+      const payload = await readData<{ product: Product; extrasWarning?: string | null }>(response);
+      if (payload.extrasWarning) toast.info(payload.extrasWarning);
       // 옵션 묶음을 바꿨으면 상품 저장 뒤에 묶음에 넣거나 빼거나 "따로 보이기"를 바꿉니다(실패해도 상품 저장은 그대로).
       if (groupTools.ready && editingGroupId !== originalGroupId) {
         try {
@@ -1811,6 +1866,10 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
                 <input type="checkbox" checked={editing.isVisible} onChange={(event) => setEditing({ ...editing, isVisible: event.target.checked })} />
                 <span><b>공개 노출</b><small>{editing.isVisible ? "공개 단가표에 보입니다." : "숨김 · 공개 단가표에 보이지 않습니다."}</small></span>
               </label>
+              <p className="editor-status-sync">
+                발주오라 동기화: <b>판매 상태</b>(품절·시즌종료) → 발주오라 <b>품절</b>, <b>공개 노출</b> → 발주오라 <b>도매몰 노출</b>로 맞춰져요.
+                {editingBaljuora && typeof editingBaljuora.isSoldOut === "boolean" && typeof editingBaljuora.isVisible === "boolean" && <> 마지막으로 읽은 발주오라: <b>{editingBaljuora.isSoldOut ? "품절" : "판매중"}</b> · <b>{editingBaljuora.isVisible ? "도매몰 노출" : "도매몰 숨김"}</b></>}
+              </p>
             </div>
           );
         })()}
@@ -1873,7 +1932,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
           <label>판매 종료월<select value={editing.saleEndMonth ?? ""} disabled={editing.isAlwaysOnSale} onChange={(event) => setEditing({ ...editing, saleEndMonth: event.target.value ? Number(event.target.value) : null })}><option value="">{editing.isAlwaysOnSale ? "상시 판매 (선택 불가)" : "미설정"}</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((month) => <option key={month} value={month}>{month}월</option>)}</select></label>
         <label className="full">상품 이미지<input value={editing.imageUrl} onChange={(event) => setEditing({ ...editing, imageUrl: event.target.value })} placeholder="https://... 또는 아래 업로드" /><span className="image-upload-row"><button type="button" onClick={() => imageInputRef.current?.click()} disabled={imageBusy}><Upload size={14} /> {imageBusy ? "업로드 중…" : "JPEG/PNG 업로드"}</button><input ref={imageInputRef} type="file" accept="image/jpeg,image/png" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProductImage(file); }} /></span>{editing.imageUrl ? <ProductImagePreview url={editing.imageUrl} onClear={() => setEditing({ ...editing, imageUrl: "" })} /> : <small className="product-image-empty">이미지를 올리거나 주소를 넣으면 여기에서 미리 볼 수 있습니다.</small>}</label>
         <label>공급사(매입처)<select value={editing.supplierName} onChange={(event) => setEditing({ ...editing, supplierName: event.target.value })}><option value="">미지정</option>{editing.supplierName && !suppliers.some((supplier) => supplier.name === editing.supplierName) && <option value={editing.supplierName}>{editing.supplierName} (기존 입력)</option>}{suppliers.filter((supplier) => supplier.isActive).map((supplier) => <option value={supplier.name} key={supplier.id}>{supplier.name}</option>)}</select><small>공급사 관리에서 등록한 공급사를 고르면, 그 공급사가 공급사 센터에서 이 상품을 보고 변경을 요청할 수 있어요.</small></label>
-        <label>원산지<input value={editing.origin} onChange={(event) => setEditing({ ...editing, origin: event.target.value })} /></label>
+        <label>원산지<input value={editing.origin} list="product-origin-suggestions" onChange={(event) => setEditing({ ...editing, origin: event.target.value })} placeholder="예: 국내산 경북" /><datalist id="product-origin-suggestions">{ORIGIN_SUGGESTIONS.map((option) => <option key={option} value={option} />)}</datalist><small className="editor-field-hint">발주오라 형식: 국내산 경북 · 수입산 중국 · 원양산 · 상세설명 참조{editingBaljuora?.extra?.originText !== undefined && (editingBaljuora.extra.originText ?? "") !== editing.origin.trim() ? ` · 발주오라: ${editingBaljuora.extra.originText || "비어 있음"}` : ""}</small></label>
         <label>배송 정책<select value={editing.shippingPolicyId ?? ""} onChange={(event) => {
           const policyId = event.target.value || null;
           const policy = shippingPolicies.find((item) => item.id === policyId);
@@ -1886,9 +1945,16 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         }}><option value="">직접 입력</option>{shippingPolicies.filter((policy) => policy.shippingType === editing.shippingType && policy.isActive).map((policy) => <option value={policy.id} key={policy.id}>{policy.name} · {policy.feeLabel}</option>)}</select><small>정책을 선택하면 배송비와 택배사가 자동으로 반영됩니다.</small></label>
         <label>배송비<input value={editing.shippingFee} onChange={(event) => setEditing({ ...editing, shippingFee: event.target.value })} /></label>
         <label>출고 안내<input value={editing.releaseInfo} onChange={(event) => setEditing({ ...editing, releaseInfo: event.target.value })} /></label>
-        <label>택배사<input value={editing.courier} onChange={(event) => setEditing({ ...editing, courier: event.target.value })} /></label>
+        <label>택배사<input value={editing.courier} list="product-courier-suggestions" onChange={(event) => setEditing({ ...editing, courier: event.target.value })} /><datalist id="product-courier-suggestions">{COURIER_SUGGESTIONS.map((option) => <option key={option} value={option} />)}</datalist></label>
         <label>포장방법<input value={editing.packaging} onChange={(event) => setEditing({ ...editing, packaging: event.target.value })} /></label>
         <label className="full">참고사항<textarea rows={4} value={editing.notes} onChange={(event) => setEditing({ ...editing, notes: event.target.value })} /></label>
+        <ProductExtrasSection
+          value={editingExtras?.value ?? emptyProductExtras()}
+          status={editingExtras?.status ?? "loading"}
+          taxableDefault={editingHealthProduct}
+          baljuora={editingBaljuora ? { extra: editingBaljuora.extra ?? null, isTaxable: editingBaljuora.isTaxable ?? null } : null}
+          onChange={(next) => setExtrasState((state) => state ? { ...state, value: next, touched: true } : state)}
+        />
         {groupTools.ready && <ProductGroupField value={editingGroupId} onChange={setEditingGroupId} groups={groupTools.groups} suggestion={suggestGroupFor(editing, data.products.filter((product) => product.id !== editing.id), groupTools.memberships)} autoMembership={editing.id ? groupTools.auto[editing.id] : undefined} isNew={!editing.id} />}
       </div><div className="editor-footer">{editing.id && <button type="button" className="editor-copy-button" onClick={copyEditing} disabled={saving} title="지금 입력한 값 그대로 새 상품으로 복사합니다(원본은 바뀌지 않음)"><Copy size={16} /> 복사</button>}<button type="button" onClick={closeEditor} disabled={saving}>취소</button><button className="primary-action" type="submit" disabled={saving}><Save size={16} /> {saving ? "빠르게 저장 중…" : copySource && !editing.id ? "복사본 저장하기" : "저장하기"}</button></div></form></div>}
       {groupSelectionOpen && (

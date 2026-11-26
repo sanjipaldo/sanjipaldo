@@ -253,6 +253,34 @@ export const products = sqliteTable(
   ]
 );
 
+// 발주오라 상품 등록 화면과 같은 상품 정보 칸(migration 037, 상품 1개당 1행). 원산지·택배사·배송유형·품절·노출은 products 칸을 씁니다.
+// isTaxable null = 자동(건강식품 카테고리 과세, 그 밖 비과세). certificationKinds = JSON 배열.
+export const productExtras = sqliteTable("product_extras", {
+  productId: text("productId")
+    .primaryKey()
+    .references(() => products.id, { onDelete: "cascade" }),
+  isTaxable: integer("isTaxable", { mode: "boolean" }),
+  managementCode: text("managementCode"),
+  barcode: text("barcode"),
+  contentAmount: real("contentAmount"),
+  contentUnit: text("contentUnit"),
+  contentCount: integer("contentCount"),
+  contentBasis: text("contentBasis"),
+  purchaseName: text("purchaseName"),
+  purchaseQuantity: integer("purchaseQuantity"),
+  shippingUnitType: text("shippingUnitType"),
+  shippingUnitValue: real("shippingUnitValue"),
+  purchaseDeadline: text("purchaseDeadline"),
+  certificationKinds: text("certificationKinds"),
+  summary: text("summary"),
+  shippingLocation: text("shippingLocation"),
+  manufacturingDate: text("manufacturingDate"),
+  expirationDate: text("expirationDate"),
+  taxonomyItemId: text("taxonomyItemId"),
+  taxonomyName: text("taxonomyName"),
+  updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+});
+
 export const productOptions = sqliteTable(
   "product_options",
   {

@@ -13,11 +13,15 @@ import {
   BALJUORA_DIRECTION_LABELS,
   BALJUORA_FIELD_LABELS,
   BALJUORA_FIELD_SHORT_LABELS,
+  canPullDiff,
+  canPushDiff,
+  isExtraField,
   type BaljuoraCategory,
   type BaljuoraFieldDiff,
   type BaljuoraProductSnapshot,
   type BaljuoraSyncField
 } from "@repo/shared/baljuora-sync";
+import { certificationLabel, formatContent, formatShippingUnit } from "@repo/shared/product-extras";
 import { BaljuoraMasterPanel } from "./BaljuoraMasterPanel";
 import { BaljuoraCategoryTreeCard, type CategoryTreeView } from "./BaljuoraCategoryTreeCard";
 import { BaljuoraAlignSettings, type BaljuoraPolicyOption, type DoogoPolicyOption } from "./BaljuoraAlignSettings";
@@ -83,6 +87,8 @@ type Changes = {
   items: ChangeItem[];
   baljuoraOnly: BaljuoraProductSnapshot[];
   unmappedCategories: Array<{ id: string; name: string }>;
+  // 상품 정보 칸 표(037)가 있는지(false = 운영 배포 전 → 원산지·택배사·판매 상태·과세 밖의 상품 정보 칸은 비교하지 않음)
+  extrasReady?: boolean;
 };
 // changed = DB센터에서 바꿈(마지막으로 맞춘 뒤 DB센터에서 고친 칸만, 2026-11-23 관리자 요청 "내가 지금 바꿔서 발주오라에 보내야 할 것만 따로")
 type Tab = "changed" | "push" | "new" | "pull" | "only";
@@ -140,11 +146,31 @@ function BookmarkletLink({ origin }: { origin: string }) {
 // 마지막으로 맞춘 뒤 DB센터에서 바꾼 칸(양쪽에서 바뀐 칸 포함): 'DB센터에서 바꿈' 탭과 요약 줄에 씀
 const isDoogoChange = (diff: BaljuoraFieldDiff) => diff.direction === "push" || diff.direction === "both";
 
-function DiffValue({ field, value, categoryPath, policyName }: { field: BaljuoraSyncField; value: string | number | null; categoryPath: (id: string) => string; policyName: (id: string) => string }) {
+// 상품 정보 칸 값 보기(비교 값 모양: 품절·노출·과세 1/0, 내용량 "양|단위|개수|기준", 배송 단위 "단위|수량", 인증 "a,b")
+function extraText(field: BaljuoraSyncField, value: string | number | null, auto = false) {
+  if (field === "soldOut") return value === null ? "없음" : Number(value) ? "품절" : "판매중";
+  if (field === "visible") return value === null ? "없음" : Number(value) ? "노출" : "숨김";
+  if (field === "taxable") return value === null ? "없음" : `${Number(value) ? "과세" : "비과세"}${auto ? "(자동)" : ""}`;
+  if (field === "tradeType") return value ? "해외" : "국내";
+  if (value === null || value === "") return "없음";
+  if (field === "content") {
+    const [amount, unit, count, basis] = String(value).split("|");
+    return formatContent(amount ? Number(amount) : null, unit || null, count ? Number(count) : null, basis || null) || "없음";
+  }
+  if (field === "shippingUnit") {
+    const [type, amount] = String(value).split("|");
+    return formatShippingUnit(type || null, amount ? Number(amount) : null) || "없음";
+  }
+  if (field === "certification") return String(value).split(",").map(certificationLabel).join(", ");
+  return String(value);
+}
+
+function DiffValue({ field, value, categoryPath, policyName, auto }: { field: BaljuoraSyncField; value: string | number | null; categoryPath: (id: string) => string; policyName: (id: string) => string; auto?: boolean }) {
   if (field === "image") return value ? <img className="bj-diff-thumb" src={String(value)} alt="" loading="lazy" /> : <span className="bj-muted">없음</span>;
   if (field === "shippingPolicy") return <span>{value ? policyName(String(value)) : "없음"}</span>;
   if (field === "category") return <span>{value ? String(value).split(",").map(categoryPath).join(", ") : "없음"}</span>;
   if (field === "name") return <span>{value || "없음"}</span>;
+  if (isExtraField(field)) return <span>{extraText(field, value, auto)}</span>;
   return <span>{won(value)}</span>;
 }
 
@@ -222,8 +248,9 @@ export function BaljuoraSyncAdmin() {
 
   const lists = useMemo(() => {
     const items = changes?.items ?? [];
-    const push = items.filter((item) => item.kind === "update" && (item.diffs.some((diff) => diff.direction !== "pull") || item.syncStatus === "failed"));
-    const pull = items.filter((item) => item.kind === "update" && item.diffs.some((diff) => diff.direction === "pull" || diff.direction === "both"));
+    // 보낼 변경: 가격 등은 '발주오라에서 바뀜'만 빼고, 상품 정보 칸은 DB센터에서 바꾼 칸만(처음부터 다른 칸은 맞추기 카드에서 방향을 고름)
+    const push = items.filter((item) => item.kind === "update" && (item.diffs.some((diff) => canPushDiff(diff, false)) || item.syncStatus === "failed"));
+    const pull = items.filter((item) => item.kind === "update" && item.diffs.some((diff) => canPullDiff(diff, false)));
     const fresh = items.filter((item) => item.kind === "new");
     const changed = items.filter((item) => item.kind === "update" && item.diffs.some(isDoogoChange));
     return { changed, push, pull, new: fresh, newVisible: fresh.filter((item) => item.isVisible) };
@@ -413,7 +440,7 @@ export function BaljuoraSyncAdmin() {
         <div>
           <span>BALJUORA SYNC</span>
           <h1>발주오라 동기화</h1>
-          <p>DB센터와 발주오라 도매몰의 상품·가격·썸네일·카테고리·배송비 정책을 양쪽 같게 맞춥니다. DB센터에서 고친 값은 발주오라로 보내고(보낼 변경), 발주오라에서 먼저 고친 값은 발주오라 기준으로 가져옵니다.</p>
+          <p>DB센터와 발주오라 도매몰의 상품·가격·썸네일·카테고리·배송비 정책·판매 상태(품절·도매몰 노출)·상품 정보(과세·원산지·관리코드·바코드·내용량 등)를 양쪽 같게 맞춥니다. DB센터에서 고친 값은 발주오라로 보내고(보낼 변경), 발주오라에서 먼저 고친 값은 발주오라 기준으로 가져옵니다.</p>
         </div>
         <button type="button" className="outline-button" onClick={() => { setLoading(true); void load(); }}><RefreshCw size={15} /> 새로고침</button>
       </div>
@@ -520,7 +547,11 @@ export function BaljuoraSyncAdmin() {
         disabled={Boolean(busy) || jobActive}
         onCompare={() => void startJob({ type: "compare" }, "compare")}
         onDone={load}
+        onPush={(fieldsByProduct) => void startJob({ type: "push", productIds: Object.keys(fieldsByProduct), fieldsByProduct }, "push")}
       />
+      {changes?.compared && changes.extrasReady === false && (
+        <p className="bj-notice"><AlertTriangle size={15} aria-hidden="true" /> 상품 정보 칸(과세 여부·관리코드·바코드·내용량 등)은 DB 업데이트(037)가 적용된 뒤(운영 배포 후)부터 비교·동기화돼요. 지금은 판매 상태(품절·노출)·원산지·택배사·과세만 비교해요.</p>
+      )}
 
       {changes?.compared && changes.groupPriceReadable === false && (
         <p className="bj-notice"><AlertTriangle size={15} aria-hidden="true" /> 지금 목록은 수강생 단가(‘{overview?.settings.groupKeyword || "황금농부"}’ 매출처 그룹 공급가)를 읽기 전 비교 결과예요. <b>발주오라 상품 불러오기(비교)</b>를 한 번 다시 하면 수강생 단가·매입원가·카테고리를 새로 읽어 진짜 차이만 남아요(그 전에 보내는 상품도 수강생 단가를 함께 맞춥니다).</p>
@@ -602,7 +633,7 @@ export function BaljuoraSyncAdmin() {
                   );
                 }
                 const item = row;
-                const shown = tab === "pull" ? item.diffs.filter((diff) => diff.direction === "pull" || diff.direction === "both") : tab === "changed" ? item.diffs.filter(isDoogoChange) : item.diffs.filter((diff) => diff.direction !== "pull");
+                const shown = tab === "pull" ? item.diffs.filter((diff) => canPullDiff(diff, false)) : tab === "changed" ? item.diffs.filter(isDoogoChange) : item.diffs.filter((diff) => canPushDiff(diff, false));
                 return (
                   <label key={item.productId} className={`bj-row${item.syncStatus === "failed" ? " is-failed" : ""}`} role="listitem">
                     <input type="checkbox" checked={selected.has(item.productId)} onChange={() => toggle(item.productId)} />
@@ -625,9 +656,9 @@ export function BaljuoraSyncAdmin() {
                               <span key={diff.field} className={`bj-diff is-${diff.direction}${needsPolicyLink ? " is-blocked" : ""}`} title={needsPolicyLink ? "이 DB센터 배송 정책과 연결한 발주오라 매출배송정책이 없어 보내지 않습니다. 동기화 설정 > 배송비 정책 맞추기에서 연결해 주세요." : `${BALJUORA_FIELD_LABELS[diff.field]} · ${BALJUORA_DIRECTION_LABELS[diff.direction]}`}>
                                 <b>{BALJUORA_FIELD_SHORT_LABELS[diff.field]}</b>
                                 {tab === "pull"
-                                  ? <><DiffValue field={diff.field} value={diff.doogo} categoryPath={categoryPath} policyName={policyName} /><ChevronLeft size={12} aria-hidden="true" /><DiffValue field={diff.field} value={diff.baljuora} categoryPath={categoryPath} policyName={policyName} /></>
-                                  : <><DiffValue field={diff.field} value={diff.baljuora} categoryPath={categoryPath} policyName={policyName} /><ChevronRight size={12} aria-hidden="true" /><DiffValue field={diff.field} value={diff.doogo} categoryPath={categoryPath} policyName={policyName} /></>}
-                                {needsPolicyLink ? <i className="bj-diff-need">연결 필요 · 보내지 않음</i> : diff.direction !== "push" && <i>{BALJUORA_DIRECTION_LABELS[diff.direction]}</i>}
+                                  ? <><DiffValue field={diff.field} value={diff.doogo} categoryPath={categoryPath} policyName={policyName} auto={diff.doogoEmpty} /><ChevronLeft size={12} aria-hidden="true" /><DiffValue field={diff.field} value={diff.baljuora} categoryPath={categoryPath} policyName={policyName} /></>
+                                  : <><DiffValue field={diff.field} value={diff.baljuora} categoryPath={categoryPath} policyName={policyName} /><ChevronRight size={12} aria-hidden="true" /><DiffValue field={diff.field} value={diff.doogo} categoryPath={categoryPath} policyName={policyName} auto={diff.doogoEmpty} /></>}
+                                {needsPolicyLink ? <i className="bj-diff-need">연결 필요 · 보내지 않음</i> : diff.direction !== "push" && <i>{diff.direction === "pull" && diff.doogoEmpty ? "DB센터에 없음" : BALJUORA_DIRECTION_LABELS[diff.direction]}</i>}
                               </span>
                             );
                           })}
@@ -647,7 +678,7 @@ export function BaljuoraSyncAdmin() {
             )}
           </>
         )}
-        <p className="bj-legend">{tab === "pull" ? "표시: DB센터 값 ← 발주오라 값. '발주오라 값 가져오기'는 DB센터 상품을 발주오라 값으로 바꿉니다." : "표시: 지금 발주오라 값 → 보낼 DB센터 값. 공급가 ← 일반공급가 · 그룹 공급가 ← 수강생 단가 · 소비자가 ← 지정 판매가 · 매입원가 ← 원가."}</p>
+        <p className="bj-legend">{tab === "pull" ? "표시: DB센터 값 ← 발주오라 값. '발주오라 값 가져오기'는 DB센터 상품을 발주오라 값으로 바꿉니다(비어 있는 발주오라 값으로 DB센터 값을 지우지 않음)." : "표시: 지금 발주오라 값 → 보낼 DB센터 값. 공급가 ← 일반공급가 · 그룹 공급가 ← 수강생 단가 · 소비자가 ← 지정 판매가 · 매입원가 ← 원가 · 품절 ← 판매 상태 · 노출 ← 공개 노출. 처음부터 다른 상품 정보 칸은 위 맞추기 카드에서 방향을 골라 맞춥니다."}</p>
       </section>
 
       <section className="admin-card bj-settings">

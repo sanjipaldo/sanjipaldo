@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.8.0";
+  var VERSION = "1.9.0";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   var INFO_FIELDS = ["name", "category"];
@@ -26,6 +26,14 @@
   // 발주오라 API 도구는 배열을 쉼표로 이어 보냄). prices = 매출처별 개별공급가(황금농부 그룹 공급가 포함), productSuppliers = 매입처·매입원가.
   var DETAIL_INCLUDE = "categories,productSuppliers,shippingPolicy,prices,visibility";
   var LIST_INCLUDE = "productSuppliers,prices";
+  // 상품 정보 칸(1.9.0, 2026-11-26 관리자 요청 "발주오라 상품관리자 페이지와 빠지는 거 없이 양방향으로"): 판매 상태(품절·도매몰 노출)·과세 여부·
+  // 원산지·관리코드·바코드·내용량·발주상품명·발주단위·배송 단위·발주마감·인증·간략설명·출고지·제조연월일·소비기한·택배사·해외배송.
+  // 발주오라 칸 이름은 발주오라 화면 코드(공개 js)·엑셀 칸 목록에서 확인했습니다. 보내기는 발주오라 상품 수정 화면처럼 PUT products/:id 에
+  // 바뀐 칸만 보내고, 저장 뒤 다시 읽어 DB센터가 확인합니다(발주오라가 모르는 칸을 버려도 '반영됨'으로 보이지 않게).
+  var EXTRA_FIELDS = ["soldOut", "visible", "taxable", "origin", "managementCode", "barcode", "content", "purchaseName", "purchaseQuantity", "shippingUnit", "purchaseDeadline", "certification", "summary", "shippingLocation", "manufacturingDate", "expirationDate", "courier", "tradeType"];
+  var STATUS_KEYS = { soldOut: "isSoldOut", visible: "isVisible" };
+  // 신규 등록: DB센터에 값이 없으면 복사한 상품 값을 쓰지 않을 칸(상품마다 다른 칸). 택배사·출고지·발주마감·배송 단위·해외배송은 매입처마다 같아 그대로 둡니다.
+  var PRODUCT_SPECIFIC_KEYS = ["managementCode", "barcode", "originText", "description", "manufacturingDate", "expirationDate", "contentAmount", "contentUnit", "contentCount", "contentAmountBasis", "purchaseProductName", "purchaseName", "purchaseQuantity", "taxonomyItemId"];
 
   // ─── 순수 도우미(테스트에서도 씀) ─────────────────────────────────────────────
 
@@ -158,6 +166,99 @@
     return key ? toNumber(main[key]) : undefined;
   }
 
+  function decimalOf(value) {
+    if (value === null || value === undefined || value === "") return null;
+    var number = typeof value === "number" ? value : Number(String(value).replace(/,/g, ""));
+    return isFinite(number) ? Math.round(number * 100) / 100 : null;
+  }
+
+  function textOf(value) {
+    if (typeof value === "number" && isFinite(value)) return String(value);
+    return typeof value === "string" ? value.replace(/\s+/g, " ").trim() || null : null;
+  }
+
+  // 상품 정보 칸(1.9.0): 응답에 있는 칸만 읽습니다(없는 칸은 넣지 않음 = 읽지 못함). 칸이 하나도 없으면 undefined.
+  function extractExtra(record) {
+    if (!isObject(record)) return undefined;
+    var extra = {};
+    var found = false;
+    var set = function (key, value) { extra[key] = value; found = true; };
+    ["originText", "managementCode", "barcode", "contentUnit", "shippingUnitType", "purchaseDeadline", "description", "shippingLocation", "manufacturingDate", "expirationDate", "courier", "tradeType", "taxonomyItemId"].forEach(function (key) {
+      if (key in record) set(key, textOf(record[key]));
+    });
+    if ("contentAmountBasis" in record) set("contentBasis", textOf(record.contentAmountBasis));
+    ["contentAmount", "contentCount", "purchaseQuantity", "shippingUnitValue"].forEach(function (key) {
+      if (key in record) set(key, decimalOf(record[key]));
+    });
+    // 발주상품명: 상품 정보는 purchaseProductName(내보내기 엑셀 칸 이름), 없으면 purchaseName(올리기 엑셀 칸 이름)
+    if ("purchaseProductName" in record) { set("purchaseName", textOf(record.purchaseProductName)); extra.purchaseNameKey = "purchaseProductName"; }
+    else if ("purchaseName" in record) { set("purchaseName", textOf(record.purchaseName)); extra.purchaseNameKey = "purchaseName"; }
+    // 인증: 도매몰 목록은 certificationKinds, 상품 정보는 인증 상태 + 인증 목록(인증 있음 HAS_CERT일 때만 인증 종류를 씀 — 발주오라 화면과 같은 규칙)
+    if (Array.isArray(record.certificationKinds)) {
+      set("certificationKinds", record.certificationKinds.filter(function (kind) { return typeof kind === "string" && kind; }));
+    } else if (Array.isArray(record.certifications)) {
+      var status = record.certificationStatus !== undefined ? record.certificationStatus : record.certStatus;
+      var kinds = status !== undefined && status !== null && status !== "HAS_CERT" ? [] : record.certifications.map(function (entry) { return isObject(entry) ? entry.kind || entry.type : typeof entry === "string" ? entry : null; }).filter(function (kind) { return typeof kind === "string" && kind; });
+      set("certificationKinds", kinds.filter(function (kind, index) { return kinds.indexOf(kind) === index; }));
+    }
+    var taxonomy = isObject(record.taxonomyItem) ? record.taxonomyItem : null;
+    if (taxonomy) {
+      if (!("taxonomyItemId" in extra) && typeof taxonomy.id === "string") set("taxonomyItemId", taxonomy.id);
+      var taxonomyName = textOf(taxonomy.path || taxonomy.fullName || taxonomy.fullPath || taxonomy.name);
+      if (taxonomyName) set("taxonomyName", taxonomyName);
+    } else if (typeof record.taxonomyItemName === "string") {
+      set("taxonomyName", textOf(record.taxonomyItemName));
+    }
+    return found ? extra : undefined;
+  }
+
+  // 발주상품명을 보낼 칸 이름(상품 정보에 있는 칸)
+  function purchaseNameKeyOf(detail) {
+    if (isObject(detail)) {
+      if ("purchaseProductName" in detail) return "purchaseProductName";
+      if ("purchaseName" in detail) return "purchaseName";
+    }
+    return "purchaseProductName";
+  }
+
+  // DB센터 칸 하나 → 보낼 발주오라 칸들(extra = DB센터가 보낸 값, 발주오라 칸 이름). 보낼 값을 모르면 null. 인증은 보내지 않습니다.
+  function extraBodyFor(field, extra, detail) {
+    var e = isObject(extra) ? extra : {};
+    var has = function (key) { return Object.prototype.hasOwnProperty.call(e, key); };
+    var one = function (key, value) { var body = {}; body[key] = value; return body; };
+    if (field === "soldOut") return typeof e.isSoldOut === "boolean" ? { isSoldOut: e.isSoldOut } : null;
+    if (field === "visible") return typeof e.isVisible === "boolean" ? { isVisible: e.isVisible } : null;
+    if (field === "taxable") return typeof e.isTaxable === "boolean" ? { isTaxable: e.isTaxable } : null;
+    if (field === "content") return has("contentAmount") || has("contentCount") ? { contentAmount: e.contentAmount === undefined ? null : e.contentAmount, contentUnit: e.contentUnit || null, contentCount: e.contentCount === undefined ? null : e.contentCount, contentAmountBasis: e.contentBasis || null } : null;
+    if (field === "shippingUnit") return has("shippingUnitType") || has("shippingUnitValue") ? { shippingUnitType: e.shippingUnitType || null, shippingUnitValue: e.shippingUnitValue === undefined ? null : e.shippingUnitValue } : null;
+    if (field === "purchaseName") return has("purchaseName") ? one(purchaseNameKeyOf(detail), e.purchaseName) : null;
+    // 발주단위를 지우면 기본값 1로 보냅니다.
+    if (field === "purchaseQuantity") return has("purchaseQuantity") ? { purchaseQuantity: e.purchaseQuantity === null ? 1 : e.purchaseQuantity } : null;
+    var simple = { origin: "originText", managementCode: "managementCode", barcode: "barcode", purchaseDeadline: "purchaseDeadline", summary: "description", shippingLocation: "shippingLocation", manufacturingDate: "manufacturingDate", expirationDate: "expirationDate", courier: "courier", tradeType: "tradeType" };
+    var key = simple[field];
+    return key && has(key) ? one(key, e[key]) : null;
+  }
+
+  // 보내기 전 발주오라 값과 같은지(빈 값끼리·숫자 모양 차이는 같게 봄)
+  function sameExtraValue(live, wanted) {
+    var blank = function (value) { return value === null || value === undefined || value === ""; };
+    if (blank(live) && blank(wanted)) return true;
+    if (blank(live) || blank(wanted)) return false;
+    if (typeof wanted === "boolean" || typeof live === "boolean") return live === wanted;
+    var liveNumber = Number(live);
+    var wantedNumber = Number(wanted);
+    if (typeof wanted === "number" && isFinite(liveNumber)) return Math.abs(liveNumber - wantedNumber) < 1e-6;
+    // 시각("09:30:00" = "09:30")·날짜("2026-11-01T00:00:00Z" = "2026-11-01")는 발주오라가 돌려주는 모양이 달라도 같게 봅니다.
+    var shape = function (value) {
+      var text = String(value).replace(/\s+/g, " ").trim();
+      var time = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(text);
+      if (time) return ("0" + time[1]).slice(-2) + ":" + time[2];
+      var iso = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}/.exec(text);
+      return iso ? iso[1] : text;
+    };
+    return shape(live) === shape(wanted);
+  }
+
   function normalizeProduct(record, context) {
     if (!isObject(record) || typeof record.id !== "string") return null;
     var code = firstString(record, CODE_KEYS);
@@ -183,6 +284,8 @@
     // 매출배송정책(배송비 정책): sellShippingPolicyId(없으면 shippingPolicy.id). 칸이 아예 없으면 읽지 못함(보내지 않음)
     if ("sellShippingPolicyId" in record) snapshot.shippingPolicyId = typeof record.sellShippingPolicyId === "string" && record.sellShippingPolicyId ? record.sellShippingPolicyId : null;
     else if (isObject(record.shippingPolicy) && typeof record.shippingPolicy.id === "string") snapshot.shippingPolicyId = record.shippingPolicy.id;
+    var extra = extractExtra(record);
+    if (extra) snapshot.extra = extra;
     return snapshot;
   }
 
@@ -501,7 +604,7 @@
     if (isObject(value)) {
       if (level > 3) return "object";
       var shape = {};
-      Object.keys(value).slice(0, 80).forEach(function (key) { shape[key] = structureOf(value[key], level + 1); });
+      Object.keys(value).slice(0, 140).forEach(function (key) { shape[key] = structureOf(value[key], level + 1); });
       return shape;
     }
     return value === null ? "null" : typeof value;
@@ -750,6 +853,17 @@
     if ("isTaxable" in template) body.isTaxable = Boolean(item.values.isTaxable);
     if ("isVisible" in template) body.isVisible = true;
     if (item.values.categoryId) body[categoryKeyOf(template)] = categoryKeyOf(template) === "categoryIds" ? [item.values.categoryId] : item.values.categoryId;
+    // 상품 정보 칸(1.9.0): 상품마다 다른 칸은 복사한 상품 값을 지우고 DB센터 값(있으면)을 넣습니다. 판매 상태(품절·도매몰 노출)도 DB센터 값으로.
+    var extra = isObject(item.values.extra) ? item.values.extra : null;
+    if (extra) {
+      PRODUCT_SPECIFIC_KEYS.forEach(function (key) { delete body[key]; });
+      (item.fields || []).forEach(function (field) {
+        if (EXTRA_FIELDS.indexOf(field) < 0) return;
+        var part = extraBodyFor(field, extra, template);
+        if (part) Object.keys(part).forEach(function (key) { body[key] = part[key]; });
+      });
+      if (typeof extra.taxonomyItemId === "string" && extra.taxonomyItemId) body.taxonomyItemId = extra.taxonomyItemId;
+    }
     return body;
   }
 
@@ -1357,7 +1471,8 @@
       var raw = await listAllProducts(function (count, total) { report.progress(count, total || count, "발주오라 상품 목록 " + count + (total ? " / " + total : "") + "개 읽음"); });
       var snapshots = raw.map(function (record) { return normalizeProduct(record, context); }).filter(Boolean);
       var products = snapshots.filter(function (snapshot) { return snapshot.kind === "product"; });
-      var needsDetail = products.some(function (snapshot) { return snapshot.categoryIds === undefined || snapshot.groupPrice === undefined || snapshot.shippingPolicyId === undefined || !snapshot.code; });
+      // 상품 정보 칸(원산지·관리코드 등, 1.9.0)이 목록에 없으면 연결된 상품의 상세를 읽습니다.
+      var needsDetail = products.some(function (snapshot) { return snapshot.categoryIds === undefined || snapshot.groupPrice === undefined || snapshot.shippingPolicyId === undefined || !snapshot.code || snapshot.extra === undefined || snapshot.extra.originText === undefined; });
       var policiesFromDetails = {};
       // 목록에 상품코드가 거의 없으면 상품코드로 연결할 수 있게 모든 상품의 상세를 읽습니다(최대 5,000개).
       var withoutCode = products.filter(function (snapshot) { return !snapshot.code; }).length;
@@ -1713,6 +1828,80 @@
       });
     }
 
+    // 상품 정보 칸(1.9.0): 발주오라 상품 수정 화면처럼 PUT products/:id 에 바뀐 칸만 보냅니다. 이미 같은 칸은 보내지 않고 '반영됨'.
+    // 한꺼번에 보내다 거절되면 칸마다 따로 보내 어느 칸이 문제인지 찾고, 판매 상태(품절·도매몰 노출)를 받지 않으면 PUT products/:id/status 로 보냅니다.
+    // 저장된 값 확인은 DB센터가 저장 뒤 다시 읽은 상품으로 합니다.
+    async function applyExtras(id, detail, item, fields, result) {
+      var extra = isObject(item.values.extra) ? item.values.extra : {};
+      var path = "products/" + encodeURIComponent(id);
+      var source = currentProductValues(detail, ["name", "code", "supplyPrice", "categoryIds"]);
+      var keysByField = {};
+      var parts = {};
+      var body = {};
+      fields.forEach(function (field) {
+        var part = extraBodyFor(field, extra, detail);
+        if (!part) {
+          result.skipped.push({ field: field, reason: field === "certification" ? "인증은 발주오라에서 인증번호와 함께 고쳐 주세요(DB센터에서 보내지 않음)." : "보낼 값을 알 수 없습니다." });
+          return;
+        }
+        var keys = Object.keys(part);
+        if (keys.every(function (key) { return sameExtraValue(detail[key], part[key]); })) {
+          result.applied.push(field);
+          return;
+        }
+        keysByField[field] = keys;
+        parts[field] = part;
+        keys.forEach(function (key) { body[key] = part[key]; });
+      });
+      var pending = Object.keys(keysByField);
+      if (pending.length === 0) return;
+      var statusLeft = [];
+      var settle = function (sent, list) {
+        list.forEach(function (field) {
+          if (keysByField[field].every(function (key) { return key in sent; })) result.applied.push(field);
+          else if (STATUS_KEYS[field]) statusLeft.push(field);
+          else result.skipped.push({ field: field, reason: "발주오라가 이 칸(" + keysByField[field].join(", ") + ")을 받지 않았습니다." });
+        });
+      };
+      try {
+        await sendAdaptive("PUT", path, body, source, {});
+        settle(body, pending);
+      } catch (error) {
+        if (error && error.status === 401) throw error;
+        if (pending.length === 1) {
+          if (STATUS_KEYS[pending[0]] && error && error.status === 400) statusLeft.push(pending[0]);
+          else result.skipped.push({ field: pending[0], reason: describeError(error) });
+        } else {
+          for (var index = 0; index < pending.length; index += 1) {
+            var field = pending[index];
+            // 처음 보낸 본문은 sendAdaptive가 받지 않는 칸을 지웠을 수 있어, 그 칸의 원래 값으로 다시 만듭니다.
+            var single = Object.assign({}, parts[field]);
+            try {
+              await sendAdaptive("PUT", path, single, source, {});
+              settle(single, [field]);
+            } catch (fieldError) {
+              if (fieldError && fieldError.status === 401) throw fieldError;
+              if (STATUS_KEYS[field] && fieldError && fieldError.status === 400) statusLeft.push(field);
+              else result.skipped.push({ field: field, reason: describeError(fieldError) });
+            }
+          }
+        }
+      }
+      if (statusLeft.length === 0) return;
+      var statusBody = {};
+      statusLeft.forEach(function (field) { statusBody[STATUS_KEYS[field]] = extra[STATUS_KEYS[field]]; });
+      try {
+        await sendAdaptive("PUT", path + "/status", statusBody, null, {});
+        statusLeft.forEach(function (field) {
+          if (STATUS_KEYS[field] in statusBody) result.applied.push(field);
+          else result.skipped.push({ field: field, reason: "발주오라가 판매 상태 칸(" + STATUS_KEYS[field] + ")을 받지 않았습니다." });
+        });
+      } catch (statusError) {
+        if (statusError && statusError.status === 401) throw statusError;
+        statusLeft.forEach(function (field) { result.skipped.push({ field: field, reason: describeError(statusError) }); });
+      }
+    }
+
     // 신규 등록 때 복사할 발주오라 상품 고르기(1.8.0, 2026-11-25 프로세스 점검): 새 상품은 복사한 상품의 매입처 줄(매입처·매입원가·매입배송정책)을
     // 그대로 쓰므로, 매입처가 다른 상품을 복사하면 발주가 엉뚱한 매입처로 갑니다. 복사할 상품의 기본 매입처가 DB센터 매입처명과 같은지 보고,
     // 다르면 발주오라에서 같은 매입처 상품을 찾아 복사합니다. 같은 매입처 상품이 없으면 등록하지 않고 이유를 알립니다.
@@ -1763,6 +1952,8 @@
             var key = field === "category" ? categoryKeyOf(template) : field;
             if (key in body && fields.indexOf(field) >= 0) result.applied.push(field);
           });
+          // 상품 정보 칸은 등록 본문에 넣어 보내고, 등록 뒤 다시 읽은 값과 비교해(applyExtras) 같으면 반영됨, 발주오라가 등록 때
+          // 받지 않았거나 조용히 버린 칸만 PUT products/:id(판매 상태는 /status)로 한 번 더 보냅니다.
           fields = fields.filter(function (field) { return result.applied.indexOf(field) < 0; });
           detail = await getDetail(id);
         } else {
@@ -1791,6 +1982,10 @@
         }
         if (fields.indexOf("shippingPolicy") >= 0) {
           try { await applyShipping(id, detail, item, result); } catch (error) { if (error && error.status === 401) throw error; markFailed(["shippingPolicy"], error); }
+        }
+        var extraFields = fields.filter(function (field) { return EXTRA_FIELDS.indexOf(field) >= 0; });
+        if (extraFields.length) {
+          try { await applyExtras(id, detail, item, extraFields, result); } catch (error) { if (error && error.status === 401) throw error; markFailed(extraFields, error); }
         }
         var after = normalizeProduct(await getDetail(id), context);
         if (after) {
@@ -2466,6 +2661,9 @@
     buildCreateBody: buildCreateBody,
     supplierNameKey: supplierNameKey,
     defaultSupplierName: defaultSupplierName,
+    extractExtra: extractExtra,
+    extraBodyFor: extraBodyFor,
+    sameExtraValue: sameExtraValue,
     verifyApplied: verifyApplied,
     createRunner: createRunner,
     readCode: readCode,

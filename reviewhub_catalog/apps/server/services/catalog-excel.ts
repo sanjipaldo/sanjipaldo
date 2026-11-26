@@ -1,6 +1,8 @@
 import ExcelJS from "exceljs";
 import { DatabaseError } from "../_core/db";
 import { createCategory, createProduct, getAdminCatalog, getDeletedProductsForRestore, getShippingPolicies, type ProductInput, restoreDeletedProduct, updateProduct } from "./catalog";
+import { loadProductExtrasMap } from "./product-extras";
+import { shippingUnitLabel } from "@repo/shared/product-extras";
 
 const LIST_HEADERS = [
   "등록일", "노출여부", "품절여부", "상품코드", "관리코드", "상품명", "발주상품명",
@@ -219,6 +221,7 @@ export async function buildProductListWorkbook(selectedProductIds?: string[]) {
 }
 
 // 발주오라 "대량상품등록_양식"(1행 제목, 2행 필수/선택, 3행부터 상품). 데이터센터에 있는 값만 채우고 나머지는 비워 둡니다.
+// 과세여부는 상품 창에서 정한 값(없으면 카테고리 기준), 상품 정보 칸(migration 037)이 있으면 그 값도 채웁니다.
 const BALJUORA_REGISTER_HEADERS = [
   "상품코드", "상품명", "매입처\n(사업자등록번호입력)", "매입원가", "매입배송정책\n(배송비코드입력)", "공급가",
   "매출배송정책\n(배송비코드입력)", "발주상품명", "발주단위", "과세여부", "해외배송여부", "단위", "단위명", "소비자가",
@@ -227,6 +230,10 @@ const BALJUORA_REGISTER_HEADERS = [
 ] as const;
 const BALJUORA_REGISTER_REQUIRED = new Set([2, 3, 4, 5, 6, 7]);
 const BALJUORA_REGISTER_WIDTHS = [22.6, 30, 19.3, 17, 25.1, 17, 25.1, 30, 29.4, 18.3, 24.4, 15.6, 18.3, 24.7, 18.9, 18.3, 18.3, 18.3, 45.7, 25.3, 24.3, 21.7, 28.4, 33];
+
+// 발주오라 양식의 선택 목록(단위명·택배사)
+const REGISTER_UNIT_NAMES = ["개", "kg", "박스", "포"];
+const REGISTER_COURIERS = ["CJ대한통운", "롯데택배", "우체국택배", "한진택배", "홈픽택배"];
 
 // 과세여부: 건강식품 카테고리는 과세, 농산·수산·축산 등 나머지는 비과세(면세 농수산물)로 적습니다.
 export function baljuoraTaxType(categoryName: string | null | undefined) {
@@ -244,14 +251,33 @@ export async function buildBaljuoraRegisterWorkbook(selectedProductIds: string[]
   const border = Object.fromEntries(["top", "left", "bottom", "right"].map((side) => [side, { style: "thin", color: { argb: "FF000000" } }])) as Partial<ExcelJS.Borders>;
   worksheet.addRow([...BALJUORA_REGISTER_HEADERS]);
   worksheet.addRow(BALJUORA_REGISTER_HEADERS.map((_, index) => (BALJUORA_REGISTER_REQUIRED.has(index + 1) ? "필수" : "선택")));
+  // 상품 정보 칸(product_extras, migration 037): 있으면 발주상품명·발주단위·과세여부·단위·간략설명·관리코드·바코드·출고지·제조연월일·소비기한도 채웁니다.
+  const extrasMap = await loadProductExtrasMap(exportProducts.map((product) => product.id)).catch(() => null);
   for (const product of exportProducts) {
     const row: Array<string | number | null> = BALJUORA_REGISTER_HEADERS.map(() => null);
+    const extras = extrasMap?.get(product.id);
     row[0] = product.productCode || null;
     row[1] = product.name;
     // 매입처·매입배송정책·매출배송정책은 발주오라에서 직접 고르도록 비워 둡니다.
     row[3] = product.costPrice;
     row[5] = product.generalPrice;
-    row[9] = baljuoraTaxType(product.categoryId ? categoryNames.get(product.categoryId) : null);
+    row[7] = extras?.purchaseName ?? null;
+    row[8] = extras?.purchaseQuantity ?? null;
+    row[9] = extras && typeof extras.isTaxable === "boolean" ? (extras.isTaxable ? "과세" : "비과세") : baljuoraTaxType(product.categoryId ? categoryNames.get(product.categoryId) : null);
+    // 단위·단위명: 발주오라 양식 목록(개·kg·박스·포)에 있는 배송 단위만
+    const unitName = extras?.shippingUnitType ? shippingUnitLabel(extras.shippingUnitType) : "";
+    if (extras?.shippingUnitValue && REGISTER_UNIT_NAMES.includes(unitName)) {
+      row[11] = extras.shippingUnitValue;
+      row[12] = unitName;
+    }
+    row[13] = product.salePriceMode === "fixed" && product.salePrice ? product.salePrice : null;
+    row[14] = extras?.summary ?? null;
+    row[15] = extras?.managementCode ?? null;
+    row[16] = extras?.barcode ?? null;
+    row[17] = product.courier && REGISTER_COURIERS.includes(product.courier.trim()) ? product.courier.trim() : null;
+    row[19] = extras?.shippingLocation ?? null;
+    row[20] = extras?.manufacturingDate ?? null;
+    row[21] = extras?.expirationDate ?? null;
     worksheet.addRow(row);
   }
   worksheet.columns.forEach((column, index) => {
@@ -283,8 +309,8 @@ export async function buildBaljuoraRegisterWorkbook(selectedProductIds: string[]
   // 상품 행 + 여유 1,000행까지만 걸어 둡니다(시트 끝까지 걸면 파일을 여는 쪽에서 느려집니다).
   const lastRow = worksheet.rowCount + 1000;
   sheetValidations.add(`J3:J${lastRow}`, list("과세,비과세"));
-  sheetValidations.add(`M3:M${lastRow}`, list("개,kg,박스,포"));
-  sheetValidations.add(`R3:R${lastRow}`, list("CJ대한통운,롯데택배,우체국택배,한진택배,홈픽택배"));
+  sheetValidations.add(`M3:M${lastRow}`, list(REGISTER_UNIT_NAMES.join(",")));
+  sheetValidations.add(`R3:R${lastRow}`, list(REGISTER_COURIERS.join(",")));
   worksheet.views = [{ state: "frozen", ySplit: 1 }];
   return new Uint8Array(await workbook.xlsx.writeBuffer());
 }
