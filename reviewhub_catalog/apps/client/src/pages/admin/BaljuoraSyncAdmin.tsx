@@ -93,6 +93,8 @@ type Changes = {
 // changed = DB센터에서 바꿈(마지막으로 맞춘 뒤 DB센터에서 고친 칸만, 2026-11-23 관리자 요청 "내가 지금 바꿔서 발주오라에 보내야 할 것만 따로")
 type Tab = "changed" | "push" | "new" | "pull" | "only";
 const PAGE_SIZE = 40;
+// 가져오기(발주오라에서 바뀜·발주오라에만 있음)를 한 번에 보내는 상품 수
+const PULL_CHUNK = 25;
 
 async function readData<T>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => ({ ok: false }))) as { ok: boolean; data: T; error?: { message?: string } };
@@ -188,6 +190,7 @@ export function BaljuoraSyncAdmin() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState<Settings | null>(null);
   const [openJob, setOpenJob] = useState<JobView | null>(null);
+  const [pullProgress, setPullProgress] = useState<{ done: number; total: number } | null>(null);
   const origin = typeof window === "undefined" ? "" : window.location.origin;
 
   const load = useCallback(async () => {
@@ -355,18 +358,32 @@ export function BaljuoraSyncAdmin() {
       : `고른 ${ids.length}개 상품의 DB센터 값을 발주오라 값으로 바꿀까요? (가격이 바뀌면 가격변동 이력에 남습니다)`;
     if (!window.confirm(message)) return;
     setBusy("pull");
+    // 많이 고르면(처음 맞출 때 전체 선택 등) 25개씩 나눠 보냅니다(서버는 한 번에 500개까지, 함수 시간 제한도 넘지 않게).
+    const total = { updated: 0, created: 0, failed: [] as Array<{ name: string; error: string }> };
+    let done = 0;
+    setPullProgress({ done: 0, total: ids.length });
     try {
-      // '발주오라에서 바뀜' 탭: 발주오라에서 바뀐 칸만 가져옵니다(DB센터에서 고친 칸은 그대로).
-      const body = tab === "only" ? { baljuoraIds: ids } : { productIds: ids, onlyPulled: true };
-      const result = await readData<{ updated: number; created: number; failed: Array<{ name: string; error: string }> }>(await apiFetch("/baljuora/admin/pull", jsonInit("POST", body)));
-      toast.success(tab === "only" ? `${result.created}개를 DB센터에 등록했습니다.` : `${result.updated}개를 발주오라 값으로 바꿨습니다.`);
-      if (result.failed.length) toast.error(`${result.failed.length}개 실패: ${result.failed.slice(0, 2).map((item) => `${item.name} (${item.error})`).join(", ")}`);
+      for (let index = 0; index < ids.length; index += PULL_CHUNK) {
+        const part = ids.slice(index, index + PULL_CHUNK);
+        // '발주오라에서 바뀜' 탭: 발주오라에서 바뀐 칸만 가져옵니다(DB센터에서 고친 칸은 그대로).
+        const body = tab === "only" ? { baljuoraIds: part } : { productIds: part, onlyPulled: true };
+        const result = await readData<{ updated: number; created: number; failed: Array<{ name: string; error: string }> }>(await apiFetch("/baljuora/admin/pull", jsonInit("POST", body)));
+        total.updated += result.updated;
+        total.created += result.created;
+        total.failed.push(...result.failed);
+        done += part.length;
+        setPullProgress({ done, total: ids.length });
+      }
+      toast.success(tab === "only" ? `${total.created}개를 DB센터에 등록했습니다.` : `${total.updated}개를 발주오라 값으로 바꿨습니다.`);
+      if (total.failed.length) toast.error(`${total.failed.length}개 실패: ${total.failed.slice(0, 2).map((item) => `${item.name} (${item.error})`).join(", ")}`);
       setSelected(new Set());
-      await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "가져오지 못했습니다.");
+      const reason = error instanceof Error ? error.message : "가져오지 못했습니다.";
+      toast.error(done > 0 ? `${ids.length}개 중 ${done}개까지 가져오고 멈췄습니다: ${reason}` : reason);
     } finally {
+      setPullProgress(null);
       setBusy("");
+      await load();
     }
   };
 
@@ -606,7 +623,7 @@ export function BaljuoraSyncAdmin() {
           <div className="bj-toolbar-actions">
             <span>{selected.size > 0 ? `${selected.size}개 선택` : `${rows.length.toLocaleString("ko-KR")}개`}</span>
             {(tab === "changed" || tab === "push" || tab === "new") && <button type="button" className="primary-action" onClick={pushSelected} disabled={!compared || selected.size === 0 || Boolean(busy) || jobActive}>{busy === "push" ? <Loader2 className="bj-spin" size={15} /> : <Send size={15} />} 선택 {selected.size}개 {tab === "changed" ? "바꾼 칸 보내기" : "동기화"}</button>}
-            {(tab === "pull" || tab === "only") && <button type="button" className="primary-action" onClick={() => void pullSelected()} disabled={selected.size === 0 || Boolean(busy)}><ArrowDownToLine size={15} /> {tab === "only" ? "DB센터로 가져오기" : "발주오라 값 가져오기"}</button>}
+            {(tab === "pull" || tab === "only") && <button type="button" className="primary-action" onClick={() => void pullSelected()} disabled={selected.size === 0 || Boolean(busy)}>{busy === "pull" ? <Loader2 className="bj-spin" size={15} /> : <ArrowDownToLine size={15} />} {busy === "pull" && pullProgress ? `가져오는 중 ${pullProgress.done.toLocaleString("ko-KR")} / ${pullProgress.total.toLocaleString("ko-KR")}` : tab === "only" ? "DB센터로 가져오기" : "발주오라 값 가져오기"}</button>}
             {(tab === "changed" || tab === "push" || tab === "pull") && <button type="button" className="outline-button" onClick={() => void ignoreSelected()} disabled={selected.size === 0 || Boolean(busy)}>이대로 두기</button>}
           </div>
         </div>
