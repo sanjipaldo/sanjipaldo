@@ -29,6 +29,43 @@
 .sup-hero-kicker { color: var(--w-positive-deep); font-size: 12px; font-weight: 800; letter-spacing: .02em; }
 .sup-hero h2 mark { padding: 0 .08em; color: inherit; background: linear-gradient(transparent 58%, var(--w-primary) 58%, var(--w-primary) 92%, transparent 92%); }
 .sup-hero .admin-home-live { color: var(--w-ink); text-decoration: none; }
+/* 대시보드 맨 위 '두고푸드 계약 조건'(2026-11-26): 정산 방식 · 판매 수수료 · 지급 주기 칸 3개.
+   카드 폭이 넓으면 왼쪽 제목·안내 | 오른쪽 칸 3개 한 줄, 좁으면(휴대폰·태블릿) 제목 → 칸 3개 → 안내. 칸 3개는 320px 휴대폰까지 한 줄 */
+.sup-contract-card { margin: 0 0 14px; padding: 16px 20px; container-type: inline-size; }
+.sup-contract-inner { display: grid; grid-template-columns: minmax(190px, 250px) minmax(0, 1fr); grid-template-areas: "head terms" "note terms"; align-items: center; gap: 6px 22px; }
+.sup-contract-head { grid-area: head; display: flex; align-items: center; gap: 10px; min-width: 0; align-self: end; }
+.sup-contract-icon { display: inline-grid; flex: 0 0 auto; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: var(--w-positive-deep); background: var(--w-primary-pale); }
+.sup-contract-head h2 { margin: 0; color: var(--w-ink); font-size: 17px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
+.sup-contract-more { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; padding: 4px 0; color: var(--w-positive-deep); font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.sup-contract-more:hover { text-decoration: underline; }
+.sup-contract-note { grid-area: note; align-self: start; margin: 0; color: var(--w-mute); font-size: 12.5px; line-height: 1.5; }
+.sup-contract-grid { grid-area: terms; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.sup-contract-term { display: grid; align-content: start; gap: 4px; min-width: 0; padding: 12px 14px; border-radius: var(--w-radius-md); background: var(--w-soft-2); }
+.sup-contract-term.is-fee { background: var(--w-primary-pale); }
+.sup-contract-term dt { color: var(--w-body); font-size: 12.5px; font-weight: 700; }
+.sup-contract-term dd { display: grid; gap: 3px; min-width: 0; margin: 0; }
+.sup-contract-term strong { color: var(--w-positive-deep); font-size: 21px; font-weight: 800; line-height: 1.2; letter-spacing: -.02em; }
+.sup-contract-term dd span { color: var(--w-body); font-size: 12.5px; line-height: 1.45; }
+@container (max-width: 640px) {
+  .sup-contract-inner { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "terms" "note"; gap: 10px; }
+  .sup-contract-head { align-self: auto; }
+  .sup-contract-grid { gap: 6px; }
+  .sup-contract-term { gap: 3px; padding: 10px; }
+  .sup-contract-term dt { font-size: 12px; }
+  .sup-contract-term strong { font-size: 17px; }
+  .sup-contract-term dd span { font-size: 11.5px; }
+}
+@container (max-width: 320px) {
+  .sup-contract-term { padding: 9px 7px; }
+  .sup-contract-term dt { font-size: 11.5px; }
+  .sup-contract-term strong { font-size: 15px; }
+  .sup-contract-term dd span { font-size: 11px; line-height: 1.4; }
+}
+@media (max-width: 720px) {
+  .sup-contract-card { padding: 14px; }
+  .sup-contract-head h2 { font-size: 16px; }
+  .sup-contract-icon { width: 30px; height: 30px; }
+}
 .supplier-shell a.admin-home-stat { color: inherit; text-decoration: none; }
 .sup-rank-list { display: grid; margin: 0; padding: 0; list-style: none; }
 .sup-rank-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid #edf0eb; }

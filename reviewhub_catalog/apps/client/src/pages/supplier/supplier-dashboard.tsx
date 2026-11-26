@@ -2,6 +2,7 @@
 // 썸네일 이미지, 정산 금액은 자동으로 계산해서 깔끔하게"). 정산 방식(판매수수료 · 일반 도매)에 따라 금액 이름과 안내가 바뀝니다.
 // 일반 도매 공급사에게는 두고푸드 판매가 대신 공급가(원가) 기준 금액만 옵니다(서버가 바꿔서 보냄).
 // 공급사에게 보이는 화면이라 주문 프로그램 이름(도매몰 시스템)은 쓰지 않습니다.
+// 2026-11-26: 맨 위에 '두고푸드 계약 조건'(supplier-contract.tsx: 정산 방식 · 판매 수수료 · 지급 주기)을 두고, 다음 정산 띠 위 작은 글씨는 공급사 이름만.
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, BadgePercent, Banknote, BookOpen, Boxes, CalendarDays, CircleAlert, ClipboardList, PackagePlus, ShieldAlert, Trophy } from "lucide-react";
@@ -16,7 +17,6 @@ import {
   monthRange,
   nextMonthKey,
   settlementPlanText,
-  settlementSettingsLabel,
   weekdayOf,
   type SupplierSettlementSettings,
   type SupplierSettlementState
@@ -41,6 +41,7 @@ import {
 } from "./supplier-api";
 import { RequestStatusPill } from "./supplier-ui";
 import { rememberSupplierReturn } from "./supplier-return";
+import { SupplierContractCard } from "./supplier-contract";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -235,9 +236,11 @@ export function SupplierHome({ profile, reloadKey, onCreate }: { profile: Suppli
         <div><span>SUPPLIER DASHBOARD</span><h1>대시보드</h1><p>{dayLabel(data.today)} 기준 · 이번 달 판매와 정산 금액을 자동으로 계산해 보여 드려요.</p></div>
         <button className="primary-action" type="button" onClick={onCreate}><PackagePlus size={16} /> 상품 등록 요청</button>
       </div>
+      {/* 첫 화면 맨 위: 두고푸드와 계약한 정산 방식 · 수수료 · 지급 주기(2026-11-26). 아래 다음 정산 띠의 작은 글씨에서 옮겨 크게 보여 줘요. */}
+      <SupplierContractCard settings={settings} />
       <section className="admin-home-hero sup-hero sup-dash-hero">
         <div>
-          <span className="sup-hero-kicker">{profile.supplier.name} · {settlementSettingsLabel(settings)}</span>
+          <span className="sup-hero-kicker">{profile.supplier.name}</span>
           {daily
             ? upcoming.payoutAmount > 0
               ? <h2>오늘 판매분은 <mark>{formatPayoutLabel(upcoming)}</mark> {won(upcoming.payoutAmount)} 입금 예정이에요.</h2>

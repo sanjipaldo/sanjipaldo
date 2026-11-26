@@ -164,8 +164,11 @@ describe("공급사 대시보드: 판매 현황 · 자동 계산 정산 금액",
     expect(await screen.findByRole("heading", { name: "오늘 판매분은 11월 20일(금) 43,000원 입금 예정이에요." })).toBeTruthy();
     expect(screen.getByText(/11\.20 판매분 · 물품 대금 40,000원 \+ 배송비 3,000원 · 입금을 확인한 뒤 출고해 주세요/)).toBeTruthy();
     expect(screen.getByText("오늘 입금 예정")).toBeTruthy();
-    // 머리 표시("봄날농원 · 판매수수료 10% · 매일 정산")와 정산 안내 문구 모두
-    expect(screen.getAllByText(/판매수수료 10% · 매일 정산/).length).toBeGreaterThanOrEqual(2);
+    // 맨 위 계약 조건 칸(2026-11-26)과 정산 안내 문구
+    const contract = container.querySelector(".sup-contract-card") as HTMLElement;
+    expect(within(contract).getByText("매일 정산")).toBeTruthy();
+    expect(within(contract).getByText("그날 판매분 → 그날 입금")).toBeTruthy();
+    expect(screen.getByText(/판매수수료 10% · 매일 정산: 그날 판매분은 그날/)).toBeTruthy();
     const settle = container.querySelector(".sup-settle-panel") as HTMLElement;
     expect(within(settle).getByText("11.20 판매분 → 11월 20일(금) 입금")).toBeTruthy();
   });
@@ -174,12 +177,62 @@ describe("공급사 대시보드: 판매 현황 · 자동 계산 정산 금액",
     stubApi((url) => (url.includes("/supplier/dashboard") ? json(dashboard("wholesale")) : undefined));
     const { container } = render(<MemoryRouter><SupplierHome profile={profile} reloadKey={0} onCreate={() => undefined} /></MemoryRouter>);
     expect(await screen.findByText("2026년 11월 공급 금액")).toBeTruthy();
-    expect(screen.getByText("일반 도매(매입)")).toBeTruthy();
+    // 요약 칸 '정산 방식'과 맨 위 계약 조건 칸에 모두
+    expect(screen.getAllByText("일반 도매(매입)")).toHaveLength(2);
     const settle = container.querySelector(".sup-settle-panel") as HTMLElement;
     expect(within(settle).getByText(/물품 대금 \(공급가 × 판매 수량\)/)).toBeTruthy();
     expect(within(settle).queryByText(/공급사 → 두고푸드/)).toBeNull();
     expect(within(settle).queryByText(/실 수령 예상/)).toBeNull();
     expect(within(settle).getByText(/판매 수수료는 없어요/)).toBeTruthy();
+  });
+});
+
+// 대시보드 첫 화면 '두고푸드 계약 조건'(2026-11-26 관리자 요청: 수수료 10%인지 20%인지 · 주/월/매일 정산 · 판매수수료인지 도매 판매인지)
+describe("공급사 대시보드: 두고푸드 계약 조건", () => {
+  const terms = (card: HTMLElement) => [...card.querySelectorAll(".sup-contract-term")].map((term) => [
+    term.querySelector("dt")?.textContent,
+    term.querySelector("dd strong")?.textContent,
+    term.querySelector("dd span")?.textContent
+  ]);
+
+  async function renderWith(settlement: { type: "commission" | "wholesale"; commissionRate: number; cycle: "weekly" | "monthly" | "daily" }) {
+    const base = dashboard(settlement.type);
+    stubApi((url) => (url.includes("/supplier/dashboard") ? json({ ...base, settlement }) : undefined));
+    const view = render(<MemoryRouter><SupplierHome profile={profile} reloadKey={0} onCreate={() => undefined} /></MemoryRouter>);
+    const card = (await screen.findByRole("heading", { name: "두고푸드 계약 조건" })).closest("section") as HTMLElement;
+    return { ...view, card };
+  }
+
+  it("판매수수료 10% · 주 정산: 첫 화면 맨 위(다음 정산 띠보다 앞)에 세 칸으로, 자세히는 내 정보로", async () => {
+    const { card, container } = await renderWith({ type: "commission", commissionRate: 10, cycle: "weekly" });
+    expect(terms(card)).toEqual([
+      ["정산 방식", "판매수수료", "판매 금액 100% 입금"],
+      ["판매 수수료", "10%", "다음 달 1~3일 청구"],
+      ["지급 주기", "주 정산", "월~일 판매분 → 다음 주 월요일"]
+    ]);
+    expect(within(card).getByText(/배송비는 100% 함께 입금해요 · 계약 내용과 다르면 두고푸드 담당자에게 알려 주세요/)).toBeTruthy();
+    expect(within(card).getByRole("link", { name: "계약 조건 자세히 보기(내 정보)" }).getAttribute("href")).toBe("/supplier/account");
+    const hero = container.querySelector(".sup-dash-hero") as HTMLElement;
+    expect(card.compareDocumentPosition(hero) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // 다음 정산 띠 위 작은 글씨는 공급사 이름만(계약 조건은 위 칸으로 옮김)
+    expect(hero.querySelector(".sup-hero-kicker")?.textContent).toBe("봄날농원");
+  });
+
+  it("판매수수료 20% · 매일 정산 / 일반 도매(매입) · 월 정산은 수수료 없음", async () => {
+    const commission = await renderWith({ type: "commission", commissionRate: 20, cycle: "daily" });
+    expect(terms(commission.card)).toEqual([
+      ["정산 방식", "판매수수료", "판매 금액 100% 입금"],
+      ["판매 수수료", "20%", "다음 달 1~3일 청구"],
+      ["지급 주기", "매일 정산", "그날 판매분 → 그날 입금"]
+    ]);
+    commission.unmount();
+    vi.unstubAllGlobals();
+    const wholesale = await renderWith({ type: "wholesale", commissionRate: 10, cycle: "monthly" });
+    expect(terms(wholesale.card)).toEqual([
+      ["정산 방식", "일반 도매(매입)", "공급가 × 판매 수량 입금"],
+      ["판매 수수료", "없음", "도매 판매라 수수료 없음"],
+      ["지급 주기", "월 정산", "1일~말일 → 다음 달 1~3일"]
+    ]);
   });
 });
 
