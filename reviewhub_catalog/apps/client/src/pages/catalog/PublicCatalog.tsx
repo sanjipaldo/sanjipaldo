@@ -58,6 +58,7 @@ import { ProductThumb, formatPrice, salePriceLabel, seasonLabel, shippingFeeSumm
 import { CatalogProductGrid, buildCatalogCards, catalogOptionCount } from "./product-cards";
 import { MARGIN_OPEN_EVENT, type MarginPrefill, openMarginCalculator } from "@/lib/margin-open";
 import { FloatingActions, KAKAO_CHANNEL_URL } from "./FloatingActions";
+import { SupplierReturnBar } from "../supplier/supplier-return";
 
 // 마진계산기 팝업은 처음 열 때 따로 불러옵니다(단가표 첫 화면 용량을 늘리지 않음).
 const loadMarginCalculator = () => import("./MarginCalculator");
@@ -514,6 +515,7 @@ export function PageFrame({ children }: { children: ReactNode }) {
   }, []);
   return (
     <div className="public-app">
+      <SupplierReturnBar />
       <BrandHeader />
       {children}
       <footer className="public-footer">

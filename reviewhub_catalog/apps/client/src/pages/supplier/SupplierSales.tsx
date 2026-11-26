@@ -1,6 +1,7 @@
 // 공급사 센터 > 판매·정산: 날짜별 판매·반품 달력, 정산 입금일, 상품 판매 순위(썸네일).
 // 2026-11-25부터 정산 방식(판매수수료 · 일반 도매)에 따라 금액이 바뀝니다: 판매수수료 = 판매 금액, 일반 도매 = 공급가(원가) × 수량.
 // 정산 입금 = 물품 대금 + 배송비(100%), 판매수수료 방식은 한 달 판매 대금의 수수료를 다음 달 1~3일에 두고푸드로 보냅니다.
+// 2026-11-26: 달력 옆에는 고른 날짜 내역·입금 일정만 두고, 정산 카드는 달력 아래 전체 너비로 옮겨 빈 공간을 줄였어요(판매 없는 기간은 한 칸에 모음).
 import { useEffect, useMemo, useState } from "react";
 import { BadgePercent, Banknote, CalendarDays, ChevronLeft, ChevronRight, CircleAlert, ShieldAlert, Trophy } from "lucide-react";
 import {
@@ -22,6 +23,12 @@ import { compactWon, count, dayLabel, monthLabel, supplierGet, won, type SalesMo
 import { FeeList, FeeStatus, PayoutStatus, SettlementMoneyList, feeDueMap, feePayable } from "./supplier-dashboard";
 
 type PayoutDay = SalesMonth["payoutDays"][number];
+type PeriodSettlement = SalesMonth["settlements"][number];
+
+/** 판매·반품·배송비·수수료가 모두 0인 정산 기간(입금 0원) */
+function isEmptySettlement(item: PeriodSettlement) {
+  return !item.payoutAmount && !item.netAmount && !(item.goodsAmount ?? 0) && !(item.shippingFee ?? 0) && !item.commission && !item.costMissing;
+}
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -90,6 +97,10 @@ export function SupplierSales() {
   const daily = settings.cycle === "daily";
   const dailyPaid = daily ? (view?.settlements ?? []).filter((item) => item.state && item.state.status !== "pending").length : 0;
   const dailyWaiting = daily ? (view?.settlements ?? []).filter((item) => item.payoutAmount > 0 && (!item.state || item.state.status === "pending")).length : 0;
+  // 주 정산처럼 기간이 여러 개면 판매가 없는 기간(0원)은 칸 하나에 모아 짧게 보여 줘요(빈 칸이 길게 늘어지지 않게).
+  const periodSettlements = daily ? [] : view?.settlements ?? [];
+  const emptySettlements = periodSettlements.filter(isEmptySettlement);
+  const activeSettlements = periodSettlements.filter((item) => !isEmptySettlement(item));
 
   return (
     <>
@@ -211,32 +222,6 @@ export function SupplierSales() {
                   )}
                 </section>
               )}
-              <section className="admin-card sup-settle-card">
-                <div className="card-heading"><Banknote size={19} aria-hidden="true" /><div><h2>{monthLabel(month)} 판매분 정산</h2><p>{settlementSettingsLabel(settings)} · 자동 계산</p></div></div>
-                <div className="sup-settle-list">
-                  {daily && totals && (
-                    <article>
-                      <div className="sup-settle-head"><span>{monthLabel(month)} 판매분 · 매일 정산</span><strong>입금 완료 {count(dailyPaid, "일")} · 입금 예정 {count(dailyWaiting, "일")}</strong></div>
-                      <SettlementMoneyList summary={{ cycle: "daily", start, end, payoutStart: start, payoutEnd: end, netAmount: totals.netAmount, goodsAmount: totals.goodsAmount, shippingFee: totals.shippingFee, costMissing: totals.costMissing, commission: totals.commission, payoutAmount: totals.payoutAmount, netIncome: totals.netIncome }} settings={settings} />
-                    </article>
-                  )}
-                  {!daily && view.settlements.map((settlement) => (
-                    <article key={settlement.start}>
-                      <div className="sup-settle-head"><span>{formatPeriodLabel(settlement)} 판매분</span><strong>{formatPayoutLabel(settlement)} 입금</strong></div>
-                      <PayoutStatus state={settlement.state} done={settlement.payoutEnd < view.today} />
-                      <SettlementMoneyList summary={settlement} settings={settings} />
-                    </article>
-                  ))}
-                </div>
-                {commission && (view.fees?.length ?? 0) > 0 && (
-                  <div className="sup-fee-block">
-                    <h3><BadgePercent size={16} aria-hidden="true" /> 판매 수수료 (공급사 → 두고푸드)</h3>
-                    <FeeList fees={[...(view.fees ?? [])].reverse()} />
-                  </div>
-                )}
-                <p className="sup-card-note">{settlementPlanText(settings)}</p>
-                <p className="sup-policy"><ShieldAlert size={15} aria-hidden="true" /><span>{SUPPLIER_RETURN_POLICY}</span></p>
-              </section>
               {view.payoutDays.length > 0 && (
                 <section className="admin-card sup-payout-card">
                   <h2>{monthLabel(month)} 입금 일정</h2>
@@ -254,6 +239,41 @@ export function SupplierSales() {
               )}
             </aside>
           </div>
+          {/* 정산: 달력 아래 전체 너비. 판매가 있는 기간은 칸으로 나란히, 판매가 없는 기간(0원)은 한 칸에 모아 짧게 보여 줘요. */}
+          <section className="admin-card sup-settle-card">
+            <div className="card-heading"><Banknote size={19} aria-hidden="true" /><div><h2>{monthLabel(month)} 판매분 정산</h2><p>{settlementSettingsLabel(settings)} · 자동 계산</p></div></div>
+            <div className="sup-settle-list">
+              {daily && totals && (
+                <article>
+                  <div className="sup-settle-head"><span>{monthLabel(month)} 판매분 · 매일 정산</span><strong>입금 완료 {count(dailyPaid, "일")} · 입금 예정 {count(dailyWaiting, "일")}</strong></div>
+                  <SettlementMoneyList summary={{ cycle: "daily", start, end, payoutStart: start, payoutEnd: end, netAmount: totals.netAmount, goodsAmount: totals.goodsAmount, shippingFee: totals.shippingFee, costMissing: totals.costMissing, commission: totals.commission, payoutAmount: totals.payoutAmount, netIncome: totals.netIncome }} settings={settings} />
+                </article>
+              )}
+              {activeSettlements.map((settlement) => (
+                <article key={settlement.start}>
+                  <div className="sup-settle-head"><span>{formatPeriodLabel(settlement)} 판매분</span><strong>{formatPayoutLabel(settlement)} 입금</strong></div>
+                  <PayoutStatus state={settlement.state} done={settlement.payoutEnd < view.today} />
+                  <SettlementMoneyList summary={settlement} settings={settings} />
+                </article>
+              ))}
+              {emptySettlements.length > 0 && (
+                <article className="sup-settle-empty">
+                  <div className="sup-settle-head"><span>판매가 없는 기간</span><strong>입금 0원</strong></div>
+                  <ul>{emptySettlements.map((settlement) => <li key={settlement.start}><b>{formatPeriodLabel(settlement)}</b><span>{settlement.start > view.today ? `아직 시작 전 · ${formatPayoutLabel(settlement)} 입금` : `${formatPayoutLabel(settlement)} 입금 · 0원`}</span></li>)}</ul>
+                </article>
+              )}
+              {commission && (view.fees?.length ?? 0) > 0 && (
+                <div className="sup-fee-block">
+                  <h3><BadgePercent size={16} aria-hidden="true" /> 판매 수수료 (공급사 → 두고푸드)</h3>
+                  <FeeList fees={[...(view.fees ?? [])].reverse()} />
+                </div>
+              )}
+              <div className="sup-settle-notes">
+                <p className="sup-card-note">{settlementPlanText(settings)}</p>
+                <p className="sup-policy"><ShieldAlert size={15} aria-hidden="true" /><span>{SUPPLIER_RETURN_POLICY}</span></p>
+              </div>
+            </div>
+          </section>
           <section className="admin-card sup-ranking-card">
             <div className="card-heading"><Trophy size={19} aria-hidden="true" /><div><h2>{monthLabel(month)} 상품 판매 순위</h2><p>{commission ? "순매출(판매 − 반품)" : "공급 금액(공급가 × 판매 수량, 반품 뺌)"}이 큰 순서예요.</p></div></div>
             {view.ranking.length === 0 ? (

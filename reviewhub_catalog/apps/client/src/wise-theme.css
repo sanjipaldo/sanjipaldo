@@ -3929,3 +3929,15 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .master-login-page .login-brand-panel { min-height: 420px; padding: 22px 20px 24px; background-image: url("/assets/login/admin-login-farm-sm.webp"); }
   .master-login-page .login-brand-panel h1 { font-size: 32px; }
 }
+
+/* ---------- 공급사 센터에서 공개 화면으로 왔을 때 맨 위 "공급사 화면으로 돌아가기"(2026-11-26 관리자 요청) ----------
+   공급사 센터 왼쪽 아래 "공급사 사용방법"·"공개 단가표 보기"로 들어온 탭에서만 보입니다(pages/supplier/supplier-return.tsx).
+   머리글(고정)은 그대로 두고 그 위에 얇은 줄 하나만 둡니다. */
+.supplier-return-bar { display: flex; align-items: center; min-height: 44px; padding: 6px var(--public-inline, 24px); background: var(--w-ink, #0e0f0c); }
+.supplier-return-link { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 14px; border-radius: 999px; color: var(--w-ink, #0e0f0c); background: var(--w-primary, #9fe870); font-size: 13px; font-weight: 800; line-height: 1; text-decoration: none; white-space: nowrap; }
+.supplier-return-link:hover { background: #b4f08f; }
+.supplier-return-link:focus-visible { outline: 3px solid rgba(159, 232, 112, .55); outline-offset: 2px; }
+@media (max-width: 1050px) {
+  .supplier-return-bar { min-height: 40px; padding: 5px 12px; }
+  .supplier-return-link { min-height: 30px; padding: 0 12px; }
+}

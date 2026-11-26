@@ -20,7 +20,7 @@ import {
   type SupplierProduct,
   type SupplierRequestItem
 } from "./supplier-api";
-import { ChangeRowList, RequestStatusPill } from "./supplier-ui";
+import { ChangeRowList, RequestStatusPill, SupplierPager, SupplierPageSize, useSupplierPaging } from "./supplier-ui";
 
 // ── 입력 값 ─────────────────────────────────────────────────────────────
 type ProductDraft = {
@@ -457,8 +457,6 @@ export function CreateRequestModal({ onClose, onSaved }: { onClose: () => void; 
 // ── 내 상품 목록 ────────────────────────────────────────────────────────
 type ProductFilter = "all" | "on_sale" | "unavailable" | "pending";
 
-const PAGE_SIZE = 60;
-
 function normalizeSearch(value: string) {
   return value.replace(/\s+/g, "").toLowerCase();
 }
@@ -474,7 +472,6 @@ export function SupplierProducts({ reloadKey, onCreate, onChanged }: { reloadKey
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ProductFilter>("all");
   const [editing, setEditing] = useState<SupplierProduct | null>(null);
-  const [limit, setLimit] = useState(PAGE_SIZE);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const load = useCallback(async () => {
@@ -523,9 +520,8 @@ export function SupplierProducts({ reloadKey, onCreate, onChanged }: { reloadKey
     if (!searchText) return true;
     return normalizeSearch(`${product.name} ${product.productCode ?? ""}`).includes(searchText);
   });
-  const shown = filtered.slice(0, limit);
-
-  useEffect(() => { setLimit(PAGE_SIZE); }, [filter, query]);
+  // 쪽 나누기: 기본 10개씩, 공급사가 개수를 바꿀 수 있어요(이 브라우저에 기억). 검색·상태 칸을 바꾸면 1쪽부터.
+  const paging = useSupplierPaging(filtered, "supplier-products");
 
   const filterCards: Array<{ key: ProductFilter; label: string; value: number; note: string; icon: typeof Boxes }> = [
     { key: "all", label: "내 상품", value: counts.all, note: "두고푸드에 등록된 상품", icon: Boxes },
@@ -550,17 +546,20 @@ export function SupplierProducts({ reloadKey, onCreate, onChanged }: { reloadKey
             {filterCards.map((card, index) => {
               const Icon = card.icon;
               return (
-                <button key={card.key} type="button" className={`admin-stat-card ${index === 0 ? "featured" : ""} ${filter === card.key ? "selected" : ""}`} onClick={() => setFilter(filter === card.key ? "all" : card.key)} aria-pressed={filter === card.key}>
+                <button key={card.key} type="button" className={`admin-stat-card ${index === 0 ? "featured" : ""} ${filter === card.key ? "selected" : ""}`} onClick={() => { setFilter(filter === card.key ? "all" : card.key); paging.resetPage(); }} aria-pressed={filter === card.key}>
                   <div><span>{card.label}</span><strong>{card.value.toLocaleString("ko-KR")}</strong><small>{card.note}</small></div>
                   <Icon size={22} aria-hidden="true" />
                 </button>
               );
             })}
           </section>
-          <section className="admin-card sup-products-card">
+          <section className="admin-card sup-products-card" ref={paging.listRef}>
             <div className="admin-toolbar sup-toolbar">
-              <label className="search-field"><Search size={17} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" aria-label="상품명·상품코드 검색" /></label>
-              <span>{filtered.length.toLocaleString("ko-KR")}개 상품</span>
+              <label className="search-field"><Search size={17} aria-hidden="true" /><input value={query} onChange={(event) => { setQuery(event.target.value); paging.resetPage(); }} placeholder="상품명·상품코드 검색" aria-label="상품명·상품코드 검색" /></label>
+              <div className="admin-toolbar-meta sup-toolbar-meta">
+                <span className="sup-list-count">{filtered.length.toLocaleString("ko-KR")}개 상품</span>
+                <SupplierPageSize paging={paging} label="페이지당 상품 수" />
+              </div>
             </div>
             <p className="sup-card-note">공급가·권장 판매가·판매 상태를 바꾸려면 <b>변경 요청</b>을 눌러 주세요. 두고푸드가 승인하기 전까지는 지금 값이 그대로 보여요.</p>
             {rows.length === 0 ? (
@@ -572,7 +571,7 @@ export function SupplierProducts({ reloadKey, onCreate, onChanged }: { reloadKey
                 <table className="admin-table stackable-table sup-product-table">
                   <thead><tr><th>상품</th><th>공급가</th><th>권장 판매가</th><th>판매 기간</th><th>상태</th><th>관리</th></tr></thead>
                   <tbody>
-                    {shown.map(({ product, status }) => {
+                    {paging.shown.map(({ product, status }) => {
                       const pending = pendingByProduct.get(product.id);
                       return (
                         <tr key={product.id} className={status !== "on_sale" ? "is-unavailable" : ""}>
@@ -607,7 +606,7 @@ export function SupplierProducts({ reloadKey, onCreate, onChanged }: { reloadKey
                 </table>
               </div>
             )}
-            {filtered.length > shown.length && <button type="button" className="sup-more" onClick={() => setLimit((value) => value + PAGE_SIZE)}>더 보기 ({(filtered.length - shown.length).toLocaleString("ko-KR")}개 남음)</button>}
+            <SupplierPager paging={paging} label="내 상품 페이지" />
           </section>
         </>
       )}

@@ -5,7 +5,7 @@ import { CircleAlert, ClipboardList, Eye, Pencil, Undo2, X } from "lucide-react"
 import { toast } from "sonner";
 import { SUPPLIER_REQUEST_KIND_LABELS, type SupplierRequestStatus } from "@repo/shared/supplier-portal";
 import { shortDateTime, supplierGet, supplierPost, type SupplierCategory, type SupplierRequestItem } from "./supplier-api";
-import { ChangeRowList, RequestStatusPill } from "./supplier-ui";
+import { ChangeRowList, RequestStatusPill, SupplierPager, SupplierPageSize, useSupplierPaging } from "./supplier-ui";
 
 type RequestTab = "all" | SupplierRequestStatus;
 
@@ -95,6 +95,8 @@ export function SupplierRequests({ reloadKey, onChanged }: { reloadKey: number; 
   const list = requests ?? [];
   const counts = Object.fromEntries(TABS.map(([key]) => [key, key === "all" ? list.length : list.filter((request) => request.status === key).length])) as Record<RequestTab, number>;
   const filtered = tab === "all" ? list : list.filter((request) => request.status === tab);
+  // 쪽 나누기: 기본 10줄씩, 공급사가 개수를 바꿀 수 있어요(이 브라우저에 기억). 탭을 바꾸면 1쪽부터.
+  const paging = useSupplierPaging(filtered, "supplier-requests");
   const detail = detailId ? list.find((request) => request.id === detailId) ?? null : null;
 
   const cancel = async (request: SupplierRequestItem) => {
@@ -122,11 +124,12 @@ export function SupplierRequests({ reloadKey, onChanged }: { reloadKey: number; 
       ) : !requests ? (
         <div className="admin-loading inline"><div className="spinner" /><span>요청 내역을 불러오는 중…</span></div>
       ) : (
-        <section className="admin-card sup-requests-card">
+        <section className="admin-card sup-requests-card" ref={paging.listRef}>
           <div className="sup-tabs-row">
             <div className="request-status-tabs sup-request-tabs" role="tablist" aria-label="요청 상태로 거르기">
-              {TABS.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{label}<small>{counts[key]}</small></button>)}
+              {TABS.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} onClick={() => { setTab(key); paging.resetPage(); }}>{label}<small>{counts[key]}</small></button>)}
             </div>
+            <SupplierPageSize paging={paging} label="페이지당 요청 수" />
           </div>
           {filtered.length === 0 ? (
             <div className="empty-state"><ClipboardList size={28} /><strong>{list.length === 0 ? "아직 보낸 요청이 없어요." : "이 상태의 요청이 없어요."}</strong><span>{list.length === 0 ? "내 상품에서 '변경 요청'을 누르거나, 왼쪽 위 '상품 등록 요청'으로 새 상품을 보내 보세요." : "다른 탭을 눌러 보세요."}</span></div>
@@ -135,7 +138,7 @@ export function SupplierRequests({ reloadKey, onChanged }: { reloadKey: number; 
               <table className="admin-table stackable-table sup-request-table">
                 <thead><tr><th>상품</th><th>바뀌는 내용</th><th>상태</th><th>두고푸드 답변</th><th>관리</th></tr></thead>
                 <tbody>
-                  {filtered.map((request) => (
+                  {paging.shown.map((request) => (
                     <tr key={request.id}>
                       <td data-label="상품" className="stack-wide">
                         <div className="sup-request-product">
@@ -159,6 +162,7 @@ export function SupplierRequests({ reloadKey, onChanged }: { reloadKey: number; 
               </table>
             </div>
           )}
+          <SupplierPager paging={paging} label="변경 요청 내역 페이지" />
         </section>
       )}
       {detail && <RequestDetailModal request={detail} categoryName={categoryName} busy={busyId === detail.id} onCancel={(request) => void cancel(request)} onClose={() => setDetailId(null)} />}

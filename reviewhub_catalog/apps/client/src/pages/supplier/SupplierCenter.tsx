@@ -3,6 +3,7 @@
 // - 화면 틀은 마스터 관리자와 같은 모양(왼쪽 메뉴 · 위 제목 줄 · 카드)입니다.
 // - 메뉴: 대시보드 · 내 상품 · 변경 요청 내역 · 판매·정산 · 내 정보, 왼쪽 위 "상품 등록 요청".
 // - 위 줄 오른쪽: "공급사 안내"(두고푸드 공급사 설명서 PDF, supplier-guide.tsx) · 공급사 이름.
+// - 왼쪽 아래 "공급사 사용방법"·"공개 단가표 보기"로 공개 화면에 가면 그 화면 맨 위에 "공급사 화면으로 돌아가기"가 생깁니다(supplier-return.tsx).
 // 공급사에게 보이는 화면이라 주문 프로그램 이름(도매몰 시스템)은 쓰지 않습니다.
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -40,6 +41,7 @@ import {
 } from "@repo/shared/supplier-portal";
 import { shortDateTime, supplierGet, supplierPost, type SupplierProfile, type SupplierRequestItem } from "./supplier-api";
 import { SupplierGuideButton } from "./supplier-guide";
+import { forgetSupplierReturn, rememberSupplierReturn } from "./supplier-return";
 import { CreateRequestModal, SupplierProducts } from "./SupplierProducts";
 import { SupplierRequests } from "./SupplierRequests";
 import { SupplierSales } from "./SupplierSales";
@@ -92,6 +94,7 @@ async function checkSupplierAccess(): Promise<AccessResult> {
 async function signOutEverywhere() {
   await authClient.signOut().catch(() => undefined);
   clearAuthToken();
+  forgetSupplierReturn();
 }
 
 function loginErrorMessage(error: { message?: string; status?: number; code?: string } | null | undefined) {
@@ -331,8 +334,8 @@ function SupplierShell({ section, profile }: { section: SupplierSection; profile
           })}
         </nav>
         <div className="sidebar-bottom">
-          <Link to="/how-to/supplier" onClick={() => setSidebarOpen(false)}><BookOpen size={17} /> 공급사 사용방법</Link>
-          <Link to="/" onClick={() => setSidebarOpen(false)}><Truck size={17} /> 공개 단가표 보기</Link>
+          <Link to="/how-to/supplier" onClick={() => { setSidebarOpen(false); rememberSupplierReturn(`/supplier/${section}`); }}><BookOpen size={17} /> 공급사 사용방법</Link>
+          <Link to="/" onClick={() => { setSidebarOpen(false); rememberSupplierReturn(`/supplier/${section}`); }}><Truck size={17} /> 공개 단가표 보기</Link>
           <button type="button" onClick={() => void signOut()}><LogOut size={17} /> 로그아웃</button>
         </div>
       </aside>

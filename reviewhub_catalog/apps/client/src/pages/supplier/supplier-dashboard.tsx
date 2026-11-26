@@ -40,6 +40,7 @@ import {
   type SupplierProfile
 } from "./supplier-api";
 import { RequestStatusPill } from "./supplier-ui";
+import { rememberSupplierReturn } from "./supplier-return";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -311,7 +312,7 @@ export function SupplierHome({ profile, reloadKey, onCreate }: { profile: Suppli
             <button type="button" onClick={onCreate}><PackagePlus size={18} /><span><strong>상품 등록 요청</strong><small>새 상품 정보를 보내요</small></span></button>
             <Link to="/supplier/products"><Boxes size={18} /><span><strong>공급가·판매가 확인</strong><small>내 상품 {count(products.total)}</small></span></Link>
             <Link to="/supplier/sales"><CalendarDays size={18} /><span><strong>정산 달력</strong><small>날짜별 판매·반품·입금</small></span></Link>
-            <Link to="/how-to/supplier"><BookOpen size={18} /><span><strong>공급사 사용방법</strong><small>주문·송장·정산 안내</small></span></Link>
+            <Link to="/how-to/supplier" onClick={() => rememberSupplierReturn("/supplier/home")}><BookOpen size={18} /><span><strong>공급사 사용방법</strong><small>주문·송장·정산 안내</small></span></Link>
           </div>
         </section>
       </div>

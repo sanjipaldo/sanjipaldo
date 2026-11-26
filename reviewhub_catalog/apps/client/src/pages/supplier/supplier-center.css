@@ -149,11 +149,17 @@
 .sup-pill-row .status-pill { margin: 0; }
 .sup-product-table tbody tr.is-unavailable { background: var(--w-unavailable-gradient); }
 .sup-product-table tbody tr.is-unavailable > td { background: transparent !important; border-top-color: var(--w-unavailable-border); }
-.sup-more { display: block; width: 100%; min-height: 46px; margin-top: 14px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-ink); background: var(--w-canvas); font-size: 14px; font-weight: 700; cursor: pointer; }
-.sup-more:hover { border-color: var(--w-ink); }
+/* 목록 쪽 나누기(내 상품·변경 요청 내역, 2026-11-26): 위 오른쪽 "페이지당 [10] 개씩 보기" · 아래 쪽 번호 */
+.sup-products-card, .sup-requests-card { scroll-margin-top: 84px; }
+.sup-toolbar-meta { flex: 0 0 auto; justify-content: flex-end; }
+.sup-list-count { color: var(--w-mute); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.supplier-shell .sup-page-size { color: var(--w-mute); font-size: 12px; font-weight: 800; }
+.supplier-shell .sup-pagination { margin-top: 16px; }
+.supplier-shell .sup-pagination nav { flex-wrap: wrap; }
+.supplier-shell .sup-pagination nav > span { color: var(--w-mute); }
 
 /* ---------- 변경 요청 내역 ---------- */
-.sup-tabs-row { display: flex; margin-bottom: 16px; }
+.sup-tabs-row { display: flex; align-items: center; justify-content: space-between; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 16px; }
 .sup-request-tabs button { white-space: nowrap; cursor: pointer; }
 .sup-request-table { min-width: 940px; }
 .sup-request-table td { vertical-align: top; }
@@ -214,8 +220,16 @@
 .sup-day-payout strong { font-size: 14px; }
 .sup-day-payout span { color: var(--w-body); font-size: 13px; line-height: 1.5; }
 .sup-day-payout.is-done { color: var(--w-body); background: var(--w-soft-2); }
-.sup-settle-list { display: grid; gap: 10px; }
-.sup-settle-list article { padding: 12px 14px; border: 1px solid var(--w-line); border-radius: var(--w-radius-md); }
+/* 정산 카드(2026-11-26, 달력 아래 전체 너비): 기간 칸 · 판매 없는 기간 · 판매 수수료 · 안내를 나란히 놓고 좁으면 한 줄씩 */
+.sup-settle-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 12px; }
+.sup-settle-list > article, .sup-settle-list > .sup-fee-block, .sup-settle-list > .sup-settle-notes { min-width: 0; margin: 0; padding: 12px 14px; border: 1px solid var(--w-line); border-radius: var(--w-radius-md); }
+.sup-settle-list > .sup-settle-notes { border-style: dashed; }
+.sup-settle-notes .sup-card-note { margin: 0; }
+.sup-settle-list > .sup-settle-empty { align-self: start; border-color: transparent; background: var(--w-soft-2); }
+.sup-settle-empty ul { display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.sup-settle-empty li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; font-size: 13px; }
+.sup-settle-empty li b { color: var(--w-ink); font-weight: 700; }
+.sup-settle-empty li span { color: var(--w-mute); font-size: 12.5px; }
 .sup-settle-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; margin-bottom: 2px; }
 .sup-settle-head span { color: var(--w-body); font-size: 13px; }
 .sup-settle-head strong { color: #0b4a8f; font-size: 14px; }
@@ -283,7 +297,7 @@
 
 @media (max-width: 1180px) {
   .sales-layout.sup-sales-layout { grid-template-columns: minmax(0, 1fr); }
-  .sup-sales-aside { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sup-sales-aside { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
 }
 
 .sup-rank-mobile { display: none; }
@@ -327,6 +341,9 @@
   .sup-account-actions > button { flex: 1 1 auto; justify-content: center; }
   .sup-recent-list li { flex-wrap: wrap; }
   .sup-recent-list small { width: 100%; }
+  /* 휴대폰: "43개 상품 · 페이지당 [10] 개씩 보기"를 한 줄에(왼쪽 개수, 오른쪽 입력칸) */
+  .sup-toolbar-meta { justify-content: space-between; }
+  .supplier-shell .sup-page-size { width: auto; margin-left: auto; }
 }
 
 @media (max-width: 380px) {
