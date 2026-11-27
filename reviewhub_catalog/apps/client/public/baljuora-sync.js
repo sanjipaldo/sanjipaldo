@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.10.0";
+  var VERSION = "1.11.0";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   // 상품명은 상품 정보 저장(PUT products/:id/info), 카테고리는 상품 수정(PUT products/:id)으로 따로 보냅니다(1.9.1, 아래 applyCategory).
@@ -290,6 +290,8 @@
       isSoldOut: typeof record.isSoldOut === "boolean" ? record.isSoldOut : null,
       updatedAt: typeof record.updatedAt === "string" ? record.updatedAt : typeof record.createdAt === "string" ? record.createdAt : null
     };
+    // 발주오라 등록일시(1.11.0): DB센터 상품 리스트 '발주오라 번호'(발주오라 상품 리스트처럼 등록일시 최신순)에 씁니다.
+    if (typeof record.createdAt === "string" && record.createdAt) snapshot.createdAt = record.createdAt;
     // 과세 여부(1.7.0): 홈택스 세금계산서(과세)·계산서(면세) 나누기에 씀. 칸이 없으면 보내지 않음.
     if (typeof record.isTaxable === "boolean") snapshot.isTaxable = record.isTaxable;
     var categoryIds = extractCategoryIds(record);
@@ -1554,6 +1556,77 @@
 
     // 판매·매출처 읽기: 매출처 → 주문 상품 줄(주문일 start~end) → 아직 모르는 상품의 과세 여부 → DB센터로 보내기.
     // options.final = false 면 마지막 보고를 끝으로 하지 않음(비교 작업 안에서 쓸 때는 true로 끝냄). options.taxMap = 이번 비교에서 읽은 과세 여부.
+    // 발주오라 대시보드 숫자(1.11.0, 2026-11-27 관리자 요청 "주문 동기화를 누르면 대시보드의 최근 7일 주문 현황·기간별 매출·매출처 TOP 5·
+    // 상품별 매출까지 똑같이"): 발주오라 대시보드 화면과 같은 API(발주오라 화면 코드 8198 조각: getStatisticsRecentOrders →
+    // GET statistics/recent-orders, getStatisticsSummaryByPeriod → statistics/summary-by-period, getStatisticsTopSellers → statistics/top-sellers,
+    // getStatisticsTopProducts → statistics/top-products)를 읽어 그대로 보냅니다. 대시보드 화면이 이미 부른 주소가 있으면 같은 조건(쿼리)으로,
+    // 없으면(다른 화면에서 책갈피) 조건 없이 부릅니다. 받는 사람 이름·연락처·주소 같은 칸은 보내지 않습니다.
+    var DASHBOARD_ENDPOINTS = ["statistics/recent-orders", "statistics/summary-by-period", "statistics/top-sellers", "statistics/top-products"];
+    var DASHBOARD_PRIVATE_KEY = /(phone|mobile|receiver|recipient|address|zipcode|postcode|email|password|token|accountnumber|bankaccount|birth)/i;
+
+    function dashboardRequestsFromPage() {
+      var found = {};
+      try {
+        var entries = env.resourceEntries ? env.resourceEntries() : [];
+        var base = new URL(env.apiBase);
+        (entries || []).forEach(function (entry) {
+          var url;
+          try { url = new URL(entry && entry.name); } catch { return; }
+          if (url.host !== base.host) return;
+          var path = url.pathname.replace(/^\/+/, "");
+          DASHBOARD_ENDPOINTS.forEach(function (endpoint) {
+            if (path !== endpoint) return;
+            var params = {};
+            url.searchParams.forEach(function (value, key) { params[key] = value; });
+            var list = found[endpoint] || (found[endpoint] = []);
+            var key = JSON.stringify(params);
+            if (!list.some(function (item) { return JSON.stringify(item) === key; }) && list.length < 4) list.push(params);
+          });
+        });
+      } catch { /* 무시: 조건 없이 부름 */ }
+      return found;
+    }
+
+    function cleanDashboardValue(value, depth) {
+      if (value === null || typeof value === "number" || typeof value === "boolean") return value;
+      if (typeof value === "string") return value.slice(0, 200);
+      if (depth > 6) return null;
+      if (Array.isArray(value)) return value.slice(0, 100).map(function (item) { return cleanDashboardValue(item, depth + 1); });
+      if (isObject(value)) {
+        var out = {};
+        Object.keys(value).slice(0, 80).forEach(function (key) {
+          if (DASHBOARD_PRIVATE_KEY.test(key)) return;
+          out[key] = cleanDashboardValue(value[key], depth + 1);
+        });
+        return out;
+      }
+      return null;
+    }
+
+    async function readDashboard(report) {
+      report.progress(0, 0, "발주오라 대시보드 숫자(최근 7일 주문 현황·기간별 매출·매출처 TOP·상품별 매출)를 읽는 중…");
+      var fromPage = dashboardRequestsFromPage();
+      var responses = [];
+      for (var index = 0; index < DASHBOARD_ENDPOINTS.length; index += 1) {
+        var endpoint = DASHBOARD_ENDPOINTS[index];
+        var paramsList = fromPage[endpoint] && fromPage[endpoint].length ? fromPage[endpoint] : [{}];
+        for (var p = 0; p < paramsList.length; p += 1) {
+          var params = paramsList[p];
+          try {
+            var payload = unwrap(await api("GET", endpoint, undefined, Object.keys(params).length ? { params: params } : undefined));
+            state.structure["dashboard:" + endpoint] = structureOf(payload);
+            responses.push({ endpoint: endpoint, params: params, fromPage: Boolean(fromPage[endpoint]), status: 200, data: cleanDashboardValue(payload, 0) });
+          } catch (error) {
+            state.errors.push({ path: "GET " + endpoint, status: error.status || 0, messages: messagesOf(error).slice(0, 3) });
+            responses.push({ endpoint: endpoint, params: params, fromPage: Boolean(fromPage[endpoint]), status: error.status || 0, error: messagesOf(error).slice(0, 2).join(" / ").slice(0, 300) || describeError(error) });
+          }
+        }
+      }
+      var ok = responses.filter(function (item) { return item.status === 200; }).length;
+      report.log(ok > 0 ? "발주오라 대시보드 숫자를 읽었습니다(" + ok + "가지)." : "발주오라 대시보드 숫자를 읽지 못했습니다(주문은 계속 읽어요).", ok === 0);
+      return { at: new Date(clock()).toISOString(), page: String(env.pagePath || "").slice(0, 120), responses: responses };
+    }
+
     async function runSales(step, report, options) {
       var opts = options || {};
       if (!opts.taxMap) watchThrottle(report, { done: 0, total: 0, label: "판매·매출처 읽기" });
@@ -1633,6 +1706,12 @@
           await sendResults(report, { final: false, supplierError: supplierError || "매입처 목록을 읽지 못했습니다." });
         }
       }
+      // 발주오라 대시보드 숫자(1.11.0): 주문 줄보다 먼저 읽어 같은 때의 숫자로 맞춰 봅니다. 못 읽어도 주문은 계속 읽습니다.
+      if (step.dashboard) {
+        var dashboard = await readDashboard(report);
+        await sendResults(report, { final: false, dashboard: dashboard });
+        result.dashboard = dashboard.responses.filter(function (item) { return item.status === 200; }).length;
+      }
       report.progress(0, 0, "발주오라 주문(" + step.start + " ~ " + step.end + ")을 읽는 중…");
       var lines = [];
       try {
@@ -1697,7 +1776,8 @@
       var context = { group: group, groupKeyword: plan.groupKeyword };
       report.progress(0, 0, "발주오라 상품 목록을 읽는 중…");
       var raw = await listAllProducts(function (count, total) { report.progress(count, total || count, "발주오라 상품 목록 " + count + (total ? " / " + total : "") + "개 읽음"); });
-      var snapshots = raw.map(function (record) { return normalizeProduct(record, context); }).filter(Boolean);
+      // position(1.11.0) = 발주오라 상품 목록에서의 순서(0 = 맨 위 = 가장 최근 등록). 같은 때 대량 등록한 상품의 순서를 발주오라와 같게 맞춥니다.
+      var snapshots = raw.map(function (record, index) { var snapshot = normalizeProduct(record, context); if (snapshot) snapshot.position = index; return snapshot; }).filter(Boolean);
       var products = snapshots.filter(function (snapshot) { return snapshot.kind === "product"; });
       // 카테고리(1.9.1, 2026-11-27 운영 절임배추): 발주오라 목록은 카테고리를 include하지 않으면 모든 상품의 categoryIds가 빈 칸([])입니다.
       // 1.2.0~1.9.0은 그 빈 칸을 '카테고리 없음'으로 믿어 모든 상품이 "카테고리 없음 > 🥕 농산"처럼 달라 보였습니다(맞추기 카드 '카테고리 2,129').
@@ -3022,7 +3102,9 @@
       panel.log("작업을 받았습니다: " + jobLabel);
       var loadedScripts = [];
       try { loadedScripts = Array.prototype.map.call(win.document.scripts, function (script) { return script.src; }).filter(Boolean); } catch { /* 무시 */ }
-      var runnerEnv = { fetch: win.fetch.bind(win), locks: win.navigator && win.navigator.locks, consoleOrigin: win.location.origin, pagePath: win.location.pathname, loadedScripts: loadedScripts, apiBase: win.__doogoSyncApiBase || API_BASE, doogoOrigin: doogoOrigin, convertImage: makeImageConverter(win) };
+      // resourceEntries(1.11.0): 대시보드 화면이 이미 부른 발주오라 주소(쿼리 포함)를 같은 조건으로 다시 부르려고 읽습니다(값·토큰 없음).
+      var resourceEntries = function () { try { return win.performance && win.performance.getEntriesByType ? win.performance.getEntriesByType("resource") : []; } catch { return []; } };
+      var runnerEnv = { fetch: win.fetch.bind(win), locks: win.navigator && win.navigator.locks, consoleOrigin: win.location.origin, pagePath: win.location.pathname, loadedScripts: loadedScripts, apiBase: win.__doogoSyncApiBase || API_BASE, doogoOrigin: doogoOrigin, convertImage: makeImageConverter(win), resourceEntries: resourceEntries };
       runner = createRunner(runnerEnv);
       panel.status("발주오라 로그인 확인 중…");
       runner.state.token = await runner.refreshToken();

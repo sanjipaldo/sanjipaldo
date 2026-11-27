@@ -116,6 +116,10 @@ export type BaljuoraProductSnapshot = {
   isVisible: boolean | null;
   isSoldOut: boolean | null;
   updatedAt: string | null;
+  // 발주오라 등록일시(책갈피 1.11.0부터) · 비교 때 발주오라 상품 목록에서의 순서(0 = 맨 위 = 가장 최근 등록).
+  // DB센터 상품 리스트의 '발주오라 번호'(발주오라 상품 리스트 줄 앞 숫자와 같음)에 씁니다. undefined = 읽지 못함.
+  createdAt?: string | null;
+  position?: number;
   // 과세 여부(1.7.0부터 읽음). undefined = 읽지 못함. 홈택스 세금계산서(과세)/계산서(면세) 나누기에 씀.
   isTaxable?: boolean;
   // 상품 정보 칸(책갈피 1.9.0부터 읽음). undefined = 읽지 못함(예전 책갈피·목록만 읽음). 안쪽 칸이 undefined면 그 칸이 응답에 없음.

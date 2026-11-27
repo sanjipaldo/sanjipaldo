@@ -63,7 +63,8 @@ export type ProductsSummary = {
 export type ProductPhase = "idle" | "waiting" | "reading" | "linking" | "sending" | "done" | "failed";
 export type OpsStatus = {
   ready: boolean;
-  orders: { job: OpsJobView | null; last: OrdersSummary | null; recent: RecentOrders | null };
+  // official = 발주오라 대시보드 '최근 7일간 주문 현황'(주문 동기화 때 책갈피 1.11.0이 읽은 숫자 그대로, 2026-11-27)
+  orders: { job: OpsJobView | null; last: OrdersSummary | null; recent: RecentOrders | null; official?: { at: string; jobId: string | null; items: Array<{ key: string; label: string; count: number }> } | null };
   products: { phase: ProductPhase; compareJob: OpsJobView | null; pushJob: OpsJobView | null; options: ProductOptions | null; planned: Counts | null; stalled: boolean; error: string | null; last: ProductsSummary | null };
 };
 export type ProductOptions = { updates: boolean; creates: boolean; hides: boolean; categories: boolean };
@@ -181,7 +182,7 @@ export function useOpsSync(onFinished?: () => void) {
   }, []);
 
   useEffect(() => {
-    void load().catch(() => setStatus({ ready: false, orders: { job: null, last: null, recent: null }, products: { phase: "idle", compareJob: null, pushJob: null, options: null, planned: null, stalled: false, error: null, last: null } }));
+    void load().catch(() => setStatus({ ready: false, orders: { job: null, last: null, recent: null, official: null }, products: { phase: "idle", compareJob: null, pushJob: null, options: null, planned: null, stalled: false, error: null, last: null } }));
   }, [load]);
 
   // 발주오라 창이 읽거나 보내는 동안 2초마다(이어 가기가 멈췄으면 10초마다) 봅니다. 비교가 끝난 지 35분이 지나면 멈춥니다.
@@ -408,6 +409,7 @@ function OrdersPanel({ state }: { state: OpsSyncState }) {
   if (!finishedOrders) return null;
   const summary = finishedOrders;
   const recent = status?.orders.recent ?? null;
+  const official = status?.orders.official ?? null;
   const suppliers = summary.suppliers;
   return (
     <section className="admin-card osync-panel is-done" role="status">
@@ -418,7 +420,14 @@ function OrdersPanel({ state }: { state: OpsSyncState }) {
         <li><span>매출처(셀러)</span><b>{count(summary.buyers)}곳</b><em>{summary.newBuyers > 0 ? `새 매출처 ${count(summary.newBuyers)}곳 · ${names(summary.newBuyerNames)}` : "새 매출처 없음"}</em></li>
         <li><span>매입처(공급사)</span><b>{suppliers ? `${count(suppliers.read || suppliers.fromLines)}곳` : "-"}</b><em>{suppliers && suppliers.added > 0 ? `공급사 관리에 새로 등록 ${count(suppliers.added)}곳 · ${names(suppliers.names)}` : "새 매입처 없음"}{suppliers?.error ? " · 매입처 목록을 못 읽어 주문에 나온 매입처로 맞췄어요" : ""}</em></li>
       </ul>
-      {recent && (
+      {official && official.items.length > 0 ? (
+        <div className="osync-status" aria-label="최근 7일 주문 현황(발주오라 대시보드)">
+          <span className="osync-status-title">최근 7일간 주문 현황 <small>발주오라 대시보드 그대로 · {formatSyncTime(official.at)}</small></span>
+          <div className="osync-chips">
+            {official.items.map((item) => <span key={item.key} className={`osync-chip${item.key === "total" ? " is-total" : item.key === "cancelled" || item.key === "returned" || item.key === "exchanged" ? " is-cancel" : item.count > 0 ? " has-value" : ""}`}><em>{item.label}</em><b>{count(item.count)}</b></span>)}
+          </div>
+        </div>
+      ) : recent && (
         <div className="osync-status" aria-label="최근 7일 주문 현황">
           <span className="osync-status-title">최근 7일 주문 현황 <small>{shortDate(recent.from)} ~ {shortDate(recent.to)} · 주문 상품 줄</small></span>
           <div className="osync-chips">

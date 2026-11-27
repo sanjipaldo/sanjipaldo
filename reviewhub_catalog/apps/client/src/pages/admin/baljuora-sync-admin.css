@@ -453,6 +453,10 @@
 .bjr-align-fail summary { color: #b42318; font-size: 12px; font-weight: 750; cursor: pointer; }
 .bjr-align-fail ul { display: grid; gap: 3px; margin: 6px 0 0; padding-left: 18px; color: #5d665f; font-size: 12px; font-weight: 600; line-height: 1.5; }
 .bjr-align .primary-action { flex: 0 0 auto; }
+/* '발주오라 새로 읽고 맞추기'(2026-11-27): 비교 → 끝나면 저절로 맞추기 */
+.bjr-align-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bjr-align-actions .outline-button, .bjr-align-actions .primary-action { display: inline-flex; align-items: center; gap: 6px; }
+.bjr-align-wait { display: flex; flex: 1 1 100%; align-items: flex-start; gap: 6px; margin: 0; padding: 9px 12px; border-radius: 12px; color: #1d4ed8; background: #eef4ff; font-size: 12.5px; font-weight: 700; line-height: 1.55; }
 @media (max-width: 720px) {
   .bjr-row { grid-template-columns: minmax(0, 1.25fr) minmax(0, .9fr) minmax(0, .9fr) minmax(0, 1fr); gap: 6px; padding: 9px 10px; }
   .bjr-row > span:first-child { font-size: 12.5px; }
@@ -462,4 +466,6 @@
   .bjr-reasons .primary-action, .bjr-reasons .outline-button { width: 100%; justify-content: center; }
   .bjr-align { padding: 12px 13px; }
   .bjr-align .primary-action { width: 100%; justify-content: center; }
+  .bjr-align-actions { width: 100%; }
+  .bjr-align-actions .outline-button, .bjr-align-actions .primary-action { flex: 1 1 100%; justify-content: center; }
 }

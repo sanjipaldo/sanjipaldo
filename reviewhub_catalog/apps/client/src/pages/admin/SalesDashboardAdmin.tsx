@@ -8,6 +8,7 @@ import { seoulDateKey } from "@repo/shared/supplier-portal";
 import { apiFetch } from "@/lib/api";
 import { SalesSyncCard, readData, won } from "./sales-admin-shared";
 import { BuyerRankList, CategoryRankList, DailySalesChart, ProfitBreakdownCards, SalesKpiCards, SupplierRankList, TodayTopCard, TopProductsTable, salesRangeFor, type SalesPreset, type SalesSummary } from "./sales-widgets";
+import { BaljuoraOfficialPanel } from "./BaljuoraOfficialPanel";
 import "./sales-admin.css";
 
 const PRESETS: Array<{ key: SalesPreset; label: string }> = [
@@ -25,6 +26,8 @@ export function SalesDashboardAdmin() {
   const [custom, setCustom] = useState(() => salesRangeFor("month", today));
   const [summary, setSummary] = useState<SalesSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  // 발주오라 대시보드 칸: 판매·매출처를 불러온 뒤 다시 읽습니다.
+  const [officialStamp, setOfficialStamp] = useState(0);
   const range = preset === "custom" ? custom : salesRangeFor(preset, today);
 
   const load = useCallback(async () => {
@@ -45,7 +48,8 @@ export function SalesDashboardAdmin() {
       <div className="admin-page-heading">
         <div><span>SALES</span><h1>판매 현황</h1><p>발주오라에서 불러온 판매로 오늘 잘 팔린 상품, 기간별 TOP 10, 공급사·카테고리·매출처 순위를 봅니다.</p></div>
       </div>
-      <SalesSyncCard sync={summary?.sync ?? null} onDone={() => void load()} compact />
+      <SalesSyncCard sync={summary?.sync ?? null} onDone={() => { void load(); setOfficialStamp((value) => value + 1); }} compact />
+      <BaljuoraOfficialPanel stamp={officialStamp} />
 
       <div className="sa-period" role="group" aria-label="기간">
         {PRESETS.map((item) => <button key={item.key} type="button" className={preset === item.key ? "is-active" : ""} aria-pressed={preset === item.key} onClick={() => setPreset(item.key)}>{item.label}</button>)}
@@ -65,6 +69,7 @@ export function SalesDashboardAdmin() {
       ) : (
         <div className={`sa-stack ${loading ? "sa-dim" : ""}`}>
           <SalesKpiCards summary={summary} />
+          {summary.basisText && <p className="sa-basis-note">판매 금액·주문 계산 기준: {summary.basisText} (발주오라 대시보드와 같은 기준)</p>}
           <ProfitBreakdownCards summary={summary} />
           {summary.pending.count > 0 && <p className="sa-notice"><Info size={15} aria-hidden="true" /><span>주문대기(입금 전) {summary.pending.count.toLocaleString("ko-KR")}줄 · {won(summary.pending.amount)}은 매출에서 뺐어요. 입금되면 다음 불러오기 때 들어옵니다.</span></p>}
 

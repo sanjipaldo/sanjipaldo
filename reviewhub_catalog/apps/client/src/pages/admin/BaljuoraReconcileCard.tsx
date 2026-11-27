@@ -5,7 +5,7 @@
 // '발주오라와 똑같이 맞추기' 하나입니다(GET /api/baljuora/admin/align, POST /admin/align/run을 끝날 때까지 되풀이):
 //   이름 같은 상품 연결 → 발주오라에만 있는 상품 가져오기(지운 상품 되살림, 발주오라 노출·품절 그대로) → 연결 상품의 품절·노출을 발주오라 값으로.
 // 운영 배포 때 한 번 자동으로 돌고(서버 deploy-tasks), 그 뒤에는 이 버튼으로 다시 맞춥니다. 발주오라는 바꾸지 않습니다.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -113,8 +113,32 @@ function totalsText(totals: AlignTotals) {
   ].filter(Boolean).join(" · ") || "바꿀 것이 없었어요";
 }
 
+// '발주오라 새로 읽고 맞추기'(2026-11-27 관리자 요청 "상품 숫자까지 똑같이 — DB센터 노출 1,865 · 발주오라 1,864"): 마지막으로 읽은 뒤 발주오라에서
+// 바뀐 상품까지 맞추려면 비교(새로 읽기)를 먼저 해야 해, 버튼 하나로 비교 작업을 만들고 그 비교가 끝나면(이 화면이 새로 불러올 때) 저절로
+// '발주오라와 똑같이 맞추기'를 이어서 합니다. 이 기기 sessionStorage에 30분 동안 기억합니다.
+const ALIGN_AFTER_COMPARE_KEY = "doogo:baljuora-align-after-compare";
+const ALIGN_AFTER_COMPARE_MS = 30 * 60_000;
+
+function readAlignAfterCompare(): number | null {
+  try {
+    const at = Number(window.sessionStorage.getItem(ALIGN_AFTER_COMPARE_KEY));
+    return Number.isFinite(at) && at > 0 && Date.now() - at < ALIGN_AFTER_COMPARE_MS ? at : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeAlignAfterCompare(at: number | null) {
+  try {
+    if (at) window.sessionStorage.setItem(ALIGN_AFTER_COMPARE_KEY, String(at));
+    else window.sessionStorage.removeItem(ALIGN_AFTER_COMPARE_KEY);
+  } catch {
+    // 저장이 막힌 브라우저는 비교가 끝난 뒤 '발주오라와 똑같이 맞추기'를 직접 누릅니다.
+  }
+}
+
 // 맨 위 '발주오라와 똑같이 맞추기' 칸
-function AlignBox({ align, disabled, working, onRun }: { align: AlignView; disabled: boolean; working: boolean; onRun: () => void }) {
+function AlignBox({ align, disabled, working, waiting, onRun, onCompare }: { align: AlignView; disabled: boolean; working: boolean; waiting: boolean; onRun: () => void; onCompare?: () => void }) {
   const { pending, last, run } = align;
   const resume = Boolean(run && !run.active);
   const sameNow = align.matched && pending.total === 0;
@@ -146,22 +170,33 @@ function AlignBox({ align, disabled, working, onRun }: { align: AlignView; disab
         )}
         {run && working && <p className="bjr-align-progress" aria-live="polite"><Loader2 className="bj-spin" size={14} aria-hidden="true" /> 맞추는 중… {totalsText(run.totals)} · 남은 일 {n(pending.total)}개</p>}
       </div>
-      {pending.total > 0 && (
-        <button type="button" className="primary-action" onClick={onRun} disabled={disabled || working || Boolean(run?.active)}>
-          {working ? <Loader2 className="bj-spin" size={15} aria-hidden="true" /> : <RefreshCw size={15} aria-hidden="true" />}
-          {working ? "맞추는 중…" : resume ? "이어서 맞추기" : "발주오라와 똑같이 맞추기"}
-        </button>
-      )}
+      <div className="bjr-align-actions">
+        {pending.total > 0 && (
+          <button type="button" className="primary-action" onClick={onRun} disabled={disabled || working || Boolean(run?.active)}>
+            {working ? <Loader2 className="bj-spin" size={15} aria-hidden="true" /> : <RefreshCw size={15} aria-hidden="true" />}
+            {working ? "맞추는 중…" : resume ? "이어서 맞추기" : "발주오라와 똑같이 맞추기"}
+          </button>
+        )}
+        {onCompare && (
+          <button type="button" className={pending.total > 0 ? "outline-button" : "primary-action"} onClick={onCompare} disabled={disabled || working || waiting} title="발주오라 상품을 새로 읽은 뒤(책갈피) 바로 발주오라와 똑같이 맞춰요">
+            <RefreshCw size={15} aria-hidden="true" /> {waiting ? "새로 읽기를 기다리는 중…" : "발주오라 새로 읽고 맞추기"}
+          </button>
+        )}
+      </div>
+      {waiting && <p className="bjr-align-wait" aria-live="polite"><Loader2 className="bj-spin" size={14} aria-hidden="true" /> 발주오라 관리자 창에서 책갈피 '두고푸드 동기화'를 눌러 주세요. 새로 읽기가 끝나면 이 화면이 저절로 발주오라와 똑같이 맞춰요(30분 안).</p>}
     </div>
   );
 }
 
-export function BaljuoraReconcileCard({ stamp, disabled, onChanged }: { stamp: unknown; disabled: boolean; onChanged: () => Promise<void> | void }) {
+export function BaljuoraReconcileCard({ stamp, disabled, onChanged, onCompare }: { stamp: unknown; disabled: boolean; onChanged: () => Promise<void> | void; onCompare?: () => Promise<void> | void }) {
   const [data, setData] = useState<ReconcileView | null>(null);
   const [align, setAlign] = useState<AlignView | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  // '발주오라 새로 읽고 맞추기'를 누른 때(이 시각 뒤에 끝난 비교가 보이면 저절로 맞춤)
+  const [afterCompare, setAfterCompare] = useState<number | null>(() => readAlignAfterCompare());
+  const autoStarted = useRef(false);
 
   useEffect(() => {
     let stopped = false;
@@ -187,10 +222,26 @@ export function BaljuoraReconcileCard({ stamp, disabled, onChanged }: { stamp: u
     return () => { stopped = true; };
   }, [stamp]);
 
-  const runAlign = async () => {
+  const compareThenAlign = async () => {
+    if (!onCompare) return;
+    const ok = window.confirm([
+      "발주오라 상품을 새로 읽고, 읽기가 끝나면 DB센터를 발주오라와 똑같이 맞출까요?",
+      "· 발주오라 관리자 창이 열리면 책갈피 '두고푸드 동기화'를 눌러 주세요(발주오라는 바뀌지 않아요).",
+      "· 다 읽으면 이 화면이 저절로 발주오라에만 있는 상품 가져오기·판매 상태·노출 맞추기를 해서 전체·판매중·품절·노출·미노출 수와 상품 리스트 발주오라 번호를 발주오라와 같게 만들어요.",
+      "· 끝날 때까지 이 화면을 닫지 말아 주세요."
+    ].join("\n"));
+    if (!ok) return;
+    const at = Date.now();
+    writeAlignAfterCompare(at);
+    setAfterCompare(at);
+    autoStarted.current = false;
+    await onCompare();
+  };
+
+  const runAlign = async (skipConfirm = false) => {
     if (!align) return;
     const { pending } = align;
-    const ok = window.confirm([
+    const ok = skipConfirm || window.confirm([
       "발주오라와 똑같이 맞출까요? (마지막으로 읽은 발주오라 값 기준)",
       pending.imports > 0 ? `· 발주오라에만 있는 상품 ${n(pending.imports)}개를 DB센터로 가져와요${pending.importRestore > 0 ? `(지운 상품 ${n(pending.importRestore)}개는 되살림)` : ""}. 발주오라 노출·품절 그대로 — 발주오라에서 노출 중인 상품은 공개 단가표에도 보여요. 진열순서는 맨 뒤.` : "",
       pending.states > 0 ? `· 판매 상태·노출이 다른 연결 상품 ${n(pending.states)}개를 발주오라 값으로 바꿔요(${stateText(pending.stateDetail)}).` : "",
@@ -224,6 +275,19 @@ export function BaljuoraReconcileCard({ stamp, disabled, onChanged }: { stamp: u
     }
   };
 
+  // 새로 읽기(비교)가 '새로 읽고 맞추기'를 누른 뒤에 끝났으면 저절로 맞춥니다(한 번만).
+  const freshCompare = Boolean(afterCompare && align?.lastCompareAt && Date.parse(align.lastCompareAt) >= afterCompare - 5_000);
+  useEffect(() => {
+    if (!freshCompare || working || autoStarted.current || disabled) return;
+    autoStarted.current = true;
+    writeAlignAfterCompare(null);
+    setAfterCompare(null);
+    toast.info("발주오라 상품을 새로 읽었어요. 발주오라와 똑같이 맞추는 중…");
+    void runAlign(true);
+    // runAlign은 렌더마다 새로 만들어지지만 여기서는 비교가 끝난 그 한 번만 부릅니다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [freshCompare, working, disabled]);
+
   if (unavailable) return null;
   if (error) return <section className="admin-card bjr-card is-error"><p><AlertTriangle size={15} aria-hidden="true" /> {error}</p></section>;
   if (!data) return <section className="admin-card bjr-card"><p className="bjr-loading"><Loader2 className="bj-spin" size={15} aria-hidden="true" /> DB센터 ↔ 발주오라 상품 수를 세는 중…</p></section>;
@@ -247,7 +311,7 @@ export function BaljuoraReconcileCard({ stamp, disabled, onChanged }: { stamp: u
           <p>{data.compared ? `발주오라 수는 마지막으로 읽은 값(비교 ${formatTime(data.lastCompareAt)} + 그 뒤 보낸 결과)이에요. 최신 수는 '발주오라 상품 불러오기(비교)'를 한 번 하면 바뀌어요.` : "아직 발주오라 상품을 읽지 않았어요. '발주오라 상품 불러오기(비교)'를 먼저 해 주세요."}</p>
         </div>
       </div>
-      {align && data.compared && <AlignBox align={align} disabled={disabled} working={working} onRun={() => void runAlign()} />}
+      {align && data.compared && <AlignBox align={align} disabled={disabled} working={working} waiting={Boolean(afterCompare) && !freshCompare} onRun={() => void runAlign()} onCompare={onCompare ? () => void compareThenAlign() : undefined} />}
       {bj?.source === "estimated" && <p className="bjr-note">발주오라 수는 연결 기록으로 계산한 값이에요(이번 업데이트 전 비교). 비교를 한 번 다시 하면 발주오라 상품 리스트와 같은 정확한 수로 바뀌어요.</p>}
       <div className="bjr-table" role="table" aria-label="DB센터와 발주오라 상품 수">
         <div className="bjr-row is-head" role="row"><span role="columnheader">구분</span><span role="columnheader">DB센터</span><span role="columnheader">발주오라</span><span role="columnheader">차이</span></div>

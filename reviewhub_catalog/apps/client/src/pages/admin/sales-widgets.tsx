@@ -32,6 +32,8 @@ export type SalesSummary = {
   topSuppliers: Array<{ name: string; amount: number; quantity: number; products: number }>;
   categories: Array<{ categoryId: string | null; categoryName: string; amount: number; quantity: number }>;
   topBuyers: Array<{ key: string; name: string; amount: number; orders: number; quantity: number }>;
+  // 숫자 계산 기준(2026-11-27, 발주오라 대시보드와 맞춤): 예 "배송비 포함 · 주문 상품 줄 수 · 전량 취소·반품 줄 뺌 · 주문대기 뺌"
+  basisText?: string;
   sync: SalesSyncState;
 };
 
@@ -267,7 +269,8 @@ export function BuyerRankList({ summary }: { summary: SalesSummary }) {
   return (
     <ol className="sa-rank-list">
       {summary.topBuyers.map((item, index) => (
-        <li key={item.key}><b className={`sa-rank rank-${Math.min(index + 1, 4)}`}>{index + 1}</b><span><strong>{item.name}</strong><small>주문 {count(item.orders)}건 · {count(item.quantity)}개</small><ShareBar value={item.amount} total={summary.totals.amount} /></span><em>{compactWon(item.amount)}원</em></li>
+        // 금액은 발주오라 대시보드 '매출처 TOP'처럼 원 단위까지(2026-11-27 관리자 신고 "385만원 vs 4,257,500")
+        <li key={item.key}><b className={`sa-rank rank-${Math.min(index + 1, 4)}`}>{index + 1}</b><span><strong>{item.name}</strong><small>주문 {count(item.orders)}건 · {count(item.quantity)}개</small><ShareBar value={item.amount} total={summary.totals.amount} /></span><em className="sa-rank-won">{won(item.amount)}</em></li>
       ))}
     </ol>
   );

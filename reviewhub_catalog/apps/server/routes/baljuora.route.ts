@@ -24,6 +24,7 @@ import {
   listBaljuoraChanges,
   listLinkedProducts,
   listBaljuoraJobs,
+  getBaljuoraProductOrder,
   pullFromBaljuora,
   recordRunnerProgress,
   saveBaljuoraSettings,
@@ -35,6 +36,7 @@ import {
   buildHometaxFile,
   getHometaxPreview,
   getHometaxSettings,
+  getOfficialDashboard,
   getSalesDashboard,
   listBuyers,
   listSupplierSettlements,
@@ -111,6 +113,17 @@ baljuoraRouter.post("/admin/align/run", adminRoute, async (c) => {
   try {
     const user = c.var.currentUser;
     return c.json(apiSuccess(await runAlignStep({ budgetMs: 40_000, by: user?.username || user?.email || "admin", trigger: "admin" })));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 상품 리스트 '발주오라 번호'(2026-11-27 관리자 요청 "줄 앞 숫자를 발주오라처럼"): DB센터 상품 id를 발주오라 상품 리스트 순서(등록일시 최신순)로.
+// 화면이 지금 목록(검색·거르기 뒤) 안에서 (상품 수 − 순서)로 번호를 붙입니다. 읽기만 합니다.
+baljuoraRouter.get("/admin/product-order", adminRoute, async (c) => {
+  try {
+    c.header("Cache-Control", "no-store");
+    return c.json(apiSuccess(await getBaljuoraProductOrder()));
   } catch (error) {
     return errorResponse(c, error);
   }
@@ -371,6 +384,17 @@ const MonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 baljuoraRouter.get("/admin/sales/summary", adminRoute, async (c) => {
   try {
     return c.json(apiSuccess(await getSalesDashboard({ from: c.req.query("from") ?? null, to: c.req.query("to") ?? null })));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 발주오라 대시보드 숫자(2026-11-27 관리자 요청 "주문 동기화를 누르면 대시보드의 최근 7일 주문 현황·기간별 매출·매출처 TOP 5·상품별 매출까지 똑같이"):
+// 마지막 주문 동기화 때 책갈피가 읽은 발주오라 숫자 + 같은 기준으로 계산한 DB센터 숫자(맞는지 칸마다 비교). 읽기만 합니다.
+baljuoraRouter.get("/admin/sales/official", adminRoute, async (c) => {
+  try {
+    c.header("Cache-Control", "no-store");
+    return c.json(apiSuccess(await getOfficialDashboard()));
   } catch (error) {
     return errorResponse(c, error);
   }
@@ -652,7 +676,9 @@ baljuoraRouter.post("/runner/:code/results", publicRoute, async (c) => {
       salesDone: body.salesDone && typeof body.salesDone === "object" ? body.salesDone as { complete?: unknown; error?: unknown } : undefined,
       // 발주오라 매입처(1.10.0, 주문 동기화 — 서비스에서 칸을 정리함)와 읽지 못한 까닭
       suppliers: Array.isArray(body.suppliers) ? body.suppliers : undefined,
-      supplierError: typeof body.supplierError === "string" ? body.supplierError : null
+      supplierError: typeof body.supplierError === "string" ? body.supplierError : null,
+      // 발주오라 대시보드 숫자(1.11.0, 주문 동기화 — 서비스에서 주소·칸을 정리함)
+      dashboard: body.dashboard && typeof body.dashboard === "object" && !Array.isArray(body.dashboard) ? body.dashboard : undefined
     })));
   } catch (error) {
     return errorResponse(c, error);

@@ -24,7 +24,7 @@ import {
   runnerJobByCode,
   type SupplierSyncResult
 } from "./baljuora-sync";
-import { recentOrderStatus, type RecentOrderStatus } from "./baljuora-sales";
+import { getOfficialRecentOrders, recentOrderStatus, type RecentOrderStatus } from "./baljuora-sales";
 
 const STORE_OPS = "ops_sync";
 // 비교가 끝난 뒤 이 시간 안에만 책갈피가 이어서 보내기를 받을 수 있습니다(작업 코드 만료와 같은 30분).
@@ -404,9 +404,11 @@ export async function getOpsSyncStatus() {
     } catch {
       recent = null;
     }
+    // 발주오라 대시보드 '최근 7일간 주문 현황'(주문 동기화 때 책갈피 1.11.0이 읽은 숫자 그대로, 없으면 null)
+    const official = await getOfficialRecentOrders();
     return {
       ready: true,
-      orders: { job: ordersJob, last: store.orders.last, recent },
+      orders: { job: ordersJob, last: store.orders.last, recent, official },
       products: {
         phase,
         compareJob,
@@ -421,7 +423,7 @@ export async function getOpsSyncStatus() {
     };
   } catch (error) {
     if (isMissingSyncTable(error)) {
-      return { ready: false, orders: { job: null, last: null, recent: null }, products: { phase: "idle" as ProductSyncPhase, compareJob: null, pushJob: null, options: null, planned: null, stalled: false, error: null, last: null } };
+      return { ready: false, orders: { job: null, last: null, recent: null, official: null }, products: { phase: "idle" as ProductSyncPhase, compareJob: null, pushJob: null, options: null, planned: null, stalled: false, error: null, last: null } };
     }
     throw error;
   }

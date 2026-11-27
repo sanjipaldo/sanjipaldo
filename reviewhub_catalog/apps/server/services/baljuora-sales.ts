@@ -11,6 +11,23 @@ import ExcelJS from "exceljs";
 import { and, asc, eq, gte, inArray, lte, sql, type SQL } from "drizzle-orm";
 import { plainCategoryName } from "@repo/shared/baljuora-sync";
 import {
+  DASHBOARD_ENDPOINTS,
+  DEFAULT_SALES_BASIS,
+  calibrateSalesBasis,
+  cleanSalesBasis,
+  compareDashboard,
+  dashboardRanges,
+  dashboardShape,
+  describeSalesBasis,
+  parseBaljuoraDashboard,
+  type BaljuoraDashboardRaw,
+  type BasisScore,
+  type DashboardEndpoint,
+  type DashboardResponse,
+  type DashboardSalesLine,
+  type SalesBasis
+} from "@repo/shared/baljuora-dashboard";
+import {
   BUYER_OVERRIDE_FIELDS,
   DEFAULT_HOMETAX_SETTINGS,
   HOMETAX_DATA_START_ROW,
@@ -92,6 +109,9 @@ import {
 const PROVIDER = "baljuora";
 const STORE_PRODUCT_TAX = "product_tax";
 const STORE_SALES_STATE = "sales_state";
+// 발주오라 대시보드 숫자(주문 동기화 때 책갈피가 읽음, 2026-11-27) · 그 숫자와 가장 많이 맞는 DB센터 판매 계산 기준
+const STORE_DASHBOARD = "baljuora_dashboard";
+const STORE_SALES_BASIS = "sales_basis";
 const STORE_HOMETAX = "hometax_settings";
 const SALES_SOURCE = "baljuora";
 export const MAX_SALES_LINES_PER_POST = 2000;
@@ -593,6 +613,28 @@ export type SalesSyncState = {
 
 export const revenueWhere = (): SQL => sql`(${baljuoraSalesLines.status} IS NULL OR lower(${baljuoraSalesLines.status}) NOT IN (${sql.join(SALES_EXCLUDED_STATUSES.map((status) => sql`${status}`), sql`, `)}))`;
 
+/**
+ * 판매 현황·운영 홈·매출처 숫자의 계산 기준(SalesBasis, 발주오라 대시보드와 맞춰 고름 — getSalesBasis)을 SQL로.
+ * status = 셀 주문 상태, counted = 셀 줄(남은 수량이 있는 줄만 등), amount = 금액(배송비 포함 등), orders = 주문건(줄 수 또는 주문 수).
+ */
+function basisSql(basis: SalesBasis) {
+  const L = baljuoraSalesLines;
+  const excluded = basis.pending ? SALES_EXCLUDED_STATUSES.filter((status) => status !== "pending") : SALES_EXCLUDED_STATUSES;
+  const status = sql`(${L.status} IS NULL OR lower(${L.status}) NOT IN (${sql.join(excluded.map((value) => sql`${value}`), sql`, `)}))`;
+  const counted = basis.lines === "net" ? sql`${L.netQuantity} > 0` : sql`1 = 1`;
+  const amountExpr = basis.amount === "net" ? sql`${L.amount}` : basis.amount === "grossShip" ? sql`(${L.quantity} * ${L.unitPrice} + ${L.salesShippingFee})` : sql`(${L.amount} + ${L.salesShippingFee})`;
+  return {
+    status,
+    amount: sql<number>`coalesce(sum(case when ${counted} then ${amountExpr} else 0 end), 0)`,
+    orders: basis.count === "lines" ? sql<number>`coalesce(sum(case when ${counted} then 1 else 0 end), 0)` : sql<number>`count(distinct case when ${counted} then coalesce(${L.orderId}, ${L.id}) end)`,
+    quantity: sql<number>`coalesce(sum(case when ${counted} then ${L.netQuantity} else 0 end), 0)`,
+    lines: sql<number>`coalesce(sum(case when ${counted} then 1 else 0 end), 0)`,
+    buyers: sql<number>`count(distinct case when ${counted} then coalesce(${L.sellerId}, ${L.sellerName}) end)`,
+    products: sql<number>`count(distinct case when ${counted} then coalesce(${L.productId}, ${L.baljuoraProductId}, ${L.productName}) end)`
+  };
+}
+type BasisSql = ReturnType<typeof basisSql>;
+
 /** 공급사 센터용 supplier_sales(날짜·공급사·상품별 판매·반품)를 판매 줄로 다시 만듭니다. */
 async function rebuildSupplierSales(start: string, end: string) {
   const db = getDb();
@@ -641,6 +683,14 @@ export async function finalizeSalesSync(input: { jobId: string; start: string; e
     await rebuildSupplierSales(input.start, input.end);
     const state: SalesSyncState = { at: nowIso(), jobId: input.jobId, start: input.start, end: input.end, complete: input.complete, lines: input.lines, buyers: input.buyers, error: input.error };
     await writeStore(STORE_SALES_STATE, state);
+    // 같은 작업에서 읽은 발주오라 대시보드 숫자와 맞춰 DB센터 판매 계산 기준을 고릅니다(끝까지 읽은 판매만 — 줄이 빠지면 기준을 잘못 고를 수 있음).
+    if (input.complete) {
+      try {
+        await calibrateFromDashboard(input.jobId);
+      } catch (error) {
+        console.error("[baljuora-sales] dashboard calibrate failed", error instanceof Error ? error.message : String(error));
+      }
+    }
     return state;
   });
 }
@@ -655,25 +705,179 @@ export function salesRangeFor(months: number, today = seoulDateKey()) {
   return { start: `${nextMonthKey(today.slice(0, 7), -(count - 1))}-01`, end: today };
 }
 
+// ─── 발주오라 대시보드 숫자 맞추기(2026-11-27) ─────────────────────────────────
+// 관리자 신고 "주문 동기화를 최신으로 했는데 나도건강 금액이 발주오라 대시보드(102건 4,257,500)와 다르다(DB센터 110건 385만원)":
+// 발주오라 대시보드는 '주문일자 기준 · 배송비 포함'이고 DB센터는 배송비를 빼고 주문 수를 셌습니다. 책갈피가 주문 동기화 때 대시보드 숫자를
+// 그대로 읽어 오면 저장해 두고(화면에 그대로 보여 줌), 판매 줄을 끝까지 받은 뒤 그 숫자와 가장 많이 맞는 계산 기준을 골라 DB센터 판매 숫자에 씁니다.
+
+const DASHBOARD_PARAM_LIMIT = 10;
+const DASHBOARD_TEXT_LIMIT = 300_000;
+
+function cleanDashboardResponse(value: unknown): DashboardResponse | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const endpoint = typeof record.endpoint === "string" ? record.endpoint.replace(/^\/+/, "") : "";
+  if (!(DASHBOARD_ENDPOINTS as readonly string[]).includes(endpoint)) return null;
+  const params: Record<string, string> = {};
+  if (record.params && typeof record.params === "object" && !Array.isArray(record.params)) {
+    for (const [key, raw] of Object.entries(record.params as Record<string, unknown>).slice(0, DASHBOARD_PARAM_LIMIT)) {
+      if (typeof raw === "string" || typeof raw === "number") params[key.slice(0, 40)] = String(raw).slice(0, 100);
+    }
+  }
+  const status = typeof record.status === "number" && Number.isFinite(record.status) ? Math.round(record.status) : 0;
+  return {
+    endpoint: endpoint as DashboardEndpoint,
+    params,
+    fromPage: record.fromPage === true,
+    status,
+    ...(status >= 200 && status < 300 ? { data: record.data ?? null } : { error: typeof record.error === "string" ? record.error.slice(0, 300) : null })
+  };
+}
+
+/** 책갈피가 보낸 발주오라 대시보드 응답 저장(작업마다 마지막 것). 응답 구조(칸 이름만)를 서버 기록에 남깁니다. */
+export async function ingestBaljuoraDashboard(raw: unknown, jobId: string) {
+  return guarded(async () => {
+    const record = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+    const responses = (Array.isArray(record.responses) ? record.responses : []).slice(0, 16).map(cleanDashboardResponse).filter((item): item is DashboardResponse => item !== null);
+    const value: BaljuoraDashboardRaw = {
+      at: typeof record.at === "string" && Number.isFinite(Date.parse(record.at)) ? new Date(Date.parse(record.at)).toISOString() : nowIso(),
+      jobId,
+      page: typeof record.page === "string" ? record.page.slice(0, 120) : null,
+      responses
+    };
+    let text = JSON.stringify(value);
+    if (text.length > DASHBOARD_TEXT_LIMIT) {
+      // 너무 크면 응답 내용 대신 구조만 남깁니다(화면에는 '읽지 못함').
+      value.responses = responses.map((item) => ({ ...item, data: item.data === undefined ? undefined : { tooLarge: true } }));
+      text = JSON.stringify(value);
+    }
+    await writeStore(STORE_DASHBOARD, value);
+    const read = responses.filter((item) => item.status >= 200 && item.status < 300).length;
+    const failed = responses.length - read;
+    console.log("[baljuora-sales] dashboard", JSON.stringify({
+      jobId,
+      read,
+      failed,
+      shape: responses.map((item) => ({ endpoint: item.endpoint, params: Object.keys(item.params), fromPage: item.fromPage, status: item.status, shape: item.status >= 200 && item.status < 300 ? dashboardShape(item.data) : null, error: item.error ?? null }))
+    }).slice(0, 6000));
+    return { read, failed };
+  });
+}
+
+async function readDashboardRaw() {
+  const value = await readStore<BaljuoraDashboardRaw | null>(STORE_DASHBOARD, null);
+  return value && Array.isArray(value.responses) ? value : null;
+}
+
+type StoredBasis = { basis: SalesBasis; at: string; jobId: string | null; score: number; total: number; sellers: number; periods: number; products: number };
+
+/** DB센터 판매 숫자 계산 기준(발주오라 대시보드와 맞춰 고른 것, 없으면 기본 = 배송비 포함 · 주문 상품 줄) */
+export async function getSalesBasis(): Promise<{ basis: SalesBasis; stored: StoredBasis | null }> {
+  try {
+    const stored = await readStore<StoredBasis | null>(STORE_SALES_BASIS, null);
+    const basis = stored ? cleanSalesBasis(stored.basis) : null;
+    return basis && stored ? { basis, stored } : { basis: DEFAULT_SALES_BASIS, stored: null };
+  } catch {
+    return { basis: DEFAULT_SALES_BASIS, stored: null };
+  }
+}
+
+/** 기간 안 판매 줄(발주오라 대시보드 맞춰 보기용 칸만) */
+async function loadDashboardLines(from: string, to: string): Promise<DashboardSalesLine[]> {
+  const L = baljuoraSalesLines;
+  const rows = await getDb().select({
+    id: L.id,
+    orderId: L.orderId,
+    saleDate: L.saleDate,
+    status: L.status,
+    sellerName: L.sellerName,
+    productName: L.productName,
+    quantity: L.quantity,
+    netQuantity: L.netQuantity,
+    unitPrice: L.unitPrice,
+    amount: L.amount,
+    costAmount: L.costAmount,
+    salesShippingFee: L.salesShippingFee,
+    purchaseShippingFee: L.purchaseShippingFee
+  }).from(L).where(and(gte(L.saleDate, from), lte(L.saleDate, to)));
+  return rows.map((row) => ({ ...row, quantity: Number(row.quantity ?? 0), netQuantity: Number(row.netQuantity ?? 0), unitPrice: Number(row.unitPrice ?? 0), amount: Number(row.amount ?? 0), costAmount: row.costAmount === null ? null : Number(row.costAmount), salesShippingFee: Number(row.salesShippingFee ?? 0), purchaseShippingFee: Number(row.purchaseShippingFee ?? 0) }));
+}
+
+function dashboardLineRange(today: string) {
+  const ranges = dashboardRanges(today);
+  return { from: ranges.find((item) => item.key === "lastMonth")!.from, to: today };
+}
+
+async function calibrateFromDashboard(jobId: string): Promise<BasisScore | null> {
+  const raw = await readDashboardRaw();
+  if (!raw || raw.jobId !== jobId) return null;
+  const today = seoulDateKey();
+  const view = parseBaljuoraDashboard(raw, today);
+  const range = dashboardLineRange(today);
+  const lines = await loadDashboardLines(range.from, range.to);
+  const best = calibrateSalesBasis(lines, view, today);
+  console.log("[baljuora-sales] dashboard parsed", JSON.stringify({
+    jobId,
+    recent: view.recentOrders?.items.length ?? 0,
+    periods: view.periods?.length ?? 0,
+    sellers: view.topSellers?.rows.length ?? 0,
+    products: view.topProducts?.rows.length ?? 0,
+    errors: view.errors.length,
+    basis: best ? { ...best.basis, score: best.score, total: best.total, sellers: best.sellers, periods: best.periods, products: best.products } : null
+  }));
+  // 하나도 맞지 않으면(발주오라 응답을 잘못 읽었거나 판매 줄이 빠짐) 기준을 바꾸지 않습니다.
+  if (!best || best.score === 0) return best;
+  const stored: StoredBasis = { basis: best.basis, at: nowIso(), jobId, score: best.score, total: best.total, sellers: best.sellers, periods: best.periods, products: best.products };
+  await writeStore(STORE_SALES_BASIS, stored);
+  return best;
+}
+
+/** 운영 홈 주문 동기화 요약: 마지막으로 읽은 발주오라 대시보드 '최근 7일간 주문 현황'(없거나 못 읽으면 null) */
+export async function getOfficialRecentOrders() {
+  try {
+    const raw = await readDashboardRaw();
+    if (!raw) return null;
+    const view = parseBaljuoraDashboard(raw, seoulDateKey());
+    return view.recentOrders ? { at: view.at, jobId: raw.jobId, items: view.recentOrders.items } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 운영 홈·판매 현황 '발주오라 대시보드' 칸: 마지막 주문 동기화 때 읽은 발주오라 숫자 + 같은 기준의 DB센터 계산 */
+export async function getOfficialDashboard() {
+  return guarded(async () => {
+    const [raw, { basis, stored }, syncState] = await Promise.all([readDashboardRaw(), getSalesBasis(), getSalesSyncState()]);
+    const today = seoulDateKey();
+    if (!raw) return { available: false as const, basis, basisText: describeSalesBasis(basis), calibration: stored, sync: syncState };
+    const view = parseBaljuoraDashboard(raw, today);
+    const range = dashboardLineRange(today);
+    const lines = await loadDashboardLines(range.from, range.to);
+    const ours = compareDashboard(lines, view, basis, today);
+    const recentOurs = await recentOrderStatus(7, today);
+    return { available: true as const, today, view, ours, recentOurs, basis, basisText: describeSalesBasis(basis), calibration: stored, sync: syncState };
+  });
+}
+
 // ─── 판매 현황(대시보드) ─────────────────────────────────────────────────────
 
 type Totals = { amount: number; quantity: number; orders: number; buyers: number; cost: number; returnAmount: number; lines: number };
 
-async function totalsFor(where: SQL | undefined): Promise<Totals> {
+async function totalsFor(where: SQL | undefined, b: BasisSql): Promise<Totals> {
   const rows = await getDb().select({
-    amount: sql<number>`coalesce(sum(${baljuoraSalesLines.amount}), 0)`,
-    quantity: sql<number>`coalesce(sum(${baljuoraSalesLines.netQuantity}), 0)`,
-    orders: sql<number>`count(distinct coalesce(${baljuoraSalesLines.orderId}, ${baljuoraSalesLines.id}))`,
-    buyers: sql<number>`count(distinct coalesce(${baljuoraSalesLines.sellerId}, ${baljuoraSalesLines.sellerName}))`,
+    amount: b.amount,
+    quantity: b.quantity,
+    orders: b.orders,
+    buyers: b.buyers,
     cost: sql<number>`coalesce(sum(${baljuoraSalesLines.costAmount}), 0)`,
     returnAmount: sql<number>`coalesce(sum((${baljuoraSalesLines.quantity} - ${baljuoraSalesLines.netQuantity}) * ${baljuoraSalesLines.unitPrice}), 0)`,
-    lines: sql<number>`count(*)`
+    lines: b.lines
   }).from(baljuoraSalesLines).where(where);
   const row = rows[0];
   return { amount: Number(row?.amount ?? 0), quantity: Number(row?.quantity ?? 0), orders: Number(row?.orders ?? 0), buyers: Number(row?.buyers ?? 0), cost: Number(row?.cost ?? 0), returnAmount: Number(row?.returnAmount ?? 0), lines: Number(row?.lines ?? 0) };
 }
 
-async function topProducts(where: SQL | undefined, limit: number) {
+async function topProducts(where: SQL | undefined, limit: number, b: BasisSql) {
   const key = sql<string>`coalesce(${baljuoraSalesLines.productId}, ${baljuoraSalesLines.baljuoraProductId}, ${baljuoraSalesLines.productName})`;
   const rows = await getDb().select({
     key,
@@ -681,10 +885,10 @@ async function topProducts(where: SQL | undefined, limit: number) {
     name: sql<string>`max(${baljuoraSalesLines.productName})`,
     supplierName: sql<string | null>`max(${baljuoraSalesLines.supplierName})`,
     categoryId: sql<string | null>`max(${baljuoraSalesLines.categoryId})`,
-    amount: sql<number>`sum(${baljuoraSalesLines.amount})`,
-    quantity: sql<number>`sum(${baljuoraSalesLines.netQuantity})`,
-    orders: sql<number>`count(distinct coalesce(${baljuoraSalesLines.orderId}, ${baljuoraSalesLines.id}))`
-  }).from(baljuoraSalesLines).where(where).groupBy(key).orderBy(sql`sum(${baljuoraSalesLines.amount}) desc`).limit(limit);
+    amount: b.amount,
+    quantity: b.quantity,
+    orders: b.orders
+  }).from(baljuoraSalesLines).where(where).groupBy(key).having(sql`${b.lines} > 0`).orderBy(sql`${b.amount} desc`).limit(limit);
   return rows.map((row) => ({ key: row.key, productId: row.productId, name: row.name, supplierName: row.supplierName, categoryId: row.categoryId, amount: Number(row.amount), quantity: Number(row.quantity), orders: Number(row.orders) }));
 }
 
@@ -700,29 +904,32 @@ export async function getSalesDashboard(input: { from?: string | null; to?: stri
     let from = isDateKey(input.from) ? input.from : `${today.slice(0, 7)}-01`;
     let to = isDateKey(input.to) ? input.to : today;
     if (from > to) [from, to] = [to, from];
-    const inRange = and(gte(baljuoraSalesLines.saleDate, from), lte(baljuoraSalesLines.saleDate, to), revenueWhere());
-    const todayWhere = and(eq(baljuoraSalesLines.saleDate, today), revenueWhere());
+    // 계산 기준(2026-11-27): 발주오라 대시보드와 같게 — 배송비 포함 · 주문 상품 줄 · 전량 취소·반품 줄 뺌(주문 동기화 때 발주오라 숫자로 맞춰 고름)
+    const { basis } = await getSalesBasis();
+    const b = basisSql(basis);
+    const inRange = and(gte(baljuoraSalesLines.saleDate, from), lte(baljuoraSalesLines.saleDate, to), b.status);
+    const todayWhere = and(eq(baljuoraSalesLines.saleDate, today), b.status);
     const previous = shiftDays(from, to);
-    const previousWhere = and(gte(baljuoraSalesLines.saleDate, previous.start), lte(baljuoraSalesLines.saleDate, previous.end), revenueWhere());
+    const previousWhere = and(gte(baljuoraSalesLines.saleDate, previous.start), lte(baljuoraSalesLines.saleDate, previous.end), b.status);
 
     const supplierKey = sql<string>`coalesce(nullif(trim(${baljuoraSalesLines.supplierName}), ''), '(공급사 미지정)')`;
     const buyerKey = sql<string>`coalesce(${baljuoraSalesLines.sellerId}, ${baljuoraSalesLines.sellerName}, '(매출처 미지정)')`;
     const [totals, todayTotals, previousTotals, pendingRows, daily, products10, todayTop, suppliers10, categoryRows, buyers10, anyRows, categoryNames, syncState] = await Promise.all([
-      totalsFor(inRange),
-      totalsFor(todayWhere),
-      totalsFor(previousWhere),
+      totalsFor(inRange, b),
+      totalsFor(todayWhere, b),
+      totalsFor(previousWhere, b),
       db.select({ count: sql<number>`count(*)`, amount: sql<number>`coalesce(sum(${baljuoraSalesLines.amount}), 0)` }).from(baljuoraSalesLines)
         .where(and(gte(baljuoraSalesLines.saleDate, from), lte(baljuoraSalesLines.saleDate, to), sql`lower(${baljuoraSalesLines.status}) = 'pending'`)),
-      db.select({ date: baljuoraSalesLines.saleDate, amount: sql<number>`sum(${baljuoraSalesLines.amount})`, orders: sql<number>`count(distinct coalesce(${baljuoraSalesLines.orderId}, ${baljuoraSalesLines.id}))`, quantity: sql<number>`sum(${baljuoraSalesLines.netQuantity})` })
+      db.select({ date: baljuoraSalesLines.saleDate, amount: b.amount, orders: b.orders, quantity: b.quantity })
         .from(baljuoraSalesLines).where(inRange).groupBy(baljuoraSalesLines.saleDate).orderBy(asc(baljuoraSalesLines.saleDate)),
-      topProducts(inRange, 10),
-      topProducts(todayWhere, 5),
-      db.select({ name: supplierKey, amount: sql<number>`sum(${baljuoraSalesLines.amount})`, quantity: sql<number>`sum(${baljuoraSalesLines.netQuantity})`, products: sql<number>`count(distinct coalesce(${baljuoraSalesLines.productId}, ${baljuoraSalesLines.baljuoraProductId}, ${baljuoraSalesLines.productName}))` })
-        .from(baljuoraSalesLines).where(inRange).groupBy(supplierKey).orderBy(sql`sum(${baljuoraSalesLines.amount}) desc`).limit(10),
-      db.select({ categoryId: baljuoraSalesLines.categoryId, amount: sql<number>`sum(${baljuoraSalesLines.amount})`, quantity: sql<number>`sum(${baljuoraSalesLines.netQuantity})` })
-        .from(baljuoraSalesLines).where(inRange).groupBy(baljuoraSalesLines.categoryId).orderBy(sql`sum(${baljuoraSalesLines.amount}) desc`),
-      db.select({ key: buyerKey, name: sql<string>`coalesce(max(${baljuoraSalesLines.sellerName}), '(매출처 미지정)')`, amount: sql<number>`sum(${baljuoraSalesLines.amount})`, orders: sql<number>`count(distinct coalesce(${baljuoraSalesLines.orderId}, ${baljuoraSalesLines.id}))`, quantity: sql<number>`sum(${baljuoraSalesLines.netQuantity})` })
-        .from(baljuoraSalesLines).where(inRange).groupBy(buyerKey).orderBy(sql`sum(${baljuoraSalesLines.amount}) desc`).limit(10),
+      topProducts(inRange, 10, b),
+      topProducts(todayWhere, 5, b),
+      db.select({ name: supplierKey, amount: b.amount, quantity: b.quantity, products: b.products })
+        .from(baljuoraSalesLines).where(inRange).groupBy(supplierKey).having(sql`${b.lines} > 0`).orderBy(sql`${b.amount} desc`).limit(10),
+      db.select({ categoryId: baljuoraSalesLines.categoryId, amount: b.amount, quantity: b.quantity })
+        .from(baljuoraSalesLines).where(inRange).groupBy(baljuoraSalesLines.categoryId).having(sql`${b.lines} > 0`).orderBy(sql`${b.amount} desc`),
+      db.select({ key: buyerKey, name: sql<string>`coalesce(max(${baljuoraSalesLines.sellerName}), '(매출처 미지정)')`, amount: b.amount, orders: b.orders, quantity: b.quantity })
+        .from(baljuoraSalesLines).where(inRange).groupBy(buyerKey).having(sql`${b.lines} > 0`).orderBy(sql`${b.amount} desc`).limit(10),
       db.select({ id: baljuoraSalesLines.id }).from(baljuoraSalesLines).limit(1),
       db.select({ id: categories.id, name: categories.name }).from(categories),
       getSalesSyncState()
@@ -751,6 +958,9 @@ export async function getSalesDashboard(input: { from?: string | null; to?: stri
       topSuppliers: suppliers10.map((row) => ({ name: row.name, amount: Number(row.amount), quantity: Number(row.quantity), products: Number(row.products) })),
       categories: categoryRows.map((row) => named({ categoryId: row.categoryId, amount: Number(row.amount), quantity: Number(row.quantity) })),
       topBuyers: buyers10.map((row) => ({ key: row.key, name: row.name, amount: Number(row.amount), orders: Number(row.orders), quantity: Number(row.quantity) })),
+      // 숫자 계산 기준(화면 작은 글씨 "배송비 포함 · 주문 상품 줄 수 …")
+      basis,
+      basisText: describeSalesBasis(basis),
       sync: syncState
     };
   });
@@ -790,12 +1000,15 @@ export async function listBuyers(input: { search?: string | null } = {}) {
     const month = seoulDateKey().slice(0, 7);
     const { start, end } = monthRange(month);
     const buyerKey = sql<string>`coalesce(${baljuoraSalesLines.sellerId}, 'name:' || ${baljuoraSalesLines.sellerName})`;
+    // 판매 현황과 같은 계산 기준(발주오라 대시보드와 맞춤: 배송비 포함 · 주문 상품 줄 …)
+    const { basis } = await getSalesBasis();
+    const b = basisSql(basis);
     const [rows, stats, monthStats, state] = await Promise.all([
       db.select().from(baljuoraBuyers).orderBy(asc(baljuoraBuyers.companyName)),
-      db.select({ key: buyerKey, name: sql<string | null>`max(${baljuoraSalesLines.sellerName})`, amount: sql<number>`sum(${baljuoraSalesLines.amount})`, orders: sql<number>`count(distinct coalesce(${baljuoraSalesLines.orderId}, ${baljuoraSalesLines.id}))`, lastDate: sql<string>`max(${baljuoraSalesLines.saleDate})` })
-        .from(baljuoraSalesLines).where(revenueWhere()).groupBy(buyerKey),
-      db.select({ key: buyerKey, amount: sql<number>`sum(${baljuoraSalesLines.amount})` })
-        .from(baljuoraSalesLines).where(and(gte(baljuoraSalesLines.saleDate, start), lte(baljuoraSalesLines.saleDate, end), revenueWhere())).groupBy(buyerKey),
+      db.select({ key: buyerKey, name: sql<string | null>`max(${baljuoraSalesLines.sellerName})`, amount: b.amount, orders: b.orders, lastDate: sql<string>`max(${baljuoraSalesLines.saleDate})` })
+        .from(baljuoraSalesLines).where(b.status).groupBy(buyerKey),
+      db.select({ key: buyerKey, amount: b.amount })
+        .from(baljuoraSalesLines).where(and(gte(baljuoraSalesLines.saleDate, start), lte(baljuoraSalesLines.saleDate, end), b.status)).groupBy(buyerKey),
       getSalesSyncState()
     ]);
     const statByKey = new Map(stats.map((row) => [row.key, row]));

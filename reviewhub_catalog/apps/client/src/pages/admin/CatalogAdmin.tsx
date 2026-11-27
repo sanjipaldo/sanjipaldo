@@ -78,6 +78,7 @@ import { GroupTag, ProductGroupField, SINGLE_GROUP_VALUE, suggestGroupFor, useGr
 import { PARTNER_CONTRACT_LABELS, PARTNER_CONTRACT_TYPES, PARTNER_STAGES, PARTNER_STAGE_LABELS, partnerContractSummary, type PartnerContractType, type PartnerStage } from "@repo/shared/partner-deal";
 import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_GUIDE_SETTING_KEY, SUPPLIER_TERM_LABELS, SUPPLIER_VIDEO_GROUPS, hasSupplierDemo, parseSupplierGuide, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideTerms, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
 import { SELLER_GUIDE_SETTING_KEY, SELLER_VIDEO_GROUPS, hasSellerDemo, parseSellerGuide, type SellerGuideSettings } from "@repo/shared/seller-guide";
+import { baljuoraNumbers, sortByBaljuoraOrder } from "@/lib/baljuora-number";
 import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 import type { AdminCatalogData, AdminHomeData, Category, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
@@ -996,6 +997,10 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
   );
 }
 
+type ProductStatusFilter = "all" | "selling" | "visible" | "hidden" | "soldout" | "seasonended";
+type BaljuoraProductOrder = { index: Map<string, number>; comparedAt: string | null; exact: number; linked: number };
+const PRODUCT_SORT_KEY = "doogo:admin-products-sort";
+
 function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: AdminCatalogData; refresh: (silent?: boolean) => Promise<void>; updateData: Dispatch<SetStateAction<AdminCatalogData>>; sortOnly?: boolean }) {
   const [query, setQuery] = useState("");
   const [month, setMonth] = useState("all");
@@ -1003,10 +1008,10 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const [categoryFilter, setCategoryFilter] = useState("all");
   const currentMonth = seoulCurrentMonth();
   // 오늘 운영 팝업의 "품절 전환" 링크(/admin/products?status=soldout)로 들어오면 품절 상품만 보여 줍니다.
-  const [statusFilter, setStatusFilter] = useState<"all" | "visible" | "soldout" | "seasonended">(() => {
+  const [statusFilter, setStatusFilter] = useState<ProductStatusFilter>(() => {
     try {
       const status = new URLSearchParams(window.location.search).get("status");
-      return status === "soldout" || status === "visible" || status === "seasonended" ? status : "all";
+      return status === "soldout" || status === "visible" || status === "seasonended" || status === "selling" || status === "hidden" ? status : "all";
     } catch {
       return "all";
     }
@@ -1114,7 +1119,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       .catch(() => undefined)
       .finally(() => setHydrating(false));
   }, [data.isPartial, hydrating, updateData]);
-  const products = useMemo(() => {
+  const filteredProducts = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return data.products.filter((product) => {
       const category = data.categories.find((item) => item.id === product.categoryId);
@@ -1124,11 +1129,48 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       const matchesMonth = month === "all" || !seasonApplies(product, category) || product.isAlwaysOnSale || (product.saleStartMonth !== null && product.saleEndMonth !== null && (product.saleStartMonth <= product.saleEndMonth ? Number(month) >= product.saleStartMonth && Number(month) <= product.saleEndMonth : Number(month) >= product.saleStartMonth || Number(month) <= product.saleEndMonth));
       const matchesStatus = statusFilter === "all"
         || (statusFilter === "visible" && product.isVisible)
+        || (statusFilter === "hidden" && !product.isVisible)
+        // 판매중 = 품절도 시즌종료(직접 지정)도 아님 — 발주오라 '판매중'과 같은 기준(발주오라와 똑같이 맞추기와 같음)
+        || (statusFilter === "selling" && !product.isSoldOut && !product.isSeasonEnded)
         || (statusFilter === "soldout" && (product.isSoldOut || product.options?.some((option) => option.isSoldOut)))
         || (statusFilter === "seasonended" && supplyStatus(product, seasonApplies(product, category), currentMonth) === "season_ended");
       return matchesQuery && matchesShipping && matchesCategory && matchesMonth && matchesStatus;
     });
   }, [categoryFilter, currentMonth, data.categories, data.products, month, query, shippingFilter, statusFilter]);
+  // 발주오라 번호(2026-11-27 관리자 요청 "줄 앞 숫자를 발주오라처럼 · 전체 상품에서 맨 위 2998, 맨 아래 1 · 상품 숫자까지 똑같이"):
+  // 발주오라 상품 리스트는 등록일시 최신순이고 줄 앞 숫자 = 지금 목록의 상품 수 − 순서입니다. 서버가 DB센터 상품을 같은 순서(발주오라 등록일시
+  // → 같은 때 등록이면 비교 때 발주오라 목록 순서)로 주면, 지금 목록(검색·거르기 뒤) 안에서 같은 식으로 번호를 붙입니다. 목록 순서도 기본은
+  // 발주오라 순서이고 '노출순서'로 바꿀 수 있습니다(이 기기에 기억).
+  const [baljuoraOrder, setBaljuoraOrder] = useState<BaljuoraProductOrder | null>(null);
+  useEffect(() => {
+    if (sortOnly) return;
+    let cancelled = false;
+    void apiFetch("/baljuora/admin/product-order", { silent: true }).then(async (response) => {
+      if (!response.ok) return;
+      const payload = await readData<{ ids: string[]; comparedAt: string | null; exact: number; linked: number; total: number }>(response);
+      if (!cancelled) setBaljuoraOrder({ index: new Map(payload.ids.map((id, position) => [id, position])), comparedAt: payload.comparedAt, exact: payload.exact, linked: payload.linked });
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [sortOnly, data.products.length]);
+  const [productSort, setProductSort] = useState<"baljuora" | "display">(() => {
+    try {
+      return window.localStorage.getItem(PRODUCT_SORT_KEY) === "display" ? "display" : "baljuora";
+    } catch {
+      return "baljuora";
+    }
+  });
+  const changeProductSort = (value: "baljuora" | "display") => {
+    setProductSort(value);
+    try {
+      window.localStorage.setItem(PRODUCT_SORT_KEY, value);
+    } catch {
+      // 저장이 막힌 브라우저는 이 화면에서만 기억합니다.
+    }
+  };
+  // 발주오라 순서로 줄 세운 지금 목록(서버 순서에 없는 상품 = 방금 등록한 상품은 맨 위) → 번호 = 목록 상품 수 − 순서
+  const baljuoraSorted = useMemo(() => (baljuoraOrder ? sortByBaljuoraOrder(filteredProducts, baljuoraOrder.index) : null), [baljuoraOrder, filteredProducts]);
+  const baljuoraNumber = useMemo(() => baljuoraNumbers(baljuoraSorted ?? []), [baljuoraSorted]);
+  const products = productSort === "baljuora" && baljuoraSorted ? baljuoraSorted : filteredProducts;
   const pageCount = Math.max(1, Math.ceil(products.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const pagedProducts = products.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -1146,7 +1188,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const pageNumbers = buildPageNumbers(pageCount, currentPage).filter((value): value is number => value !== "ellipsis");
   useEffect(() => {
     setPage(1);
-  }, [query, month, shippingFilter, categoryFilter, statusFilter, pageSize]);
+  }, [query, month, shippingFilter, categoryFilter, statusFilter, pageSize, productSort]);
   useEffect(() => {
     if (page > pageCount) setPage(pageCount);
   }, [page, pageCount]);
@@ -1758,7 +1800,8 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
           <select value={shippingFilter} onChange={(event) => { setShippingFilter(event.target.value as "all" | ShippingType); setCategoryFilter("all"); }}><option value="all">전체 배송</option><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select>
           <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="all">전체 카테고리</option>{visibleCategories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select>
           <select className="admin-month-filter" value={month} onChange={(event) => setMonth(event.target.value)}><option value="all">전체 판매월</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((value) => <option key={value} value={String(value)}>{value}월 상품</option>)}</select>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "visible" | "soldout" | "seasonended")}><option value="all">전체 상태</option><option value="visible">노출 상품</option><option value="soldout">품절 상품</option><option value="seasonended">시즌종료 상품</option></select>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as ProductStatusFilter)}><option value="all">전체 상태</option><option value="selling">판매중 상품</option><option value="soldout">품절 상품</option><option value="visible">노출 상품</option><option value="hidden">숨김(미노출) 상품</option><option value="seasonended">시즌종료 상품</option></select>
+          <select className="product-sort-select" value={productSort} onChange={(event) => changeProductSort(event.target.value as "baljuora" | "display")} aria-label="목록 순서" title="발주오라 순서 = 발주오라 상품 리스트처럼 최근 등록한 상품이 위(줄 앞 번호가 큰 순서)"><option value="baljuora">발주오라 순서(최근 등록순)</option><option value="display">노출순서</option></select>
           <PageSizeInput value={pageSize} onChange={setPageSize} label="페이지당 상품 수" suffix="개씩 보기" storageKey="admin-products" />
           <button type="button" className="filter-reset" onClick={() => { setQuery(""); setShippingFilter("all"); setCategoryFilter("all"); setMonth("all"); setStatusFilter("all"); }}>초기화</button>
           <span>총 {(data.isPartial ? data.catalogTotals?.productCount ?? products.length : products.length).toLocaleString("ko-KR")}개{hydrating ? " · 전체 목록 준비 중" : ""}</span>
@@ -1778,7 +1821,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
           </div>
           <div className="bulk-main-actions">{groupTools.ready && <button type="button" className="bulk-group-action" onClick={() => setGroupSelectionOpen(true)} disabled={quickBusy} title="고른 상품을 공개 단가표에서 카드 하나의 옵션으로 묶습니다"><Layers size={15} /> 옵션 묶기</button>}<button type="button" className="bulk-delete" onClick={() => void bulkDelete()} disabled={quickBusy}><Trash2 size={15} /> 선택 삭제</button><button type="button" className="primary-action" onClick={() => setBulkEditOpen("all")} disabled={quickBusy}><Pencil size={15} /> 상세 일괄 변경</button><button type="button" onClick={() => setSelectedProductIds(new Set())} disabled={quickBusy}>선택 해제</button></div>
         </div>}
-        <div className="admin-table-wrap product-admin-table-wrap" id="admin-product-list"><table className="admin-table product-admin-table"><thead><tr><th className="product-select-column"><label className="product-select-control"><input type="checkbox" ref={(element) => { if (element) element.indeterminate = selectedOnCurrentPage > 0 && !allCurrentPageSelected; }} checked={allCurrentPageSelected} onChange={toggleCurrentPageSelection} aria-label="현재 페이지 상품 전체 선택" /><span>선택</span></label></th><th>상품정보</th><th>노출순서</th><th>배송/카테고리</th><th>판매기간</th><th>매입처</th><th>원가</th><th>수강생 단가</th><th>일반공급가</th><th>판매가</th><th>마진(1개)</th><th>상태</th><th>관리</th></tr></thead><tbody>
+        <div className="admin-table-wrap product-admin-table-wrap" id="admin-product-list"><table className="admin-table product-admin-table"><thead><tr><th className="product-select-column">{baljuoraSorted && <span className="product-no-head" title="발주오라 번호: 발주오라 상품 리스트 줄 앞 숫자와 같아요(지금 목록에서 최근 등록한 상품이 가장 큰 번호)">No.</span>}<label className="product-select-control"><input type="checkbox" ref={(element) => { if (element) element.indeterminate = selectedOnCurrentPage > 0 && !allCurrentPageSelected; }} checked={allCurrentPageSelected} onChange={toggleCurrentPageSelection} aria-label="현재 페이지 상품 전체 선택" /><span>선택</span></label></th><th>상품정보</th><th>노출순서</th><th>배송/카테고리</th><th>판매기간</th><th>매입처</th><th>원가</th><th>수강생 단가</th><th>일반공급가</th><th>판매가</th><th>마진(1개)</th><th>상태</th><th>관리</th></tr></thead><tbody>
           {pagedProducts.map((product) => {
             const options = product.options ?? [];
             const representativeOption = options.length > 0
@@ -1808,7 +1851,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             return (
               <Fragment key={product.id}>
                 <tr className={`${expanded ? "expanded " : ""}${rowStatus !== "on_sale" ? `is-unavailable is-${rowStatus}` : ""}`.trim()}>
-                  <td className="product-select-cell" data-label="선택"><label className="product-select-control"><input type="checkbox" checked={selectedProductIds.has(product.id)} onChange={() => toggleProductSelection(product.id)} aria-label={`${product.name} 선택`} /><span>선택</span></label></td>
+                  <td className="product-select-cell" data-label="선택">{baljuoraNumber.has(product.id) && <span className="product-no" title="발주오라 번호(발주오라 상품 리스트 줄 앞 숫자와 같음)" aria-label={`발주오라 번호 ${baljuoraNumber.get(product.id)}`}>{baljuoraNumber.get(product.id)}</span>}<label className="product-select-control"><input type="checkbox" checked={selectedProductIds.has(product.id)} onChange={() => toggleProductSelection(product.id)} aria-label={`${product.name} 선택`} /><span>선택</span></label></td>
                   <td className="admin-product-primary"><div className="admin-product-cell">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={20} /></span>}<div className="admin-product-copy"><strong>{product.name}</strong><small>{product.productCode || product.id} · {product.origin || "-"}</small><GroupTag membership={groupTools.memberships[product.id]} auto={groupTools.auto[product.id]} excluded={groupTools.excluded.has(product.id)} />{options.length > 0 && <button type="button" className="admin-option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? "옵션 접기" : `옵션 ${options.length}개 보기`} <ChevronRight size={14} /></button>}</div></div>{optionPanel && <div className="admin-inline-options">{optionPanel}</div>}</td>
                   <td data-label="노출순서"><strong className="display-order-number">{productOrderMap.get(product.id) ?? "-"}</strong></td>
                   <td data-label="배송·카테고리"><strong>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</strong><small>{category?.name || "-"}</small></td>

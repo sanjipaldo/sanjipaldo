@@ -4020,3 +4020,14 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .supplier-return-bar { min-height: 40px; padding: 5px 12px; }
   .supplier-return-link { min-height: 30px; padding: 0 12px; }
 }
+
+/* 상품 리스트 '발주오라 번호'(2026-11-27 관리자 요청 "줄 앞 숫자를 발주오라처럼"): 지금 목록에서 최근 등록한 상품이 가장 큰 번호.
+   PC·태블릿 표는 체크칸 위, 휴대폰 카드는 오른쪽 위 '선택' 알약 왼쪽에 둡니다. */
+.product-no-head { display: block; margin: 0 auto 3px; color: #667b70; font-size: 10px; font-weight: 850; letter-spacing: .02em; }
+.product-no { display: block; margin: 0 auto 4px; color: #26301f; font-size: 12.5px; font-weight: 850; font-variant-numeric: tabular-nums; line-height: 1.2; white-space: nowrap; }
+.product-sort-select { min-width: 0; }
+@media (max-width: 720px) {
+  /* 카드 칸(stackable-table td)은 세로 쌓기라, 번호와 '선택' 알약은 가로로 나란히 */
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > .product-select-cell { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > .product-select-cell .product-no { display: inline-flex; align-items: center; min-height: 38px; margin: 0; padding: 0 12px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-ink); background: var(--w-soft-2, #f2f4f1); font-size: 14px !important; font-weight: 800; }
+}

@@ -201,14 +201,16 @@ describe("발주오라 판매·매출처 → 판매 현황·매출처·홈택스
     // 상품 썸네일(2026-11-24): DB센터 상품과 이어진 줄만 그 상품 이미지
     expect(summary.topProducts.find((item: any) => item.name === "사과 5kg")?.imageUrl).toBe("https://img.test/apple.jpg");
     expect(summary.topProducts.find((item: any) => item.name === "발주오라에만 있는 김")?.imageUrl).toBeNull();
-    expect(summary.totals).toMatchObject({ amount: 52000 + 76000 + 33000 + 20000, quantity: 2 + 2 + 1 + 4, orders: 4, buyers: 2, returnAmount: 38000 });
+    // 판매 금액은 발주오라 대시보드처럼 '배송비 포함'(2026-11-27): i-2의 매출 배송비 3,000원이 더해짐 · 주문 = 주문 상품 줄 수
+    expect(summary.basisText).toBe("배송비 포함 · 주문 상품 줄 수 · 전량 취소·반품 줄 뺌 · 주문대기 뺌");
+    expect(summary.totals).toMatchObject({ amount: 52000 + 76000 + 3000 + 33000 + 20000, quantity: 2 + 2 + 1 + 4, orders: 4, buyers: 2, returnAmount: 38000 });
     expect(summary.pending).toEqual({ count: 1, amount: 130000 });
-    expect(summary.topProducts.map((item: any) => [item.name, item.amount])).toEqual([["배 7kg", 76000], ["사과 5kg", 52000], ["홍삼정", 33000], ["발주오라에만 있는 김", 20000]]);
-    expect(summary.topSuppliers.map((item: any) => [item.name, item.amount])).toEqual([["봄날농원", 128000], ["바다상회", 33000], ["김공장", 20000]]);
-    expect(summary.categories.map((item: any) => [item.categoryName, item.amount])).toEqual([["🥕 농산", 128000], ["💊 건강식품", 33000], ["DB센터 미연결 상품", 20000]]);
+    expect(summary.topProducts.map((item: any) => [item.name, item.amount])).toEqual([["배 7kg", 79000], ["사과 5kg", 52000], ["홍삼정", 33000], ["발주오라에만 있는 김", 20000]]);
+    expect(summary.topSuppliers.map((item: any) => [item.name, item.amount])).toEqual([["봄날농원", 131000], ["바다상회", 33000], ["김공장", 20000]]);
+    expect(summary.categories.map((item: any) => [item.categoryName, item.amount])).toEqual([["🥕 농산", 131000], ["💊 건강식품", 33000], ["DB센터 미연결 상품", 20000]]);
     // 매출처 id가 없는 줄(i-5)은 상호로 같은 매출처에 붙임
-    expect(summary.topBuyers.map((item: any) => [item.name, item.amount])).toEqual([["그린마켓", 148000], ["해변상점", 33000]]);
-    expect(summary.todaySales.totals.amount).toBe(today === firstDay ? 181000 : 53000);
+    expect(summary.topBuyers.map((item: any) => [item.name, item.amount])).toEqual([["그린마켓", 151000], ["해변상점", 33000]]);
+    expect(summary.todaySales.totals.amount).toBe(today === firstDay ? 184000 : 53000);
     expect(summary.sync).toMatchObject({ complete: true, lines: 5, buyers: 2 });
 
     // 공급사 센터용 판매 내역(supplier_sales): 공급사·날짜·상품별 판매 + 반품(취소 수량)
@@ -225,7 +227,8 @@ describe("발주오라 판매·매출처 → 판매 현황·매출처·홈택스
     const buyers = await call<any>(admin, "/admin/buyers");
     expect(buyers.total).toBe(2);
     const green = buyers.buyers.find((item: any) => item.id === "s-green");
-    expect(green).toMatchObject({ companyName: "그린마켓", groupName: "황금농부 수강생", totalAmount: 148000, monthAmount: 148000, orderCount: 3, invoiceProblems: [] });
+    // 매출처 매출도 판매 현황과 같은 기준(배송비 포함 · 주문 상품 줄 수, 2026-11-27)
+    expect(green).toMatchObject({ companyName: "그린마켓", groupName: "황금농부 수강생", totalAmount: 151000, monthAmount: 151000, orderCount: 3, invoiceProblems: [] });
     expect(buyers.unknownSellers).toEqual([]);
     const sea = buyers.buyers.find((item: any) => item.id === "s-sea");
     expect(sea.invoiceProblems).toEqual(["대표자 성명 없음"]);

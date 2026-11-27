@@ -698,7 +698,7 @@ export function BaljuoraSyncAdmin() {
       />
 
       {/* DB센터 ↔ 발주오라 상품 수 맞춰 보기(2026-11-27 관리자 요청 "발주오라 2,998개인데 DB센터 2,143개 — 왜 안 맞아?") */}
-      <BaljuoraReconcileCard stamp={changes} disabled={Boolean(busy) || jobActive} onChanged={load} />
+      <BaljuoraReconcileCard stamp={changes} disabled={Boolean(busy) || jobActive} onChanged={load} onCompare={() => startJob({ type: "compare" }, "compare")} />
 
       {stat && (
         <BaljuoraStatModal

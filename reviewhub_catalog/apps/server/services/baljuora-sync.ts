@@ -7,7 +7,7 @@
 // - 작업 코드는 SHA-256만 저장, 30분 뒤 만료. 발주오라 로그인 토큰은 서버로 오지 않습니다.
 // - 설정·마지막 비교 결과(매입원가 포함)는 공개 단가표가 내보내는 content_settings가 아니라 baljuora_sync_store에 둡니다.
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import {
   BALJUORA_CODE_ALPHABET,
   BALJUORA_CODE_LENGTH,
@@ -57,7 +57,7 @@ import {
 } from "@repo/shared/baljuora-sync";
 import { DatabaseError, getDb } from "../_core/db";
 import { baljuoraSalesLines, baljuoraSyncJobs, baljuoraSyncStore, categories, externalProductLinks, products, shippingPolicies, subcategories, type BaljuoraSyncJob } from "../db/schema";
-import { addSuppliersFromSalesLines, finalizeSalesSync, ingestBaljuoraSuppliers, ingestBuyers, ingestProductTax, ingestSalesLines, isMissingSalesTable, knownTaxProductIds, orderSyncFacts, salesRangeFor } from "./baljuora-sales";
+import { addSuppliersFromSalesLines, finalizeSalesSync, ingestBaljuoraDashboard, ingestBaljuoraSuppliers, ingestBuyers, ingestProductTax, ingestSalesLines, isMissingSalesTable, knownTaxProductIds, orderSyncFacts, salesRangeFor } from "./baljuora-sales";
 import { asProductInput } from "./catalog-excel";
 import { createCategory, createProduct, createShippingPolicy, createSubcategory, getAdminCatalog, restoreDeletedProduct, updateProduct } from "./catalog";
 import { emptyProductExtras, type ProductExtras } from "@repo/shared/product-extras";
@@ -68,6 +68,9 @@ const STORE_SETTINGS = "settings";
 const STORE_CATEGORIES = "categories";
 const STORE_GROUP = "group";
 const STORE_ONLY = "baljuora_only";
+// 발주오라 상품 순서(2026-11-27 관리자 요청 "상품 리스트 줄 앞 숫자를 발주오라처럼"): 마지막으로 끝까지 읽은 비교의
+// 발주오라 상품마다 [등록일시 ms(모르면 0), 목록 순서(0 = 맨 위 = 가장 최근 등록)]. 상품 리스트 '발주오라 번호'에 씁니다.
+const STORE_ORDER = "baljuora_order";
 // 마지막 비교 때 읽은 발주오라 배송비 정책(매출배송정책) 목록
 const STORE_POLICIES = "shipping_policies";
 const MAX_SNAPSHOTS_PER_POST = 1000;
@@ -151,7 +154,8 @@ export type PushPlanItem = {
 
 // 판매·매출처 읽기(책갈피): start~end(주문일, 한국 날짜) 주문 상품 줄 + 매출처 회원. knownTax = 과세 여부를 이미 아는 발주오라 상품 id.
 // suppliers = 발주오라 매입처 목록도 읽어 DB센터 공급사 관리에 없는 곳을 등록(운영 홈 '주문 동기화'만, 2026-11-27).
-export type SalesStep = { start: string; end: string; buyers: boolean; knownTax: string[]; suppliers?: boolean };
+// dashboard = 발주오라 대시보드 숫자(statistics/…)도 읽어 DB센터 판매 숫자와 맞춰 봄(책갈피 1.11.0, 2026-11-27).
+export type SalesStep = { start: string; end: string; buyers: boolean; knownTax: string[]; suppliers?: boolean; dashboard?: boolean };
 // 운영 홈 동기화 버튼(2026-11-27): orders = 주문 동기화(발주오라 → DB센터 주문·매출처·매입처), products = 상품 동기화(비교 → DB센터 변경 보내기)
 export type OpsSyncKind = "orders" | "products";
 // daily: 운영 홈 '발주오라 → DB센터 동기화'(아침 동기화, 2026-11-26) — 판매·매출처를 늘 함께 읽고, 끝나면 운영 홈이 발주오라 변경을 DB센터에 반영합니다.
@@ -203,6 +207,8 @@ export type RunnerResultInput = {
   // 발주오라 매입처(1.10.0, 주문 동기화): 목록 · 읽지 못했으면 그 까닭
   suppliers?: unknown[];
   supplierError?: string | null;
+  // 발주오라 대시보드 숫자(1.11.0, 주문 동기화): statistics/… 응답 그대로(받는 사람 정보 칸은 책갈피가 뺌)
+  dashboard?: unknown;
 };
 
 export type CategoryTreeResult = {
@@ -228,14 +234,32 @@ type JobResults = {
   received: number;
   bundles?: number;
   categoryTree?: CategoryTreeResult;
-  sales?: { lines: number; buyers: number; taxRead: number; done: boolean; complete: boolean; error: string | null; suppliers?: SupplierSyncResult };
+  sales?: { lines: number; buyers: number; taxRead: number; done: boolean; complete: boolean; error: string | null; suppliers?: SupplierSyncResult; dashboard?: { read: number; failed: number } };
   // 비교 때 읽은 발주오라 상품 수(묶음 제외): 전체 · 판매중 · 품절 · 노출 · 미노출 · 미노출이면서 품절(2026-11-27)
   states?: BaljuoraStateCounts;
+  // 비교 중에만: 발주오라 상품 id → [등록일시 ms, 목록 순서]. 끝까지 읽으면 STORE_ORDER로 옮기고 작업 기록에서는 뺍니다.
+  order?: Record<string, [number, number]>;
 };
 export type BaljuoraStateCounts = { total: number; selling: number; soldOut: number; visible: number; hidden: number; hiddenSoldOut: number };
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+// ISO("2026-11-27T12:00:00.000Z")와 SQLite 기본값("2026-11-27 12:00:00", UTC)을 같은 기준(ms)으로 읽습니다. 못 읽으면 null.
+function timeMs(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const text = String(value).trim();
+  if (!text) return null;
+  const ms = Date.parse(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(text) ? `${text.replace(" ", "T")}Z` : text);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** 발주오라 상품 id(UUIDv7)의 앞 48비트 = 만든 시각(ms). UUIDv7이 아니면 null. */
+export function uuidV7Time(id: string | null | undefined): number | null {
+  if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return null;
+  const ms = Number.parseInt(id.replace(/-/g, "").slice(0, 12), 16);
+  return Number.isFinite(ms) && ms > 0 ? ms : null;
 }
 
 function isMissingTable(error: unknown) {
@@ -593,7 +617,8 @@ export type CreateJobInput =
 async function buildSalesStep(months: number): Promise<SalesStep | null> {
   try {
     const range = salesRangeFor(months);
-    return { ...range, buyers: true, knownTax: await knownTaxProductIds() };
+    // dashboard: 발주오라 대시보드 숫자(statistics/…)도 함께 읽어 DB센터 판매 숫자와 맞춰 봅니다(책갈피 1.11.0).
+    return { ...range, buyers: true, knownTax: await knownTaxProductIds(), dashboard: true };
   } catch (error) {
     if (isMissingSalesTable(error)) return null;
     throw error;
@@ -994,6 +1019,9 @@ function sanitizeSnapshot(input: unknown): BaljuoraProductSnapshot | null {
     isSoldOut: bool(record.isSoldOut),
     updatedAt: typeof record.updatedAt === "string" ? record.updatedAt.slice(0, 40) : null
   };
+  // 발주오라 등록일시·목록 순서(책갈피 1.11.0부터): 상품 리스트 '발주오라 번호'에 씁니다.
+  if (typeof record.createdAt === "string" && record.createdAt.trim()) snapshot.createdAt = record.createdAt.trim().slice(0, 40);
+  if (typeof record.position === "number" && Number.isInteger(record.position) && record.position >= 0 && record.position < 1_000_000) snapshot.position = record.position;
   // 과세 여부(1.7.0부터): 홈택스 세금계산서/계산서 나누기에 씁니다.
   if (typeof record.isTaxable === "boolean") snapshot.isTaxable = record.isTaxable;
   if ("groupPrice" in record && record.groupPrice !== undefined) snapshot.groupPrice = toPrice(record.groupPrice);
@@ -1133,6 +1161,9 @@ async function ingestCompareBatch(snapshots: BaljuoraProductSnapshot[], results:
       results.bundles = (results.bundles ?? 0) + 1;
       continue;
     }
+    // 발주오라 상품 리스트 순서(등록일시 최신순): 책갈피 1.11.0부터 등록일시·목록 순서를 보내고, 예전 책갈피면 도착 순서(= 목록 순서)를 씁니다.
+    const order = results.order ?? (results.order = {});
+    order[snapshot.id] = [timeMs(snapshot.createdAt) ?? 0, typeof snapshot.position === "number" ? snapshot.position : results.received - 1];
     // 발주오라 상품 리스트와 같은 기준으로 셉니다(판매중·품절 · 노출·미노출 · 미노출이면서 품절) — 'DB센터 ↔ 발주오라 상품 수 맞춰 보기'
     states.total += 1;
     if (snapshot.isSoldOut === true) states.soldOut += 1;
@@ -1440,6 +1471,8 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
       const sales = results.sales ?? { lines: 0, buyers: 0, taxRead: 0, done: false, complete: false, error: null };
       if (input.productTax !== undefined) sales.taxRead += await ingestProductTax(input.productTax);
       if (Array.isArray(input.buyers) && input.buyers.length > 0) sales.buyers += await ingestBuyers(input.buyers);
+      // 발주오라 대시보드 숫자(1.11.0): 저장해 두고, 판매 줄을 끝까지 받으면(finalizeSalesSync) DB센터 계산 기준을 맞춰 봅니다.
+      if (input.dashboard !== undefined && input.dashboard !== null) sales.dashboard = await ingestBaljuoraDashboard(input.dashboard, row.id);
       // 주문 동기화: 발주오라 매입처 목록 → DB센터 공급사 관리에 없는 곳만 새로 등록(있는 공급사는 바꾸지 않음)
       const supplierMemo = `발주오라 매입처에서 가져옴(주문 동기화 ${seoulToday()})`;
       if (salesStep.suppliers) {
@@ -1475,7 +1508,8 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
     const final = Boolean(input.final);
     const fatal = input.error ? collapseName(String(input.error)).slice(0, 600) : null;
     const update: Partial<typeof baljuoraSyncJobs.$inferInsert> = {
-      results: JSON.stringify({ ...results, unmatched: plan.type === "compare" ? results.unmatched : [] }),
+      // 발주오라 상품 순서(order)는 비교 중에만 작업 기록에 두고, 끝나면 STORE_ORDER로 옮깁니다(작업 기록이 커지지 않게).
+      results: JSON.stringify({ ...results, order: final ? undefined : results.order, unmatched: plan.type === "compare" ? results.unmatched : [] }),
       diagnostics: JSON.stringify(diagnostics).slice(0, 150_000)
     };
     if (final) {
@@ -1485,6 +1519,8 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
       update.status = fatal && (plan.type === "compare" ? results.received === 0 : plan.type === "sales" ? !results.sales || (results.sales.lines === 0 && results.sales.buyers === 0) : results.items.length === 0 && !(results.categoryTree?.applied.length)) ? "failed" : "done";
       if (plan.type === "compare") {
         await writeStore(STORE_ONLY, results.unmatched.filter((snapshot) => snapshot.kind !== "bundle").slice(0, 5000));
+        // 끝까지 읽은 비교만 발주오라 상품 순서를 바꿉니다(중간에 멈춘 비교는 예전 순서 그대로 — 번호가 섞이지 않게).
+        if (!fatal && results.order && Object.keys(results.order).length > 0) await writeStore(STORE_ORDER, { at: nowIso(), jobId: row.id, items: results.order });
         update.summary = JSON.stringify({ received: results.received, linked: results.linked, baljuoraOnly: results.unmatched.filter((snapshot) => snapshot.kind !== "bundle").length, bundles: results.bundles ?? 0, states: results.states ?? null, sales: salesSummary, error: fatal });
         // 아침 동기화(운영 홈 버튼)면 DB센터 반영은 운영 홈이 이어서 한다고 알려 줍니다(책갈피 창·운영 홈 진행 칸에 보임).
         const dailyText = plan.daily && !fatal ? " DB센터 운영 홈에서 발주오라 변경을 반영해요." : "";
@@ -2200,6 +2236,73 @@ export type BaljuoraAlignState = {
   stateIds: string[];
   stateDetail: { soldOut: number; restock: number; seasonToSoldOut: number; show: number; hide: number };
 };
+
+export type BaljuoraProductOrder = {
+  // DB센터 상품 id — 발주오라 상품 리스트 순서(등록일시 최신순, 맨 앞 = 가장 최근)
+  ids: string[];
+  // 순서를 기록한 비교가 끝난 때(없으면 null = 아직 1.11.0 이상 책갈피로 끝까지 비교한 적 없음 → 발주오라 상품 id(UUIDv7) 시각으로 계산)
+  comparedAt: string | null;
+  total: number;
+  // 발주오라와 연결된 상품 수 · 그중 마지막 비교의 순서로 정한 상품 수
+  linked: number;
+  exact: number;
+};
+
+/**
+ * 상품 리스트 '발주오라 번호'(2026-11-27 관리자 요청 "발주오라처럼 줄 앞 숫자 · 전체 상품 중 맨 위 2998, 맨 아래 1"):
+ * 발주오라 상품 리스트는 등록일시 최신순이고 줄 앞 숫자는 (지금 목록의 상품 수 − 순서)입니다. DB센터도 같은 순서를 만들고
+ * 화면이 지금 목록(검색·거르기 뒤) 안에서 같은 식으로 번호를 붙입니다.
+ * 순서: 발주오라 등록일시(마지막 비교 기록 → 없으면 발주오라 상품 id(UUIDv7) 시각) → 같은 시각이면 비교 때 목록 순서 → 발주오라 상품 id.
+ * 발주오라와 이어지지 않은 상품(DB센터에만 있음)과 마지막 비교에서 발주오라에 없던 상품은 DB센터 등록일시로 끼워 넣습니다.
+ */
+export async function getBaljuoraProductOrder(): Promise<BaljuoraProductOrder> {
+  return guard(async () => {
+    const db = getDb();
+    const [rows, links, store] = await Promise.all([
+      db.select({ id: products.id, createdAt: products.createdAt }).from(products).where(isNull(products.deletedAt)),
+      db.select({ productId: externalProductLinks.productId, externalProductId: externalProductLinks.externalProductId, updatedAt: externalProductLinks.updatedAt })
+        .from(externalProductLinks).where(eq(externalProductLinks.provider, PROVIDER)),
+      readStore<{ at?: string; items?: Record<string, unknown> } | null>(STORE_ORDER, null)
+    ]);
+    const items = store && store.items && typeof store.items === "object" ? store.items : null;
+    const entryOf = (externalId: string): [number, number] | null => {
+      const value = items?.[externalId];
+      return Array.isArray(value) && typeof value[0] === "number" && typeof value[1] === "number" ? [value[0], value[1]] : null;
+    };
+    // DB센터 상품마다 쓸 연결: 마지막 비교 순서가 있는 연결 → 가장 최근에 적힌 연결
+    const chosen = new Map<string, { externalId: string; entry: [number, number] | null; updatedAt: string }>();
+    for (const link of links) {
+      const entry = entryOf(link.externalProductId);
+      const current = chosen.get(link.productId);
+      const updatedAt = link.updatedAt ?? "";
+      if (!current || (entry && !current.entry) || (Boolean(entry) === Boolean(current.entry) && updatedAt > current.updatedAt)) {
+        chosen.set(link.productId, { externalId: link.externalProductId, entry, updatedAt });
+      }
+    }
+    const keyed = rows.map((row) => {
+      const link = chosen.get(row.id);
+      // 마지막 비교 기록이 있는데 그 비교에 없던 발주오라 상품(발주오라에서 지움 등)은 DB센터에만 있는 상품처럼 DB센터 등록일시로
+      const usable = link && (link.entry || !items);
+      const time = (usable ? (link.entry?.[0] || uuidV7Time(link.externalId)) : null) || timeMs(row.createdAt) || 0;
+      return {
+        id: row.id,
+        time,
+        position: usable && link.entry ? link.entry[1] : Number.POSITIVE_INFINITY,
+        tie: usable ? link.externalId : row.id,
+        linked: Boolean(link),
+        exact: Boolean(usable && link.entry)
+      };
+    });
+    keyed.sort((first, second) => second.time - first.time || first.position - second.position || (first.tie < second.tie ? 1 : first.tie > second.tie ? -1 : 0));
+    return {
+      ids: keyed.map((item) => item.id),
+      comparedAt: items && typeof store?.at === "string" ? store.at : null,
+      total: keyed.length,
+      linked: keyed.filter((item) => item.linked).length,
+      exact: keyed.filter((item) => item.exact).length
+    };
+  });
+}
 
 export async function getBaljuoraAlignState(): Promise<BaljuoraAlignState> {
   return guard(async () => {

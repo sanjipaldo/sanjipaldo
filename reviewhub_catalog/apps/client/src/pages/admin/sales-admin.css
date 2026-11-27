@@ -481,3 +481,6 @@
   .inv-downloads button { flex: 1 1 0; justify-content: center; }
   .inv-paper { padding: 18px 14px 14px; border-radius: 12px; box-shadow: none; }
 }
+
+/* 판매 숫자 계산 기준(2026-11-27, 발주오라 대시보드와 같게: 배송비 포함 · 주문 상품 줄 수 …) */
+.sa-basis-note { margin: -4px 0 0; color: var(--w-mute, #868685); font-size: 12px; font-weight: 650; line-height: 1.5; }

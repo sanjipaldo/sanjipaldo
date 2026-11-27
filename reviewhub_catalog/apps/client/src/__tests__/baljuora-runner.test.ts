@@ -311,6 +311,9 @@ describe("비교(읽기만)", () => {
     expect(batch.categories.map((category: any) => category.path)).toEqual(["🥕 농산", "🥕 농산 > 과일류"]);
     const apple = batch.snapshots.find((snapshot: any) => snapshot.id === "bj-a");
     expect(apple).toMatchObject({ code: "BJT-001", supplyPrice: 26000, groupPrice: 24000, categoryIds: ["bj-cat-fruit"] });
+    // 발주오라 번호(1.11.0): 등록일시(상세에서)와 발주오라 목록 순서(0 = 맨 위)를 함께 보냅니다 — DB센터 상품 리스트 줄 앞 숫자
+    expect(apple).toMatchObject({ createdAt: "2026-10-01T00:00:00Z", position: 0 });
+    expect(batch.snapshots.map((snapshot: any) => [snapshot.id, snapshot.position])).toEqual([["bj-a", 0], ["bj-b", 1], ["bj-bundle", 2]]);
     expect(batch.snapshots.find((snapshot: any) => snapshot.id === "bj-bundle").kind).toBe("bundle");
     expect(batch.diagnostics.structure.productList.supplyPrice).toBe("number");
     expect(batch.diagnostics.structure.productDetail.prices[0]).toBe("array");
@@ -1717,6 +1720,11 @@ function createSalesFake(options: { rejectRangeType?: boolean; failOrdersAtCurso
       const id = decodeURIComponent(path.slice("products/".length));
       return id in taxable ? jsonResponse(200, { statusCode: 200, data: { id, name: id, isTaxable: taxable[id] } }) : jsonResponse(404, { statusCode: 404, message: "Not Found" });
     }
+    // 발주오라 대시보드 숫자(1.11.0): 대시보드 화면과 같은 API(statistics/…). 상품별 매출은 이 흉내에서 오류(500).
+    if (method === "GET" && path === "statistics/recent-orders") return jsonResponse(200, { statusCode: 200, data: { purchased: 2, shipping: 48, delivered: 94, total: 144, cancelled: 26, recipientPhone: "010-1234-5678" } });
+    if (method === "GET" && path === "statistics/summary-by-period") return jsonResponse(200, { statusCode: 200, data: { today: { sales: 219710, purchase: 213300, margin: 6410 } } });
+    if (method === "GET" && path === "statistics/top-sellers") return jsonResponse(200, { statusCode: 200, data: [{ sellerName: "나도건강", orderCount: 102, totalAmount: 4257500, sellerAddress: "서울시 비밀로" }] });
+    if (method === "GET" && path === "statistics/top-products") return jsonResponse(500, { statusCode: 500, message: "Internal Server Error" });
     return jsonResponse(404, { message: `not found ${input}` });
   };
   return { fetch, calls, sellers, orderItems };
@@ -1725,6 +1733,61 @@ function createSalesFake(options: { rejectRangeType?: boolean; failOrdersAtCurso
 function salesRunner(fake: ReturnType<typeof createSalesFake>) {
   return internals.createRunner({ fetch: fake.fetch, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
 }
+
+// 2026-11-27 관리자 신고 "주문 동기화를 최신으로 했는데 나도건강 금액이 발주오라 대시보드와 다르다 — 주문 동기화를 누르면 대시보드 숫자까지":
+// 책갈피 1.11.0은 판매 읽기(step.dashboard) 때 발주오라 대시보드와 같은 API(statistics/…)를 읽어 그대로 보냅니다(받는 사람 정보 칸은 뺌).
+describe("발주오라 대시보드 숫자 읽기(1.11.0)", () => {
+  const step = { start: "2026-10-01", end: "2026-11-23", buyers: false, knownTax: ["bj-a", "bj-b", "bj-c"], dashboard: true };
+
+  it("대시보드 화면이 부른 주소(조건 포함)를 그대로 다시 불러 주문 줄보다 먼저 보내고, 못 읽은 칸이 있어도 주문은 계속 읽습니다", async () => {
+    const fake = createSalesFake();
+    const report = createReport();
+    const entries = [
+      { name: "https://api.baljuora.com/statistics/top-sellers?period=thisMonth&limit=5" },
+      { name: "https://api.baljuora.com/statistics/top-sellers?period=thisMonth&limit=5" },
+      { name: "https://api.baljuora.com/statistics/recent-orders" },
+      { name: "https://console.baljuora.com/statistics/top-sellers?x=1" },
+      { name: "not a url" }
+    ];
+    const runner = internals.createRunner({ fetch: fake.fetch, locks: undefined, consoleOrigin: "https://console.baljuora.com", pagePath: "/doogofood/dashboard", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test", resourceEntries: () => entries });
+    const result = await runner.runSales(step, report, { final: true });
+    expect(result).toMatchObject({ lines: 5, complete: true, dashboard: 3 });
+    // 같은 조건은 한 번만, 다른 사이트 주소는 무시
+    const topCalls = fake.calls.filter((call) => call.url.pathname === "/statistics/top-sellers");
+    expect(topCalls.map((call) => call.url.search)).toEqual(["?period=thisMonth&limit=5"]);
+    expect(fake.calls.filter((call) => call.url.pathname.startsWith("/statistics/")).map((call) => call.url.pathname)).toEqual(["/statistics/recent-orders", "/statistics/summary-by-period", "/statistics/top-sellers", "/statistics/top-products"]);
+    // 대시보드 → 주문 줄 순서, 발주오라는 읽기만
+    expect(fake.calls.some((call) => call.method !== "GET" && call.url.origin === "https://api.baljuora.com")).toBe(false);
+    const dashboardIndex = report.posted.findIndex((body) => body.dashboard);
+    const linesIndex = report.posted.findIndex((body) => body.salesLines);
+    expect(dashboardIndex).toBeGreaterThanOrEqual(0);
+    expect(dashboardIndex).toBeLessThan(linesIndex);
+    const dashboard = report.posted[dashboardIndex].dashboard;
+    expect(dashboard.page).toBe("/doogofood/dashboard");
+    expect(dashboard.responses.map((item: any) => [item.endpoint, item.status, item.fromPage])).toEqual([
+      ["statistics/recent-orders", 200, true],
+      ["statistics/summary-by-period", 200, false],
+      ["statistics/top-sellers", 200, true],
+      ["statistics/top-products", 500, false]
+    ]);
+    expect(dashboard.responses[2]).toMatchObject({ params: { period: "thisMonth", limit: "5" }, data: [{ sellerName: "나도건강", orderCount: 102, totalAmount: 4257500 }] });
+    // 받는 사람 연락처·주소 같은 칸은 보내지 않음
+    expect(JSON.stringify(dashboard)).not.toMatch(/010-1234|비밀로|recipient|Address/);
+    expect(dashboard.responses[3].error).toContain("Internal Server Error");
+  });
+
+  it("다른 화면에서 책갈피를 눌러 대시보드 주소 기록이 없으면 조건 없이 부르고, step.dashboard가 없으면(예전 작업) 읽지 않습니다", async () => {
+    const fake = createSalesFake();
+    const report = createReport();
+    await internals.createRunner({ fetch: fake.fetch, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" }).runSales(step, report, { final: true });
+    expect(fake.calls.filter((call) => call.url.pathname === "/statistics/top-sellers").map((call) => call.url.search)).toEqual([""]);
+    const old = createSalesFake();
+    const oldReport = createReport();
+    await salesRunner(old).runSales({ ...step, dashboard: undefined }, oldReport, { final: true });
+    expect(old.calls.some((call) => call.url.pathname.startsWith("/statistics/"))).toBe(false);
+    expect(oldReport.posted.some((body) => body.dashboard)).toBe(false);
+  });
+});
 
 describe("판매·매출처 읽기(1.7.0)", () => {
   const step = { start: "2026-10-01", end: "2026-11-23", buyers: true, knownTax: ["bj-a"] };

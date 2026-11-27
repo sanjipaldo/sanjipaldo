@@ -118,7 +118,8 @@ describe("운영 홈 배치 규칙", () => {
   it("저장한 배치가 없으면 기본 배치, 모르는 칸은 빼고 저장 뒤 새로 생긴 칸은 끝에 붙입니다", () => {
     expect(normalizeHomeLayout(null).visible).toEqual(DEFAULT_HOME_LAYOUT);
     const next = normalizeHomeLayout({ visible: ["notices", "unknown-widget", "sales-kpi", "notices"], known: ["notices", "sales-kpi", "members", "catalog-stats", "sales-today", "sales-daily", "sales-top10", "sourcing", "baljuora"], sizes: { notices: "full", "sales-kpi": "tiny" } });
-    expect(next.visible).toEqual(["notices", "sales-kpi", "rank-buyers"]);
+    // 저장 뒤 새로 생긴 칸(rank-buyers, 2026-11-27 '발주오라 대시보드')은 기본 배치 순서대로 끝에 붙습니다.
+    expect(next.visible).toEqual(["notices", "sales-kpi", "baljuora-dashboard", "rank-buyers"]);
     expect(next.sizes).toEqual({ notices: "full" });
   });
 });
@@ -193,12 +194,13 @@ describe("운영 홈", () => {
     fireEvent.click(within(screen.getByText("최근 공지", { selector: ".ahb-add-list strong" }).closest("li")!).getByRole("button", { name: /넣기/ }));
     expect(widgetOrder(container).at(-1)).toBe("notices");
     fireEvent.click(screen.getByRole("button", { name: "판매 요약 뒤로" }));
-    expect(widgetOrder(container).slice(0, 2)).toEqual(["members", "sales-kpi"]);
+    // 기본 배치 두 번째 칸은 '발주오라 대시보드'(2026-11-27)
+    expect(widgetOrder(container).slice(0, 2)).toEqual(["baljuora-dashboard", "sales-kpi"]);
     await waitFor(() => expect(puts.length).toBeGreaterThan(0), { timeout: 2000 });
-    expect(puts.at(-1)?.visible.slice(0, 2)).toEqual(["members", "sales-kpi"]);
+    expect(puts.at(-1)?.visible.slice(0, 2)).toEqual(["baljuora-dashboard", "sales-kpi"]);
     expect(puts.at(-1)?.visible.at(-1)).toBe("notices");
     // 이 기기에도 기억해서 다음에 바로 그 배치로 그립니다.
-    expect(JSON.parse(window.localStorage.getItem("doogo:admin-home-layout:u-admin") ?? "{}").visible.slice(0, 2)).toEqual(["members", "sales-kpi"]);
+    expect(JSON.parse(window.localStorage.getItem("doogo:admin-home-layout:u-admin") ?? "{}").visible.slice(0, 2)).toEqual(["baljuora-dashboard", "sales-kpi"]);
   });
 
   it("저장한 배치(서버)대로 그리고, 기본 배치로 되돌릴 수 있습니다", async () => {

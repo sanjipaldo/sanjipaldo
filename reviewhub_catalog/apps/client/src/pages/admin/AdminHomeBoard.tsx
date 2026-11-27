@@ -20,14 +20,15 @@ import {
   salesRangeFor, type SalesSummary
 } from "./sales-widgets";
 import { OpsSyncButtons, OpsSyncPanel, useOpsSync } from "./OpsSync";
+import { BaljuoraOfficialPanel } from "./BaljuoraOfficialPanel";
 import "./sales-admin.css";
 import "./admin-home-board.css";
 
 export type WidgetId =
   | "sales-kpi" | "members" | "catalog-stats" | "sales-today" | "sales-daily" | "sales-top10"
-  | "sourcing" | "baljuora" | "notices" | "rank-buyers" | "rank-suppliers" | "rank-categories";
+  | "sourcing" | "baljuora" | "notices" | "rank-buyers" | "rank-suppliers" | "rank-categories" | "baljuora-dashboard";
 type WidgetSize = "full" | "half";
-type WidgetInfo = { id: WidgetId; title: string; description: string; size: WidgetSize; needs: "sales" | "members" | "overview" };
+type WidgetInfo = { id: WidgetId; title: string; description: string; size: WidgetSize; needs: "sales" | "members" | "overview" | "official" };
 
 export const HOME_WIDGETS: WidgetInfo[] = [
   { id: "sales-kpi", title: "판매 요약", description: "판매 금액·주문·주문한 매출처·매입원가 뺀 금액(이전 같은 기간과 비교)", size: "full", needs: "sales" },
@@ -41,10 +42,12 @@ export const HOME_WIDGETS: WidgetInfo[] = [
   { id: "notices", title: "최근 공지", description: "공개 공지사항에 보이는 최근 공지", size: "half", needs: "overview" },
   { id: "rank-buyers", title: "매출처(셀러) 순위", description: "기간에 많이 주문한 셀러 10곳", size: "half", needs: "sales" },
   { id: "rank-suppliers", title: "공급사 순위", description: "기간 판매 금액이 큰 공급사", size: "half", needs: "sales" },
-  { id: "rank-categories", title: "카테고리 순위", description: "DB센터 1차 카테고리별 판매", size: "half", needs: "sales" }
+  { id: "rank-categories", title: "카테고리 순위", description: "DB센터 1차 카테고리별 판매", size: "half", needs: "sales" },
+  // 2026-11-27 관리자 요청 "주문 동기화를 누르면 발주오라 대시보드 숫자까지 똑같이": 발주오라 대시보드 숫자 그대로 + DB센터 계산과 칸마다 비교
+  { id: "baljuora-dashboard", title: "발주오라 대시보드", description: "주문 동기화 때 읽은 발주오라 대시보드 숫자(최근 7일 주문·기간별 매출·매출처 TOP·상품별 매출)와 DB센터 비교", size: "full", needs: "official" }
 ];
 const WIDGET_BY_ID = new Map(HOME_WIDGETS.map((widget) => [widget.id, widget]));
-export const DEFAULT_HOME_LAYOUT: WidgetId[] = ["sales-kpi", "members", "catalog-stats", "sales-today", "sales-daily", "sales-top10", "sourcing", "baljuora", "notices", "rank-buyers"];
+export const DEFAULT_HOME_LAYOUT: WidgetId[] = ["sales-kpi", "baljuora-dashboard", "members", "catalog-stats", "sales-today", "sales-daily", "sales-top10", "sourcing", "baljuora", "notices", "rank-buyers"];
 const ALL_IDS = HOME_WIDGETS.map((widget) => widget.id);
 
 type LayoutState = { visible: WidgetId[]; sizes: Partial<Record<WidgetId, WidgetSize>> };
@@ -310,9 +313,12 @@ export function AdminHomeBoard({ overview, onRefresh }: { overview: AdminHomeDat
 
   useEffect(() => { if (needsSales) void loadSales(); }, [needsSales, loadSales]);
   // 주문 동기화·상품 동기화(2026-11-27, 예전 아침 동기화 자리): 끝나면 판매·매출처·상품 숫자를 새로 불러옵니다.
+  // 발주오라 대시보드 칸: 주문 동기화가 끝나면 다시 불러옵니다.
+  const [officialStamp, setOfficialStamp] = useState(0);
   const ops = useOpsSync(() => {
     void loadSales();
     void loadMembers();
+    setOfficialStamp((value) => value + 1);
     onRefresh?.();
   });
   useEffect(() => { if (needsMembers && !members) void loadMembers(); }, [needsMembers, members, loadMembers]);
@@ -439,7 +445,9 @@ export function AdminHomeBoard({ overview, onRefresh }: { overview: AdminHomeDat
       case "sales-top10":
         return <SalesCard icon={<Package size={19} aria-hidden="true" />} title="상품 판매 TOP 10" subtitle={`판매 금액이 큰 순서 · ${salesSubtitle}`} link>{salesGate((summary) => <TopProductsTable summary={summary} />)}</SalesCard>;
       case "rank-buyers":
-        return <SalesCard icon={<Users size={19} aria-hidden="true" />} title="매출처(셀러) 순위" subtitle={`많이 주문한 셀러 · ${salesSubtitle}`}>{salesGate((summary) => <BuyerRankList summary={summary} />)}</SalesCard>;
+        return <SalesCard icon={<Users size={19} aria-hidden="true" />} title="매출처(셀러) 순위" subtitle={`많이 주문한 셀러 · ${salesSubtitle}${sales?.basisText ? ` · ${sales.basisText.split(" · ").slice(0, 2).join(" · ")}` : ""}`}>{salesGate((summary) => <BuyerRankList summary={summary} />)}</SalesCard>;
+      case "baljuora-dashboard":
+        return <BaljuoraOfficialPanel stamp={officialStamp} compact />;
       case "rank-suppliers":
         return <SalesCard icon={<Store size={19} aria-hidden="true" />} title="공급사 순위" subtitle={`공급사 제품 판매 금액 · ${salesSubtitle}`}>{salesGate((summary) => <SupplierRankList summary={summary} />)}</SalesCard>;
       case "rank-categories":
