@@ -3,7 +3,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { categoryMatches, diffBaljuoraProduct, doogoSyncValues, flattenBaljuoraCategories, suggestCategoryMapping, type BaljuoraProductSnapshot } from "@repo/shared/baljuora-sync";
 
 process.env.SKYBASE_DB_ENDPOINT = `file:${join(mkdtempSync(join(tmpdir(), "baljuora-sync-")), "test.db")}`;
@@ -127,6 +127,24 @@ describe("발주오라 동기화 API", () => {
     expect((await post(`/api/baljuora/runner/${job.code}/progress`, { done: 12, total: 2000, message: "늦은 소식" })).status).toBe(409);
   });
 
+  it("진행 확인(light)은 만료가 지난 작업을 그 작업만 만료로 바꾸고, 끝난 작업에는 늦은 진행 소식을 적지 않습니다(2026-11-27)", async () => {
+    const admin = await adminToken();
+    const job = await startCompare(admin);
+    expect((await app.fetch(new Request(`http://localhost/api/baljuora/runner/${job.code}`))).status).toBe(200);
+    await executeSql("UPDATE baljuora_sync_jobs SET expiresAt = ? WHERE id = ?", ["2000-01-01T00:00:00.000Z", job.job.id]);
+    const light = await json<{ job: { status: string; finishedAt: string | null } }>(await fetchWithAuth(app, admin, `/api/baljuora/admin/jobs/${job.job.id}?light=1`));
+    expect(light.data.job.status).toBe("expired");
+    expect(light.data.job.finishedAt).toBeTruthy();
+    expect(String((await executeSql("SELECT status FROM baljuora_sync_jobs WHERE id = ?", [job.job.id])).rows[0]?.status)).toBe("expired");
+    // 끝난 작업에 늦게 온 진행 소식은 거절하고 상태를 '진행 중'으로 되돌리지 않음
+    const other = await startCompare(admin);
+    expect((await app.fetch(new Request(`http://localhost/api/baljuora/runner/${other.code}`))).status).toBe(200);
+    expect((await post(`/api/baljuora/runner/${other.code}/results`, { final: true, snapshots: [] })).status).toBe(200);
+    expect((await post(`/api/baljuora/runner/${other.code}/progress`, { done: 1, total: 1, message: "늦은 소식" })).status).toBe(409);
+    expect(String((await executeSql("SELECT status FROM baljuora_sync_jobs WHERE id = ?", [other.job.id])).rows[0]?.status)).toBe("done");
+    expect((await fetchWithAuth(app, admin, "/api/baljuora/admin/jobs/no-such-job?light=1")).status).toBe(404);
+  });
+
   it("작업 코드 다시 받기(2026-11-25): 기다리는 작업에 새 코드를 주고 예전 코드는 막으며, 시작한 작업·로그인 없는 요청은 거절합니다", async () => {
     const admin = await adminToken();
     const job = await startCompare(admin);
@@ -210,9 +228,18 @@ describe("발주오라 동기화 API", () => {
     expect(create?.values).toMatchObject({ supplyPrice: 12000, groupPrice: 11000, categoryId: "bj-cat-farm", isTaxable: false });
     // 연결된 발주오라 카테고리 전체(책갈피 1.9.1이 '이미 같은 카테고리'·저장 확인에 씀)
     expect(create?.values.categoryIds).toEqual(["bj-cat-farm"]);
+    // 진행 확인(light, 2026-11-27 동기화 속도): 상품별 결과·기술 정보 없이 진행·보낼 상품 수만(보낼 상품 수는 DB가 plan에서 꺼냄)
+    const running = await json<{ job: { status: string; total: number | null; progress: { total: number } | null; items?: unknown; diagnostics?: unknown } }>(await fetchWithAuth(app, admin, `/api/baljuora/admin/jobs/${push.data.job.id}?light=1`));
+    expect(running.data.job).toMatchObject({ status: "running", total: 2, progress: { total: 2 } });
+    expect(running.data.job.items).toBeUndefined();
+    expect(running.data.job.diagnostics).toBeUndefined();
 
-    // 다른 상품 결과는 받지 않습니다(작업에 든 상품만).
+    // 다른 상품 결과는 받지 않습니다(작업에 든 상품만). 끝나면 속도 요약을 한 줄 남깁니다(값·토큰 없음).
+    const infoLines: string[] = [];
+    const infoSpy = vi.spyOn(console, "info").mockImplementation((...args: unknown[]) => { infoLines.push(args.map(String).join(" ")); });
     await post(`/api/baljuora/runner/${push.data.code}/results`, {
+      final: true,
+      diagnostics: { version: "1.9.2", structure: {}, throttled: 1, gapMs: 180, extra: { concurrency: 3 }, stats: { requests: 9, writes: 3, avgMs: 310, maxMs: 900, pausedSeconds: 2, concurrency: 3, resultPosts: 1, resultRetries: 0, rateHeaders: ["x-ratelimit-remaining"] } },
       final: true,
       items: [
         { productId: "bj-test-1", ok: true, applied: ["supplyPrice"], snapshot: snapshot({ id: "bj-a", code: "BJT-001", name: "봄날 사과 5kg", supplyPrice: 27000, consumerPrice: 39000, purchaseCost: 20000, groupPrice: 24000, categoryIds: ["bj-cat-fruit"], imageUrls: ["https://files.baljuora.com/a.jpg"] }) },
@@ -220,8 +247,18 @@ describe("발주오라 동기화 API", () => {
         { productId: "bj-test-4", ok: true, baljuoraId: "evil" }
       ]
     });
+    infoSpy.mockRestore();
+    const summaryLine = infoLines.find((line) => line.startsWith("[baljuora-sync] push summary "));
+    expect(summaryLine).toBeTruthy();
+    expect(JSON.parse(summaryLine!.slice("[baljuora-sync] push summary ".length))).toMatchObject({ status: "done", version: "1.9.2", items: 2, ok: 1, failed: 1, throttled: 1, gapMs: 180, requests: 9, writes: 3, avgMs: 310, maxMs: 900, pausedSeconds: 2, concurrency: 3, rateHeaders: ["x-ratelimit-remaining"] });
     const pushed = await json<{ job: { status: string; summary: Record<string, number>; items: Array<{ productId: string; ok: boolean; error: string | null }> } }>(await fetchWithAuth(app, admin, `/api/baljuora/admin/jobs/${push.data.job.id}`));
     expect(pushed.data.job.status).toBe("done");
+    // 작업 목록·동기화 화면(가볍게 읽기)도 보낼 상품 수를 그대로 보여 줌(끝난 작업은 summary.total)
+    const listed = await json<{ jobs: Array<{ id: string; total: number | null; items?: unknown }> }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/jobs"));
+    expect(listed.data.jobs.find((entry) => entry.id === push.data.job.id)).toMatchObject({ total: 2 });
+    expect(listed.data.jobs.every((entry) => entry.items === undefined)).toBe(true);
+    const overviewJobs = await json<{ jobs: Array<{ id: string; total: number | null }> }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/overview"));
+    expect(overviewJobs.data.jobs.find((entry) => entry.id === push.data.job.id)).toMatchObject({ total: 2 });
     expect(pushed.data.job.summary).toMatchObject({ total: 2, succeeded: 1, failed: 1, updated: 1 });
     expect(pushed.data.job.items.map((item) => item.productId).sort()).toEqual(["bj-test-1", "bj-test-3"]);
     changes = await json<Changes>(await fetchWithAuth(app, admin, "/api/baljuora/admin/changes"));

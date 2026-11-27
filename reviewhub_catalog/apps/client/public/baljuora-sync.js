@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.9.1";
+  var VERSION = "1.9.2";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   // 상품명은 상품 정보 저장(PUT products/:id/info), 카테고리는 상품 수정(PUT products/:id)으로 따로 보냅니다(1.9.1, 아래 applyCategory).
@@ -40,6 +40,13 @@
   var REQUEST_GAP_MIN_MS = 150;
   var REQUEST_GAP_MAX_MS = 3000;
   var THROTTLE_WAITS_MS = [2000, 4000, 8000, 15000, 30000, 30000, 30000, 30000];
+  // 보내기 속도(1.9.2, 2026-11-27 운영 "동기화가 매우 느려졌다": 상품 하나에 발주오라 요청 4~6개를 차례로 보내 상품당 1.3~4초,
+  // 5개마다 DB센터 응답을 기다림). 상품 3개를 함께 처리하되(각 상품 안의 요청 순서는 그대로) 모든 요청은 위 간격을 함께 지키고,
+  // 결과는 상품을 보내는 동안 따로(한 번에 하나씩) DB센터로 보냅니다(20개 또는 4초마다, 일시 오류는 1·3·8초 뒤 다시).
+  var PUSH_CONCURRENCY = 3;
+  var RESULT_BATCH_SIZE = 20;
+  var RESULT_FLUSH_MS = 4000;
+  var RESULT_RETRY_WAITS_MS = [1000, 3000, 8000];
   // 신규 등록: DB센터에 값이 없으면 복사한 상품 값을 쓰지 않을 칸(상품마다 다른 칸). 택배사·출고지·발주마감·배송 단위·해외배송은 매입처마다 같아 그대로 둡니다.
   var PRODUCT_SPECIFIC_KEYS = ["managementCode", "barcode", "originText", "description", "manufacturingDate", "expirationDate", "contentAmount", "contentUnit", "contentCount", "contentAmountBasis", "purchaseProductName", "purchaseName", "purchaseQuantity", "taxonomyItemId"];
 
@@ -822,6 +829,21 @@
     return String(value || "").toLowerCase().replace(/\(주\)|㈜|주식회사|\(유\)|유한회사/g, "").replace(/[^0-9a-z가-힣]/g, "");
   }
 
+  // 상품명 비교(1.9.2): 발주오라는 상품명이 같은 상품의 신규 등록을 거절합니다("이미 존재하는 상품 명 입니다: …").
+  // 발주오라가 받아 줄 이름을 막지 않게 앞뒤 공백만 빼고 그대로 비교합니다.
+  function productNameKey(value) {
+    return typeof value === "string" ? value.trim() : "";
+  }
+
+  // 같은 이름 상품이 있어 신규 등록을 하지 않을 때 알릴 말(existing = { id, code } 또는 null)
+  function duplicateNameMessage(item, existing) {
+    var name = item && item.values && item.values.name ? item.values.name : item && item.name ? item.name : "";
+    var where = existing && existing.code ? "(발주오라 상품코드 " + existing.code + ")" : "";
+    return "발주오라에 이름이 같은 상품 '" + name + "'" + where + "이 이미 있어 새로 등록하지 않았습니다(발주오라는 상품명이 같은 상품을 새로 받지 않아요). " +
+      "같은 상품이면 발주오라에서 그 상품의 상품코드를 DB센터 상품코드(" + (item && item.code ? item.code : "없음") + ")로 바꾼 뒤 '발주오라 상품 불러오기(비교)'를 다시 하면 연결돼요. " +
+      "다른 상품이면 DB센터 상품명을 조금 다르게 바꿔 주세요.";
+  }
+
   // 발주오라 상품의 기본 매입처 이름: 매입처 목록(productSuppliers)의 기본 줄(없으면 하나뿐인 줄) → 상품의 매입처 칸. 못 읽으면 null.
   function defaultSupplierName(record) {
     if (!isObject(record)) return null;
@@ -1022,8 +1044,15 @@
   // ─── 실행 ─────────────────────────────────────────────────────────────────
 
   function createRunner(env) {
-    // gapMs·nextAt: 요청 간격 조절, writes: 지금까지 보낸 저장 요청 수(상품마다 바꾼 것이 없으면 다시 읽지 않음), throttled: 429로 쉰 횟수
-    var state = { token: null, structure: {}, endpoints: {}, errors: [], gapMs: REQUEST_GAP_MIN_MS, nextAt: 0, writes: 0, throttled: 0, onThrottle: null };
+    // gapMs·nextAt: 요청 간격 조절(floorMs: 429를 받은 뒤 한동안 지킬 간격, cooldownUntil: 429 뒤 모든 요청이 함께 쉬는 시각),
+    // writes: 지금까지 보낸 저장 요청 수, writesById: 발주오라 상품별 저장 요청 수(상품을 함께 보내도 그 상품에 저장했는지 알 수 있게),
+    // throttled: 429로 쉰 횟수, stats: 요청 수·응답 시간·쉰 시간(진단 정보, 값·토큰 없음)
+    var state = {
+      token: null, structure: {}, endpoints: {}, errors: [],
+      gapMs: REQUEST_GAP_MIN_MS, floorMs: REQUEST_GAP_MIN_MS, nextAt: 0, cooldownUntil: 0, lastThrottleAt: -Infinity,
+      writes: 0, writesById: {}, throttled: 0, onThrottle: null, refreshing: null,
+      stats: { requests: 0, totalMs: 0, maxMs: 0, pausedMs: 0, resultPosts: 0, resultRetries: 0, rateHeaders: {} }
+    };
     var testHooks = scope.__DOOGO_SYNC_TEST__ || null;
     var sleep = env.sleep || (testHooks && testHooks.sleep) || function (ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); };
     var clock = env.now || (testHooks && testHooks.now) || function () { return Date.now(); };
@@ -1041,16 +1070,29 @@
       };
     }
 
-    // 요청 사이 간격(state.gapMs)을 지킵니다. 동시에 여러 요청(상세 5개씩)을 보내도 차례로 간격을 둡니다.
+    // 요청 사이 간격(state.gapMs)을 지킵니다. 동시에 여러 요청(상세 5개씩·상품 3개씩)을 보내도 차례로 간격을 두고,
+    // 기다리는 동안 다른 요청이 429를 받아 모두 쉬기로 했으면(cooldownUntil) 그 뒤로 다시 줄을 섭니다.
     async function pace() {
       var now = clock();
-      var at = Math.max(now, state.nextAt);
+      var at = Math.max(now, state.nextAt, state.cooldownUntil);
       state.nextAt = at + state.gapMs;
       if (at > now) await sleep(at - now);
+      if (state.cooldownUntil > at && state.cooldownUntil > clock()) return pace();
     }
 
     function note(path, status) {
       state.endpoints[path] = status;
+    }
+
+    // 발주오라 응답에 요청 제한 머리글(X-RateLimit-* 등)이 보이면 이름만 기록합니다(다음 속도 조절에 쓰려고, 값 없음).
+    function noteRateHeaders(response) {
+      try {
+        if (!response.headers || typeof response.headers.forEach !== "function") return;
+        response.headers.forEach(function (_value, name) {
+          var key = String(name).toLowerCase();
+          if (key.indexOf("ratelimit") >= 0 || key === "retry-after") state.stats.rateHeaders[key] = true;
+        });
+      } catch { /* 진단만 */ }
     }
 
     async function refreshToken() {
@@ -1068,44 +1110,89 @@
       return work();
     }
 
+    // 여러 요청이 함께 로그인 만료(401)를 받아도 로그인 정보는 한 번만 새로 받습니다.
+    function renewToken() {
+      if (!state.refreshing) {
+        state.refreshing = refreshToken().then(function (token) {
+          state.token = token;
+          state.refreshing = null;
+          return token;
+        }, function (error) {
+          state.refreshing = null;
+          throw error;
+        });
+      }
+      return state.refreshing;
+    }
+
+    function writeKeyOf(path) {
+      var match = /^\/?products\/([^/?#]+)/.exec(path);
+      if (!match) return null;
+      try { return decodeURIComponent(match[1]); } catch { return match[1]; }
+    }
+
     async function api(method, path, body, options) {
       var opts = options || {};
-      if (!state.token) state.token = await refreshToken();
+      if (!state.token) await renewToken();
       var url = new URL(path.replace(/^\//, ""), env.apiBase);
       if (opts.params) Object.keys(opts.params).forEach(function (key) { if (opts.params[key] !== undefined && opts.params[key] !== null) url.searchParams.set(key, String(opts.params[key])); });
-      var headers = { Authorization: "Bearer " + state.token };
       var payload;
-      if (body !== undefined) {
-        headers["Content-Type"] = "application/json";
-        payload = JSON.stringify(body);
-      }
+      if (body !== undefined) payload = JSON.stringify(body);
       await pace();
-      if (method !== "GET") state.writes += 1;
+      var usedToken = state.token;
+      var headers = { Authorization: "Bearer " + usedToken };
+      if (payload !== undefined) headers["Content-Type"] = "application/json";
+      if (method !== "GET") {
+        state.writes += 1;
+        var writeKey = writeKeyOf(path);
+        if (writeKey) state.writesById[writeKey] = (state.writesById[writeKey] || 0) + 1;
+      }
+      var sentAt = clock();
       var response = await env.fetch(url.toString(), { method: method, headers: headers, body: payload });
+      var tookMs = Math.max(0, clock() - sentAt);
+      state.stats.requests += 1;
+      state.stats.totalMs += tookMs;
+      if (tookMs > state.stats.maxMs) state.stats.maxMs = tookMs;
+      noteRateHeaders(response);
       note(method + " " + path.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, ":id"), response.status);
       if (response.status === 401 && !opts.retried) {
-        state.token = await refreshToken();
+        // 다른 요청이 그사이 새 로그인 정보를 받았으면 그것으로 다시 보냅니다.
+        if (state.token === usedToken) await renewToken();
         return api(method, path, body, Object.assign({}, opts, { retried: true }));
       }
-      // 429 요청이 너무 많음: 간격을 늘리고 점점 길게 쉬었다가 같은 요청을 다시 보냅니다(최대 8번, 약 2분 50초).
+      // 429 요청이 너무 많음: 모든 요청이 함께 쉬었다가(점점 길게, 최대 8번·약 2분 50초) 같은 요청을 다시 보냅니다.
+      // 처음 막혔을 때의 간격보다 조금 넓은 간격(floorMs)을 한동안 지켜 다시 막히지 않게 하고, 성공할 때마다 조금씩 좁힙니다.
       if (response.status === 429) {
         var attempt = opts.throttleAttempt || 0;
         if (attempt < THROTTLE_WAITS_MS.length) {
           state.throttled += 1;
-          state.gapMs = Math.min(REQUEST_GAP_MAX_MS, Math.max(state.gapMs * 2, 400));
+          var now = clock();
+          // 1분 넘게 막히지 않다가 새로 막혔으면 그때 간격보다 30% 넓은 간격을 바닥으로 삼습니다(같은 때 거듭 막혀도 바닥은 한 번만 정함).
+          if (now - state.lastThrottleAt > 60000) state.floorMs = Math.min(REQUEST_GAP_MAX_MS, Math.max(REQUEST_GAP_MIN_MS, Math.round(state.gapMs * 1.3)));
+          state.lastThrottleAt = now;
+          // 이미 함께 쉬는 중에 다른 요청도 막힌 것이면(상품 3개를 함께 보냄) 간격을 거듭 늘리지 않습니다.
+          if (now >= state.cooldownUntil) state.gapMs = Math.min(REQUEST_GAP_MAX_MS, Math.max(state.gapMs * 2, 400));
           var waitMs = THROTTLE_WAITS_MS[attempt];
           // 발주오라가 기다릴 시간(Retry-After, 초)을 알려 주고 읽을 수 있으면 그만큼(최대 1분) 기다립니다.
           var retryAfter = Number(response.headers.get("retry-after"));
           if (isFinite(retryAfter) && retryAfter > 0) waitMs = Math.min(60000, Math.max(waitMs, retryAfter * 1000));
+          var until = now + waitMs;
+          if (until > state.cooldownUntil) {
+            state.stats.pausedMs += until - Math.max(now, state.cooldownUntil);
+            state.cooldownUntil = until;
+          }
           if (typeof state.onThrottle === "function") {
             try { state.onThrottle(waitMs, attempt + 1); } catch { /* 표시는 실패해도 계속 */ }
           }
           await sleep(waitMs);
-          state.nextAt = clock() + state.gapMs;
           return api(method, path, body, Object.assign({}, opts, { throttleAttempt: attempt + 1 }));
         }
-      } else if (response.ok && state.gapMs > REQUEST_GAP_MIN_MS) {
-        state.gapMs = Math.max(REQUEST_GAP_MIN_MS, Math.round(state.gapMs * 0.97));
+      } else if (response.ok) {
+        if (state.gapMs > state.floorMs) state.gapMs = Math.max(state.floorMs, Math.round(state.gapMs * 0.9));
+        if (state.floorMs > REQUEST_GAP_MIN_MS) {
+          state.floorMs -= 1;
+          if (state.gapMs > REQUEST_GAP_MIN_MS && state.gapMs > state.floorMs) state.gapMs = Math.max(state.floorMs, state.gapMs - 1);
+        }
       }
       var type = response.headers.get("content-type") || "";
       var data = type.indexOf("json") >= 0 ? await response.json().catch(function () { return null; }) : await response.text().catch(function () { return ""; });
@@ -1490,7 +1577,7 @@
               return merged;
             });
           }
-          for (var start = 0; start < buyers.length; start += 500) await report.results({ final: false, buyers: buyers.slice(start, start + 500) });
+          for (var start = 0; start < buyers.length; start += 500) await sendResults(report, { final: false, buyers: buyers.slice(start, start + 500) });
           result.buyers = buyers.length;
           report.log("매출처 " + buyers.length + "곳을 보냈습니다.");
         } catch (error) {
@@ -1538,15 +1625,15 @@
           }
         });
       }
-      if (Object.keys(productTax).length > 0) await report.results({ final: false, productTax: productTax });
+      if (Object.keys(productTax).length > 0) await sendResults(report, { final: false, productTax: productTax });
       report.progress(0, lines.length, "판매 " + lines.length + "줄을 DB센터로 보내는 중…");
       for (var index = 0; index < lines.length; index += 1000) {
-        await report.results({ final: false, salesLines: lines.slice(index, index + 1000) });
+        await sendResults(report, { final: false, salesLines: lines.slice(index, index + 1000) });
         report.progress(Math.min(index + 1000, lines.length), lines.length, "판매 " + lines.length + "줄을 DB센터로 보내는 중…");
       }
       result.lines = lines.length;
       var isFinal = opts.final !== false;
-      await report.results({
+      await sendResults(report, {
         final: isFinal,
         salesDone: { complete: result.complete, error: result.error },
         diagnostics: isFinal ? diagnostics({ sales: { start: step.start, end: step.end, lines: result.lines, buyers: result.buyers, taxRead: unknown.length, complete: result.complete } }) : undefined
@@ -1613,7 +1700,7 @@
         var batch = snapshots.slice(index, index + batchSize);
         var first = index === 0;
         var last = index + batchSize >= snapshots.length;
-        await report.results({
+        await sendResults(report, {
           final: last && !plan.sales,
           snapshots: batch,
           categories: first ? categories : undefined,
@@ -2051,12 +2138,24 @@
     // 신규 등록 때 복사할 발주오라 상품 고르기(1.8.0, 2026-11-25 프로세스 점검): 새 상품은 복사한 상품의 매입처 줄(매입처·매입원가·매입배송정책)을
     // 그대로 쓰므로, 매입처가 다른 상품을 복사하면 발주가 엉뚱한 매입처로 갑니다. 복사할 상품의 기본 매입처가 DB센터 매입처명과 같은지 보고,
     // 다르면 발주오라에서 같은 매입처 상품을 찾아 복사합니다. 같은 매입처 상품이 없으면 등록하지 않고 이유를 알립니다.
+    // 복사할 상품 상세는 같은 작업에서 한 번만 읽습니다(같은 매입처 새 상품이 여러 개면 같은 상품을 복사함, 읽은 값은 고치지 않고 복사해 씀).
+    function templateDetail(context, id) {
+      if (!context.templateCache) context.templateCache = {};
+      if (!context.templateCache[id]) {
+        context.templateCache[id] = getDetail(id).catch(function (error) {
+          delete context.templateCache[id];
+          throw error;
+        });
+      }
+      return context.templateCache[id];
+    }
+
     async function pickCreateTemplate(item, context) {
       var wantKey = supplierNameKey(item.supplierName);
       var template = null;
       if (item.templateId) {
         // 복사할 상품을 발주오라에서 지웠으면(404) 같은 매입처 상품을 찾아봅니다. 그 밖의 오류(로그인 만료 등)는 그대로 멈춥니다.
-        try { template = await getDetail(item.templateId); } catch (error) { if (!error || error.status !== 404) throw error; }
+        try { template = await templateDetail(context, item.templateId); } catch (error) { if (!error || error.status !== 404) throw error; }
       }
       // DB센터 상품에 매입처가 없으면 비교할 수 없어 설정 복사용 상품을 그대로 씁니다(예전과 같음).
       if (!wantKey) {
@@ -2069,7 +2168,7 @@
       if (template && !templateName && item.templateMatch === "supplier") return template;
       var sameId = context.supplierTemplates ? context.supplierTemplates[wantKey] : null;
       if (sameId && (!template || sameId !== template.id)) {
-        var same = await getDetail(sameId);
+        var same = await templateDetail(context, sameId);
         var sameName = defaultSupplierName(same);
         if (isObject(same) && (!sameName || supplierNameKey(sameName) === wantKey)) return same;
       }
@@ -2078,7 +2177,8 @@
 
     async function pushItem(item, plan, context, code) {
       var result = { productId: item.productId, action: item.action, ok: false, baljuoraId: item.baljuoraId, code: item.code, applied: [], skipped: [], snapshot: null, error: null };
-      var writesBefore = state.writes;
+      // 상세를 읽은 뒤 이 상품에 보낸 저장 요청 수(상품 3개를 함께 보내도 이 상품 것만 셈) — 하나도 없으면 다시 읽지 않습니다.
+      var writesAtDetail = null;
       try {
         var id = item.baljuoraId;
         var detail;
@@ -2088,9 +2188,18 @@
           if (context.existingCodes && item.code && context.existingCodes[String(item.code).toUpperCase()]) {
             throw SyncError("발주오라에 같은 상품코드(" + item.code + ")가 이미 있습니다. DB센터에서 '발주오라 상품 불러오기'를 다시 한 뒤 동기화해 주세요.");
           }
+          // 발주오라는 상품명이 같은 상품을 새로 받지 않습니다("이미 존재하는 상품 명 입니다", 2026-11-27 운영). 보내기 전에 알아보고 고칠 방법을 알립니다.
+          var sameName = context.existingNames ? context.existingNames[productNameKey(item.values.name || item.name)] : null;
+          if (sameName) throw SyncError(duplicateNameMessage(item, sameName));
           var template = await pickCreateTemplate(item, context);
           var body = buildCreateBody(template, item);
-          var created = unwrap(await sendAdaptive("POST", "products", body, writable(template)));
+          var created;
+          try {
+            created = unwrap(await sendAdaptive("POST", "products", body, writable(template)));
+          } catch (createError) {
+            if (createError && createError.status === 400 && messagesOf(createError).some(function (message) { return /이미\s*존재하는\s*상품\s*명/.test(message); })) throw SyncError(duplicateNameMessage(item, null));
+            throw createError;
+          }
           if (!state.structure.productCreate) state.structure.productCreate = structureOf(created);
           id = isObject(created) ? created.id || (isObject(created.product) ? created.product.id : null) : null;
           if (typeof id !== "string") throw SyncError("발주오라가 새 상품 id를 돌려주지 않았습니다. 발주오라 상품 목록에서 등록됐는지 확인해 주세요.");
@@ -2107,6 +2216,7 @@
           if (!id) throw SyncError("연결된 발주오라 상품이 없습니다.");
           detail = await getDetail(id);
         }
+        writesAtDetail = state.writesById[id] || 0;
         if (isObject(detail) && groupArrayKeys(detail).length === 0) await discoverProductForm(id);
         var priceFields = fields.filter(function (field) { return PRICE_FIELDS.indexOf(field) >= 0; });
         var infoFields = fields.filter(function (field) { return INFO_FIELDS.indexOf(field) >= 0; });
@@ -2138,8 +2248,9 @@
         if (extraFields.length) {
           try { await applyExtras(id, detail, item, extraFields, result); } catch (error) { if (error && error.status === 401) throw error; markFailed(extraFields, error); }
         }
-        // 이번 상품에 저장 요청을 하나도 보내지 않았으면(모든 칸이 이미 같음) 방금 읽은 상세를 그대로 써서 발주오라 요청을 줄입니다.
-        var after = normalizeProduct(state.writes === writesBefore && isObject(detail) ? detail : await getDetail(id), context);
+        // 상세를 읽은 뒤 이 상품에 저장 요청을 하나도 보내지 않았으면(모든 칸이 이미 같음) 방금 읽은 상세를 그대로 써서 발주오라 요청을 줄입니다.
+        var untouched = writesAtDetail !== null && (state.writesById[id] || 0) === writesAtDetail;
+        var after = normalizeProduct(untouched && isObject(detail) ? detail : await getDetail(id), context);
         if (after) {
           verifyApplied(result, item, after, checks);
           result.snapshot = after;
@@ -2173,7 +2284,7 @@
         var treeLine = "카테고리 맞추기: 반영 " + treeResult.applied.length + "건" + (treeResult.skipped.length ? " · 못 한 것 " + treeResult.skipped.length + "건" : "");
         report.log((treeResult.error || treeResult.skipped.length ? "✕ " : "✓ ") + treeLine + (treeResult.error ? " — " + treeResult.error : ""), Boolean(treeResult.error || treeResult.skipped.length));
         treeResult.skipped.slice(0, 5).forEach(function (entry) { report.log("  · " + entry.name + ": " + entry.reason, true); });
-        await report.results({ final: false, items: [], categoryTree: { applied: treeResult.applied, skipped: treeResult.skipped, created: treeResult.created, categories: treeResult.categories, error: treeResult.error } });
+        await sendResults(report, { final: false, items: [], categoryTree: { applied: treeResult.applied, skipped: treeResult.skipped, created: treeResult.created, categories: treeResult.categories, error: treeResult.error } });
       }
       // 2) 상품 카테고리를 보낼 때 상품에 붙은 브랜드별 아래 카테고리는 지우지 않게 지금 발주오라 트리에서 찾아 둡니다.
       if (plan.items.some(function (item) { return item.fields.indexOf("category") >= 0; })) {
@@ -2186,42 +2297,129 @@
         report.progress(0, plan.items.length, "같은 상품코드·같은 매입처 상품이 발주오라에 있는지 확인하는 중…");
         var listed = await listAllProducts();
         context.existingCodes = {};
+        // 상품명 → 그 이름의 발주오라 상품(발주오라는 같은 이름 상품을 새로 받지 않음, 1.9.2)
+        context.existingNames = {};
         // 매입처(이름) → 그 매입처의 발주오라 상품 id: 신규 등록 때 같은 매입처 상품을 복사합니다(묶음 상품 제외).
         context.supplierTemplates = {};
         listed.forEach(function (record) {
           if (!isObject(record)) return;
           var found = firstString(record, CODE_KEYS);
           if (found) context.existingCodes[found.value.toUpperCase()] = record.id;
+          var nameKey = productNameKey(record.name);
+          if (nameKey && !context.existingNames[nameKey]) context.existingNames[nameKey] = { id: typeof record.id === "string" ? record.id : null, code: found ? found.value : null };
           if (typeof record.id !== "string" || record.targetType === "bundle" || record.type === "bundle" || record.productType === "bundle") return;
           var key = supplierNameKey(defaultSupplierName(record));
           if (key && !context.supplierTemplates[key]) context.supplierTemplates[key] = record.id;
         });
       }
-      var pending = [];
       var summary = { ok: 0, failed: 0 };
-      for (var index = 0; index < plan.items.length; index += 1) {
-        var item = plan.items[index];
-        current.done = index;
-        current.label = (index + 1) + " / " + plan.items.length + " " + item.name;
-        report.progress(index, plan.items.length, (item.action === "create" ? "신규 등록 " : "수정 ") + (index + 1) + " / " + plan.items.length + " · " + item.name);
-        var result = await pushItem(item, plan, context, code);
-        if (result.ok) summary.ok += 1; else summary.failed += 1;
-        report.log((result.ok ? "✓ " : "✕ ") + item.name + (result.ok ? "" : " — " + result.error), !result.ok);
-        pending.push(result);
-        if (pending.length >= 5) {
-          await report.results({ final: false, items: pending });
-          pending = [];
+      var order = {};
+      plan.items.forEach(function (entry, position) { order[entry.productId] = position; });
+      var queue = createResultQueue(report, order);
+      var concurrency = Math.max(1, Math.min(PUSH_CONCURRENCY, plan.items.length));
+      var nextIndex = 0;
+      var finished = 0;
+      // 상품 3개를 함께 처리합니다(각 상품 안의 요청 순서는 그대로, 모든 요청은 같은 간격·429 쉬기를 함께 지킴).
+      // DB센터에 결과를 보내지 못하면(취소·만료 등) 새 상품은 더 시작하지 않습니다.
+      async function worker() {
+        while (nextIndex < plan.items.length && !queue.error) {
+          var index = nextIndex;
+          nextIndex += 1;
+          var item = plan.items[index];
+          current.done = finished;
+          current.label = (index + 1) + " / " + plan.items.length + " " + item.name;
+          report.progress(finished, plan.items.length, (item.action === "create" ? "신규 등록 " : "수정 ") + (index + 1) + " / " + plan.items.length + " · " + item.name);
+          var result;
+          try {
+            result = await pushItem(item, plan, context, code);
+          } catch (error) {
+            result = { productId: item.productId, action: item.action, ok: false, baljuoraId: item.baljuoraId, code: item.code, applied: [], skipped: [], snapshot: null, error: describeError(error) };
+          }
+          finished += 1;
+          if (result.ok) summary.ok += 1; else summary.failed += 1;
+          report.log((result.ok ? "✓ " : "✕ ") + item.name + (result.ok ? "" : " — " + result.error), !result.ok);
+          queue.add(result);
         }
       }
-      await report.results({ final: true, items: pending, diagnostics: diagnostics({ group: group, items: plan.items.length, ok: summary.ok, failed: summary.failed }) });
+      var workers = [];
+      for (var slot = 0; slot < concurrency; slot += 1) workers.push(worker());
+      await Promise.all(workers);
+      await queue.finish({ diagnostics: diagnostics({ group: group, items: plan.items.length, ok: summary.ok, failed: summary.failed, concurrency: concurrency }) });
       report.progress(plan.items.length, plan.items.length, "완료: 성공 " + summary.ok + "개 · 실패 " + summary.failed + "개");
       return summary;
+    }
+
+    // DB센터로 결과 보내기: 일시 오류(연결 끊김·DB센터 5xx·429)는 1·3·8초 뒤 다시 보냅니다(상품 결과·연결·판매 줄은 같은 것을 두 번 받아도 한 번으로 저장).
+    // 마지막 결과를 다시 보냈는데 '이미 끝난 작업'(409)이면 앞서 보낸 것이 저장된 것이라 그대로 끝냅니다. 취소·만료(409)·없는 작업(404)은 바로 멈춥니다.
+    async function sendResults(report, body) {
+      for (var attempt = 0; ; attempt += 1) {
+        try {
+          state.stats.resultPosts += 1;
+          return await report.results(body);
+        } catch (error) {
+          var status = error && typeof error.status === "number" ? error.status : 0;
+          if (attempt > 0 && body && body.final && status === 409) return null;
+          var transient = status === 0 || status === 408 || status === 429 || status >= 500;
+          if (!transient || attempt >= RESULT_RETRY_WAITS_MS.length) throw error;
+          state.stats.resultRetries += 1;
+          await sleep(RESULT_RETRY_WAITS_MS[attempt]);
+        }
+      }
+    }
+
+    // 상품 결과를 모았다가(20개 또는 4초마다) 한 번에 하나씩 DB센터로 보냅니다. 보내는 동안에도 발주오라 쪽 상품 처리는 계속하고,
+    // 마지막에 남은 결과와 진단 정보를 함께 보냅니다(order: 상품 id → 작업 순서, 같은 묶음 안에서 작업 순서대로).
+    function createResultQueue(report, order) {
+      var queue = { pending: [], chain: Promise.resolve(), busy: false, error: null, lastAt: clock() };
+      function take() {
+        var items = queue.pending.splice(0, queue.pending.length);
+        if (order) items.sort(function (a, b) { return (order[a.productId] || 0) - (order[b.productId] || 0); });
+        return items;
+      }
+      queue.add = function (result) {
+        queue.pending.push(result);
+        if (!queue.busy && !queue.error && (queue.pending.length >= RESULT_BATCH_SIZE || clock() - queue.lastAt >= RESULT_FLUSH_MS)) queue.send();
+      };
+      queue.send = function () {
+        var items = take();
+        if (items.length === 0) return;
+        queue.busy = true;
+        queue.lastAt = clock();
+        queue.chain = queue.chain.then(function () {
+          return sendResults(report, { final: false, items: items });
+        }).then(function () {
+          queue.busy = false;
+          queue.lastAt = clock();
+        }, function (error) {
+          queue.busy = false;
+          queue.error = error;
+        });
+      };
+      queue.finish = async function (body) {
+        await queue.chain;
+        if (queue.error) throw queue.error;
+        return sendResults(report, Object.assign({ final: true, items: take() }, body));
+      };
+      return queue;
     }
 
     function diagnostics(extra) {
       var discovery = state.discovery || state.categoryDiscovery ? Object.assign({}, state.discovery || {}, state.categoryDiscovery ? { categoryPage: state.categoryDiscovery } : {}) : undefined;
       // throttled: 429(요청이 너무 많음)로 쉰 횟수, gapMs: 마지막 요청 간격 — 서버 로그로 발주오라 요청 제한을 확인합니다.
-      return { version: VERSION, at: new Date().toISOString(), structure: state.structure, endpoints: state.endpoints, errors: state.errors.slice(0, 30), extra: extra || {}, discovery: discovery, throttled: state.throttled, gapMs: state.gapMs };
+      // stats(1.9.2): 발주오라 요청 수·저장 요청 수·평균/최대 응답 시간·429로 함께 쉰 시간·동시 처리 수·DB센터 결과 보내기 횟수, 요청 제한 머리글 이름(값 없음)
+      var stats = {
+        requests: state.stats.requests,
+        writes: state.writes,
+        avgMs: state.stats.requests > 0 ? Math.round(state.stats.totalMs / state.stats.requests) : 0,
+        maxMs: Math.round(state.stats.maxMs),
+        pausedSeconds: Math.round(state.stats.pausedMs / 1000),
+        floorMs: state.floorMs,
+        concurrency: extra && typeof extra.concurrency === "number" ? extra.concurrency : 1,
+        resultPosts: state.stats.resultPosts,
+        resultRetries: state.stats.resultRetries,
+        rateHeaders: Object.keys(state.stats.rateHeaders).slice(0, 8)
+      };
+      return { version: VERSION, at: new Date().toISOString(), structure: state.structure, endpoints: state.endpoints, errors: state.errors.slice(0, 30), extra: extra || {}, discovery: discovery, throttled: state.throttled, gapMs: state.gapMs, stats: stats };
     }
 
     return { api: api, refreshToken: refreshToken, runCompare: runCompare, runPush: runPush, runSales: runSales, listAll: listAll, pushItem: pushItem, diagnostics: diagnostics, state: state };
@@ -2731,7 +2929,12 @@
     async function postJson(path, body) {
       var response = await win.fetch(doogoOrigin + "/api/baljuora/runner/" + encodeURIComponent(code) + path, { method: body === undefined ? "GET" : "POST", headers: body === undefined ? undefined : { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
       var json = await response.json().catch(function () { return null; });
-      if (!response.ok || !json || json.ok === false) throw SyncError((json && json.error && json.error.message) || "DB센터 응답 오류(" + response.status + ")");
+      if (!response.ok || !json || json.ok === false) {
+        // 응답 번호를 붙여 일시 오류(5xx)는 다시 보내고, 취소·만료(409)·없는 작업(404)은 바로 멈춥니다(결과 보내기).
+        var failure = SyncError((json && json.error && json.error.message) || "DB센터 응답 오류(" + response.status + ")");
+        failure.status = response.status;
+        throw failure;
+      }
       return json.data;
     }
     var report = {
@@ -2820,6 +3023,8 @@
     codeSnippets: codeSnippets,
     buildCreateBody: buildCreateBody,
     supplierNameKey: supplierNameKey,
+    productNameKey: productNameKey,
+    duplicateNameMessage: duplicateNameMessage,
     defaultSupplierName: defaultSupplierName,
     extractExtra: extractExtra,
     extraBodyFor: extraBodyFor,

@@ -161,6 +161,11 @@ describe("발주오라 판매·매출처 → 판매 현황·매출처·홈택스
     const created = await call<{ code: string; job: { id: string; type: string; salesRange: { start: string; end: string } } }>(admin, "/admin/jobs", "POST", { type: "sales", months: 2 });
     expect(created.job.type).toBe("sales");
     expect(created.job.salesRange).toEqual({ start: `${nextMonthKey(month, -1)}-01`, end: today });
+    // 진행 확인(light, 2026-11-27)도 같은 판매 기간 — plan을 읽지 않고 DB가 그 값만 꺼냄
+    const light = await call<{ job: { salesRange: unknown; total: unknown; items?: unknown; diagnostics?: unknown } }>(admin, `/admin/jobs/${created.job.id}?light=1`);
+    expect(light.job).toMatchObject({ salesRange: created.job.salesRange, total: null });
+    expect(light.job.items).toBeUndefined();
+    expect(light.job.diagnostics).toBeUndefined();
     const start = await app.fetch(new Request(`http://localhost/api/baljuora/runner/${created.code}`, { headers: { origin: "https://console.baljuora.com" } }));
     const job = await json<{ type: string; plan: { type: string; start: string; end: string; knownTax: string[] } }>(start);
     expect(job.data.plan).toMatchObject({ type: "sales", start: `${nextMonthKey(month, -1)}-01`, end: today });
@@ -471,6 +476,8 @@ describe("발주오라 판매·매출처 → 판매 현황·매출처·홈택스
     await runner(created.code, { final: true, salesDone: { complete: true } });
     const job = await call<any>(admin, "/admin/jobs");
     expect(job.jobs[0].summary).toMatchObject({ received: 1, sales: { lines: 1, buyers: 1, complete: true } });
+    // 작업 목록(가볍게 읽기)도 비교 + 판매 기간을 그대로 보여 줌
+    expect(job.jobs[0]).toMatchObject({ type: "compare", salesRange: created.job.salesRange, daily: false, total: null });
     const columns = await executeSql("SELECT * FROM baljuora_sales_lines");
     expect(JSON.stringify(columns.rows)).not.toMatch(/홍길동|010-9999/);
     const link = await executeSql("SELECT rawSnapshot FROM external_product_links WHERE externalProductId = 'bj-apple'");

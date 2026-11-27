@@ -97,6 +97,10 @@ describe("아침 동기화(운영 홈 버튼)", () => {
     });
     status = await call<Daily>(admin, "/admin/daily");
     expect(status.data).toMatchObject({ needsApply: true, job: { status: "done", daily: true } });
+    // 진행 확인(light)도 아침 동기화 작업으로 보임(plan에서 DB가 daily만 꺼냄, 2026-11-27)
+    const light = await call<{ job: { daily: boolean; status: string; items?: unknown } }>(admin, `/admin/jobs/${started.data.job.id}?light=1`);
+    expect(light.data.job).toMatchObject({ daily: true, status: "done" });
+    expect(light.data.job.items).toBeUndefined();
 
     const steps = await applyAll(admin);
     expect(steps.map((step) => [step.status, step.done, step.total])).toEqual([["applying", 1, 2], ["done", 2, 2]]);

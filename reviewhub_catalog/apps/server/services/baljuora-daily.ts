@@ -79,11 +79,25 @@ async function writeDaily(store: DailyStore) {
 }
 
 // 가장 최근 아침 동기화 작업(상태 상관없음)
+// 운영 홈이 2초마다 부르므로 큰 칸(상품별 결과·발주오라에만 있는 상품·기술 정보)은 읽지 않습니다(2026-11-27).
 async function latestDailyJob(): Promise<BaljuoraSyncJob | null> {
-  const rows = await getDb().select().from(baljuoraSyncJobs)
+  const rows = await getDb().select({
+    id: baljuoraSyncJobs.id,
+    codeHash: baljuoraSyncJobs.codeHash,
+    type: baljuoraSyncJobs.type,
+    status: baljuoraSyncJobs.status,
+    plan: baljuoraSyncJobs.plan,
+    progress: baljuoraSyncJobs.progress,
+    summary: baljuoraSyncJobs.summary,
+    createdBy: baljuoraSyncJobs.createdBy,
+    createdAt: baljuoraSyncJobs.createdAt,
+    startedAt: baljuoraSyncJobs.startedAt,
+    finishedAt: baljuoraSyncJobs.finishedAt,
+    expiresAt: baljuoraSyncJobs.expiresAt
+  }).from(baljuoraSyncJobs)
     .where(and(eq(baljuoraSyncJobs.type, "compare"), like(baljuoraSyncJobs.plan, '%"daily":true%')))
     .orderBy(desc(baljuoraSyncJobs.createdAt)).limit(1);
-  return rows[0] ?? null;
+  return rows[0] ? { ...rows[0], results: null, diagnostics: null } : null;
 }
 
 function publicSummary(run: DailyRun | DailySummary | null): DailySummary | null {
@@ -114,8 +128,11 @@ function readJobFacts(job: BaljuoraSyncJob) {
 // 운영 홈 버튼 아래: 마지막 동기화(끝난 회차)·지금 작업·반영할 것이 남았는지
 export async function getDailySyncStatus() {
   try {
-    await expireStaleJobs();
-    const [store, job] = await Promise.all([readDaily(), latestDailyJob()]);
+    const [store, latest] = await Promise.all([readDaily(), latestDailyJob()]);
+    // 만료 시각이 지난 작업이 있을 때만 만료로 바꿉니다(2초마다 쓰기를 하지 않음).
+    const stale = Boolean(latest && (latest.status === "waiting" || latest.status === "running") && latest.expiresAt < nowIso());
+    if (stale) await expireStaleJobs();
+    const job = stale ? await latestDailyJob() : latest;
     const run = store.run && job && store.run.jobId === job.id ? store.run : null;
     const fresh = Boolean(job?.finishedAt && Date.now() - Date.parse(job.finishedAt) < DAILY_APPLY_WINDOW_HOURS * 3600_000);
     const applied = Boolean(job && store.last?.jobId === job.id);

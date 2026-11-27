@@ -170,7 +170,9 @@ function createFake(options: { pricingAllowed?: string[]; validToken?: string; d
       }
       if (method === "POST" && path === "products") {
         if (!body.supplierId) return jsonResponse(400, { statusCode: 400, message: ["supplierId should not be empty"] });
-        const created = { ...body, id: "bj-new", code: body.code || "PD999", imageUrls: [], prices: [], supplier: { id: body.supplierId, name: "봄날농원" } };
+        // 운영처럼 상품명이 같은 상품은 새로 받지 않음(2026-11-27 운영 "이미 존재하는 상품 명 입니다: …")
+        if (Object.values(products).some((product: any) => product.name === body.name)) return jsonResponse(400, { statusCode: 400, message: `이미 존재하는 상품 명 입니다: ${body.name}` });
+        const created = { ...body, id: products["bj-new"] ? `bj-new-${Object.keys(products).length}` : "bj-new", code: body.code || "PD999", imageUrls: [], prices: [], supplier: { id: body.supplierId, name: "봄날농원" } };
         delete created.supplierId;
         products[created.id] = created;
         return jsonResponse(201, { statusCode: 201, data: created });
@@ -198,6 +200,47 @@ function createReport() {
   const posted: any[] = [];
   const logs: string[] = [];
   return { posted, logs, progress: () => undefined, log: (text: string) => { logs.push(text); }, results: async (body: any) => { posted.push(body); return {}; } };
+}
+
+// 1.9.2: 보내기 결과는 상품을 보내는 동안 묶어서 따로 보내므로 여러 번에 나눠 올 수 있습니다.
+function postedItems(report: { posted: any[] }) {
+  return report.posted.flatMap((body) => Array.isArray(body.items) ? body.items : []);
+}
+
+function finalPost(report: { posted: any[] }) {
+  return report.posted.find((body) => body.final === true);
+}
+
+// 가짜 발주오라에 상품을 여럿 넣고, 그 상품들의 공급가를 바꾸는 보내기 항목을 만듭니다.
+function addMany(fake: ReturnType<typeof createFake>, count: number) {
+  for (let index = 1; index <= count; index += 1) {
+    fake.products[`bj-m${index}`] = { id: `bj-m${index}`, code: `M-${index}`, name: `여러 상품 ${index}`, supplyPrice: 10000, consumerPrice: null, purchaseCost: 8000, categoryIds: [], categories: [], imageUrls: [], prices: [], supplier: { id: "sup-1", name: "봄날농원" }, isVisible: true, isSoldOut: false };
+  }
+}
+
+function manyItems(count: number) {
+  return Array.from({ length: count }, (_, offset) => {
+    const index = offset + 1;
+    return pushItem({ productId: `p-m${index}`, baljuoraId: `bj-m${index}`, code: `M-${index}`, name: `여러 상품 ${index}`, fields: ["supplyPrice"], values: { ...pushItem({}).values, name: `여러 상품 ${index}`, supplyPrice: 11000 } });
+  });
+}
+
+// 실제 시간 대신 vitest 가짜 시계로 기다림(요청 간격·429 대기·응답 시간)을 확인합니다(실패도 그대로 돌려줌).
+async function withFakeTimers<T>(work: (timers: { sleep: (ms: number) => Promise<void>; now: () => number }) => Promise<T>) {
+  vi.useFakeTimers();
+  try {
+    const settled = work({ sleep: (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms); }), now: () => Date.now() }).then((value) => ({ value }), (error) => ({ error }));
+    await vi.runAllTimersAsync();
+    const outcome: { value?: T; error?: unknown } = await settled;
+    if ("error" in outcome) throw outcome.error;
+    return outcome.value as T;
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
+function runnerWith(fetch: (input: string, init?: RequestInit) => Promise<Response>, timers: Record<string, unknown> = {}) {
+  return internals.createRunner({ fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test", ...timers });
 }
 
 function pushItem(partial: Record<string, any>) {
@@ -393,17 +436,6 @@ describe("보내기: 상품 카테고리(1.9.1)", () => {
 });
 
 describe("발주오라 요청 제한(429)·요청 간격(1.9.1)", () => {
-  // 실제 시간 대신 vitest 가짜 시계로 기다림(요청 간격·429 대기)을 확인합니다.
-  async function withFakeTimers<T>(work: (timers: { sleep: (ms: number) => Promise<void>; now: () => number }) => Promise<T>) {
-    vi.useFakeTimers();
-    try {
-      const promise = work({ sleep: (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms); }), now: () => Date.now() });
-      await vi.runAllTimersAsync();
-      return await promise;
-    } finally {
-      vi.useRealTimers();
-    }
-  }
   const throttleSeconds = (progress: string[]) => progress.map((text) => /(\d+)초 쉬었다가 이어서 보내요\((\d+)번째\)/.exec(text)).filter(Boolean).map((match) => Number(match![1]));
 
   it("429를 받으면 점점 길게 쉬었다가 같은 요청을 다시 보내고, 패널에 기다린다고 알립니다", async () => {
@@ -425,8 +457,8 @@ describe("발주오라 요청 제한(429)·요청 간격(1.9.1)", () => {
     expect(runner.state.throttled).toBe(2);
     expect(runner.state.gapMs).toBeGreaterThan(150); // 간격을 늘렸다가(800ms) 성공할 때마다 조금씩 줄임
     expect(report.logs.filter((line) => line.includes("발주오라 요청 제한(429)"))).toHaveLength(1); // 기록 줄은 1분에 한 번
-    expect(report.posted[0].diagnostics).toMatchObject({ throttled: 2 });
-    expect(report.posted[0].items[0]).toMatchObject({ ok: true, applied: ["supplyPrice"] });
+    expect(finalPost(report).diagnostics).toMatchObject({ throttled: 2, stats: { pausedSeconds: 6 } });
+    expect(postedItems(report)[0]).toMatchObject({ ok: true, applied: ["supplyPrice"] });
   });
 
   it("발주오라가 Retry-After(초)를 알려 주면 그만큼(최대 1분) 기다립니다", async () => {
@@ -444,7 +476,7 @@ describe("발주오라 요청 제한(429)·요청 간격(1.9.1)", () => {
     (report as any).progress = (_done: number, _total: number, text: string) => { progress.push(text); };
     await withFakeTimers((timers) => internals.createRunner({ fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test", ...timers }).runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [pushItem({ fields: ["supplyPrice"] })] }, report, "ABCDE23456"));
     expect(throttleSeconds(progress)).toEqual([7]);
-    expect(report.posted[0].items[0]).toMatchObject({ ok: true });
+    expect(postedItems(report)[0]).toMatchObject({ ok: true });
   });
 
   it("계속 429면 8번까지 쉬었다가 다시 보낸 뒤 그 상품만 실패로 알리고 다음 상품으로 갑니다", async () => {
@@ -455,9 +487,9 @@ describe("발주오라 요청 제한(429)·요청 간격(1.9.1)", () => {
     const summary = await withFakeTimers((timers) => runnerFor(fake, timers).runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [pushItem({ fields: ["supplyPrice"] }), pushItem({ productId: "p-2", baljuoraId: "bj-b", code: "BJT-002", name: "봄날 배", fields: ["supplyPrice"], values: { ...pushItem({}).values, name: "봄날 배", supplyPrice: 39000 } })] }, report, "ABCDE23456"));
     expect(summary).toEqual({ ok: 1, failed: 1 });
     expect(throttleSeconds(progress)).toEqual([2, 4, 8, 15, 30, 30, 30, 30]);
-    const [first, second] = report.posted[report.posted.length - 1].items;
-    expect(first).toMatchObject({ ok: false, error: expect.stringContaining("429") });
-    expect(second).toMatchObject({ ok: true, applied: ["supplyPrice"] });
+    const [first, second] = postedItems(report).sort((a: any, b: any) => a.productId.localeCompare(b.productId));
+    expect(first).toMatchObject({ productId: "p-1", ok: false, error: expect.stringContaining("429") });
+    expect(second).toMatchObject({ productId: "p-2", ok: true, applied: ["supplyPrice"] });
   });
 
   it("요청 사이에 간격을 둡니다(상세를 5개씩 함께 읽어도 차례로 0.15초 이상)", async () => {
@@ -470,6 +502,183 @@ describe("발주오라 요청 제한(429)·요청 간격(1.9.1)", () => {
     await withFakeTimers((timers) => internals.createRunner({ fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test", ...timers }).runCompare({ type: "compare", groupKeyword: "황금농부", detailIds: ["bj-a", "bj-b"] }, createReport()));
     expect(starts.length).toBeGreaterThan(4);
     starts.slice(1).forEach((at, index) => expect(at - starts[index]).toBeGreaterThanOrEqual(150));
+  });
+});
+
+describe("보내기 속도(1.9.2)", () => {
+  it("상품 3개를 함께 보냅니다(동시에 최대 3개, 한 상품 안의 요청은 차례로)", async () => {
+    const fake = createFake();
+    addMany(fake, 6);
+    let inFlight = 0;
+    let maxInFlight = 0;
+    let sameProductOverlap = false;
+    const busy = new Set<string>();
+    const fetch = async (input: string, init: RequestInit = {}) => {
+      const url = new URL(input);
+      if (url.origin !== "https://api.baljuora.com") return fake.fetch(input, init);
+      const id = /^\/products\/([^/]+)/.exec(url.pathname)?.[1] ?? url.pathname;
+      if (busy.has(id)) sameProductOverlap = true;
+      busy.add(id);
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => { setTimeout(resolve, 400); }); // 발주오라 응답 0.4초
+      inFlight -= 1;
+      busy.delete(id);
+      return fake.fetch(input, init);
+    };
+    const report = createReport();
+    const { summary, elapsed, runner } = await withFakeTimers(async (timers) => {
+      const startedAt = Date.now();
+      const runner = runnerWith(fetch, timers);
+      const summary = await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: manyItems(6) }, report, "ABCDE23456");
+      return { summary, elapsed: Date.now() - startedAt, runner };
+    });
+    expect(summary).toEqual({ ok: 6, failed: 0 });
+    expect(maxInFlight).toBe(3);
+    expect(sameProductOverlap).toBe(false);
+    // 상품마다 요청 3개(상세·가격·다시 읽기) × 0.4초: 차례로면 7.2초, 3개씩 함께라 절반보다 빠름(요청 간격 0.15초는 그대로)
+    expect(elapsed).toBeLessThan(3600);
+    expect(postedItems(report).map((item: any) => item.productId)).toEqual(manyItems(6).map((item) => item.productId));
+    expect(finalPost(report).diagnostics.stats).toMatchObject({ concurrency: 3, requests: 18, writes: 6, avgMs: 400, maxMs: 400 });
+    expect(runner.state.gapMs).toBe(150);
+  });
+
+  it("DB센터에 결과를 보내는 동안에도 발주오라 쪽 상품 처리는 계속합니다(묶어서 따로, 한 번에 하나씩)", async () => {
+    const fake = createFake();
+    addMany(fake, 45);
+    const starts: number[] = [];
+    const fetch = async (input: string, init: RequestInit = {}) => {
+      if (input.startsWith("https://api.baljuora.com")) starts.push(Date.now());
+      return fake.fetch(input, init);
+    };
+    const report = createReport();
+    const windows: Array<[number, number]> = [];
+    let sending = 0;
+    let overlapped = false;
+    report.results = async (body: any) => {
+      sending += 1;
+      if (sending > 1) overlapped = true;
+      const begin = Date.now();
+      if (!body.final) await new Promise((resolve) => { setTimeout(resolve, 5000); }); // DB센터가 5초 걸림
+      windows.push([begin, Date.now()]);
+      report.posted.push(body);
+      sending -= 1;
+      return {};
+    };
+    const summary = await withFakeTimers((timers) => runnerWith(fetch, timers).runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: manyItems(45) }, report, "ABCDE23456"));
+    expect(summary).toEqual({ ok: 45, failed: 0 });
+    expect(overlapped).toBe(false); // 결과는 한 번에 하나씩
+    const [begin, end] = windows[0];
+    expect(starts.filter((at) => at > begin && at < end).length).toBeGreaterThan(10); // 기다리는 5초 동안에도 발주오라 요청이 이어짐
+    expect(report.posted.filter((body: any) => !body.final).length).toBeGreaterThan(0);
+    expect(report.posted.filter((body: any) => body.final)).toHaveLength(1);
+    expect(postedItems(report)).toHaveLength(45);
+    expect(new Set(postedItems(report).map((item: any) => item.productId)).size).toBe(45);
+  });
+
+  it("결과 보내기가 잠깐 실패하면(DB센터 5xx·연결 끊김) 다시 보내고, 취소(409)면 새 상품을 더 시작하지 않습니다", async () => {
+    const fake = createFake();
+    const report = createReport();
+    const saved = report.results;
+    let failures = 2;
+    report.results = async (body: any) => {
+      if (failures === 2) { failures -= 1; const error: any = new Error("DB센터 응답 오류(502)"); error.status = 502; throw error; }
+      if (failures === 1) { failures -= 1; throw new TypeError("Failed to fetch"); } // 연결 끊김(응답 번호 없음)
+      return saved(body);
+    };
+    const runner = await withFakeTimers(async (timers) => {
+      const runner = runnerWith(fake.fetch, timers);
+      await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [pushItem({ fields: ["supplyPrice"] })] }, report, "ABCDE23456");
+      return runner;
+    });
+    expect(postedItems(report)).toHaveLength(1);
+    expect(postedItems(report)[0]).toMatchObject({ ok: true, applied: ["supplyPrice"] });
+    expect(runner.state.stats.resultRetries).toBe(2);
+
+    const many = createFake();
+    addMany(many, 40);
+    const cancelled = createReport();
+    cancelled.results = async () => { const error: any = new Error("DB센터에서 취소한 작업입니다."); error.status = 409; throw error; };
+    await expect(withFakeTimers((timers) => runnerWith(many.fetch, timers).runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: manyItems(40) }, cancelled, "ABCDE23456"))).rejects.toThrow("DB센터에서 취소한 작업입니다.");
+    const priced = many.calls.filter((call) => call.method === "PUT" && call.url.endsWith("/pricing")).length;
+    expect(priced).toBeGreaterThan(0);
+    expect(priced).toBeLessThan(40);
+  });
+
+  it("마지막 결과를 다시 보냈는데 '이미 끝난 작업'(409)이면 앞서 보낸 것이 저장된 것이라 그대로 끝냅니다", async () => {
+    const fake = createFake();
+    const report = createReport();
+    let attempts = 0;
+    report.results = async (body: any) => {
+      attempts += 1;
+      if (attempts === 1) { report.posted.push(body); throw new TypeError("Failed to fetch"); } // DB센터는 받았지만 응답이 끊김
+      const error: any = new Error("이미 끝난 작업입니다. DB센터에서 결과를 확인해 주세요."); error.status = 409; throw error;
+    };
+    const summary = await withFakeTimers((timers) => runnerWith(fake.fetch, timers).runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [pushItem({ fields: ["supplyPrice"] })] }, report, "ABCDE23456"));
+    expect(summary).toEqual({ ok: 1, failed: 0 });
+    expect(attempts).toBe(2);
+  });
+
+  it("한 요청이 429를 받으면 다른 상품의 요청도 함께 쉽니다", async () => {
+    let throttles = 1;
+    const fake = createFake({ throttle: (method, path) => method === "GET" && path === "products/bj-a" && throttles-- > 0 });
+    addMany(fake, 3);
+    const starts: Array<{ at: number; path: string }> = [];
+    const fetch = async (input: string, init: RequestInit = {}) => {
+      const url = new URL(input);
+      if (url.origin === "https://api.baljuora.com") starts.push({ at: Date.now(), path: url.pathname });
+      return fake.fetch(input, init);
+    };
+    const report = createReport();
+    const runner = await withFakeTimers(async (timers) => {
+      const runner = runnerWith(fetch, timers);
+      await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [pushItem({ fields: ["supplyPrice"] }), ...manyItems(3)] }, report, "ABCDE23456");
+      return runner;
+    });
+    const throttledAt = starts.find((entry) => entry.path === "/products/bj-a")!.at;
+    expect(starts.filter((entry) => entry.at > throttledAt && entry.at < throttledAt + 2000)).toEqual([]);
+    expect(postedItems(report).every((item: any) => item.ok)).toBe(true);
+    // 막혔던 간격(0.15초)보다 30% 넓은 간격을 바닥으로 지키다가 성공할 때마다 조금씩 좁힘
+    expect(runner.state.floorMs).toBeGreaterThan(150);
+    expect(runner.state.floorMs).toBeLessThanOrEqual(195);
+    expect(runner.state.gapMs).toBeGreaterThanOrEqual(runner.state.floorMs);
+  });
+
+  it("상품을 함께 보내도 저장한 상품만 다시 읽습니다", async () => {
+    const fake = createFake();
+    const report = createReport();
+    // bj-a: 공급가 26,000 → 27,000(저장함) / bj-b: 공급가가 이미 38,000(저장 안 함)
+    await runnerFor(fake).runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [pushItem({ fields: ["supplyPrice"] }), pushItem({ productId: "p-2", baljuoraId: "bj-b", code: "BJT-002", name: "봄날 배", fields: ["supplyPrice"], values: { ...pushItem({}).values, name: "봄날 배", supplyPrice: 38000 } })] }, report, "ABCDE23456");
+    const reads = (id: string) => fake.calls.filter((call) => call.method === "GET" && new URL(call.url).pathname === `/products/${id}`).length;
+    expect(reads("bj-a")).toBe(2);
+    expect(reads("bj-b")).toBe(1);
+    expect(postedItems(report).map((item: any) => [item.productId, item.ok])).toEqual([["p-1", true], ["p-2", true]]);
+  });
+
+  it("발주오라에 이름이 같은 상품이 있으면 새로 등록하지 않고 고칠 방법을 알립니다(발주오라는 같은 이름을 받지 않음)", async () => {
+    const fake = createFake();
+    const report = createReport();
+    await runnerFor(fake).runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [pushItem({ productId: "p-dup", action: "create", baljuoraId: null, templateId: "bj-a", templateMatch: "supplier", code: "DG-9", supplierName: "봄날농원", name: "봄날 사과 5kg", fields: ["name", "supplyPrice"] })] }, report, "ABCDE23456");
+    const [result] = postedItems(report);
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe(internals.duplicateNameMessage({ name: "봄날 사과 5kg", code: "DG-9", values: { name: "봄날 사과 5kg" } }, { id: "bj-a", code: "BJT-001" }));
+    expect(result.error).toContain("이름이 같은 상품 '봄날 사과 5kg'(발주오라 상품코드 BJT-001)");
+    expect(result.error).toContain("DB센터 상품코드(DG-9)");
+    expect(fake.calls.some((call) => call.method === "POST" && call.url === "https://api.baljuora.com/products")).toBe(false);
+    expect(internals.productNameKey("  봄날 사과 5kg ")).toBe("봄날 사과 5kg");
+  });
+
+  it("목록으로 알 수 없어도 발주오라가 '이미 존재하는 상품 명'이라고 거절하면 같은 안내로 바꿉니다", async () => {
+    const fake = createFake();
+    const fetch = async (input: string, init: RequestInit = {}) => {
+      if ((init.method || "GET").toUpperCase() === "POST" && new URL(input).pathname === "/products") return jsonResponse(400, { statusCode: 400, message: "이미 존재하는 상품 명 입니다: 봄날 사과 특품" });
+      return fake.fetch(input, init);
+    };
+    const report = createReport();
+    await runnerWith(fetch).runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [pushItem({ productId: "p-dup2", action: "create", baljuoraId: null, templateId: "bj-a", templateMatch: "supplier", code: "DG-10", supplierName: "봄날농원", name: "봄날 사과 특품", fields: ["name", "supplyPrice"], values: { ...pushItem({}).values, name: "봄날 사과 특품" } })] }, report, "ABCDE23456");
+    const [result] = postedItems(report);
+    expect(result).toMatchObject({ ok: false, error: expect.stringContaining("이름이 같은 상품 '봄날 사과 특품'이 이미 있어 새로 등록하지 않았습니다") });
+    expect(result.error).toContain("DB센터 상품코드(DG-10)");
   });
 });
 
@@ -1179,7 +1388,7 @@ describe("보내기", () => {
   it("설정 복사용 상품이 없으면 신규 등록을 하지 않고 이유를 알려 줍니다", async () => {
     const fake = createFake();
     const report = createReport();
-    await runnerFor(fake).runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [pushItem({ action: "create", baljuoraId: null, templateId: null, code: "BJT-NEW", supplierName: null })] }, report, "ABCDE23456");
+    await runnerFor(fake).runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [pushItem({ action: "create", baljuoraId: null, templateId: null, code: "BJT-NEW", supplierName: null, name: "봄날 부사 10kg", values: { ...pushItem({}).values, name: "봄날 부사 10kg" } })] }, report, "ABCDE23456");
     const [result] = report.posted[0].items;
     expect(result.ok).toBe(false);
     expect(result.error).toContain("설정 복사용 상품코드");
@@ -1222,7 +1431,7 @@ describe("보내기", () => {
     expect(fake.calls.some((call) => call.method === "POST" && call.url === "https://api.baljuora.com/products")).toBe(false);
     // 설정 복사용 상품도 없고 같은 매입처 상품도 없을 때도 같은 이유로 멈춤
     const noTemplate = createReport();
-    await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [pushItem({ action: "create", baljuoraId: null, templateId: null, code: "BJT-NEW", supplierName: "햇살농장" })] }, noTemplate, "ABCDE23456");
+    await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [pushItem({ action: "create", baljuoraId: null, templateId: null, code: "BJT-NEW", supplierName: "햇살농장", name: "햇살 고구마", values: { ...NEW_GRAPE, name: "햇살 고구마" } })] }, noTemplate, "ABCDE23456");
     expect(noTemplate.posted[0].items[0].error).toContain("'햇살농장' 매입처 상품이 없어 신규 등록을 멈췄습니다");
   });
 
@@ -1235,10 +1444,21 @@ describe("보내기", () => {
     expect(fake.calls.find((call) => call.method === "POST" && call.url === "https://api.baljuora.com/products")?.body).toMatchObject({ supplierId: "sup-2" });
   });
 
+  it("같은 상품을 복사하는 새 상품이 여러 개면 복사할 상품은 한 번만 읽습니다(1.9.2)", async () => {
+    const fake = createFake({ listSuppliers: true });
+    addDami(fake);
+    const report = createReport();
+    const grape = (index: number) => pushItem({ productId: `p-grape-${index}`, action: "create", baljuoraId: null, templateId: "bj-d", templateMatch: "supplier", code: `DAMI-1${index}`, name: `다미 거봉 ${index}kg`, supplierName: "다미농장", fields: ["name", "supplyPrice"], values: { ...NEW_GRAPE, name: `다미 거봉 ${index}kg` } });
+    await runnerFor(fake).runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [grape(1), grape(2), grape(3)] }, report, "ABCDE23456");
+    expect(fake.calls.filter((call) => call.method === "GET" && new URL(call.url).pathname === "/products/bj-d")).toHaveLength(1);
+    expect(fake.calls.filter((call) => call.method === "POST" && call.url === "https://api.baljuora.com/products").map((call) => call.body.name).sort()).toEqual(["다미 거봉 1kg", "다미 거봉 2kg", "다미 거봉 3kg"]);
+    expect(postedItems(report).map((item: any) => item.ok)).toEqual([true, true, true]);
+  });
+
   it("복사할 상품의 매입처 이름을 읽지 못하면 DB센터에서 같은 매입처로 연결된 상품일 때만 복사합니다", async () => {
     const fake = createFake();
     fake.products["bj-x"] = { id: "bj-x", code: "X-1", name: "이름 없는 매입처 상품", supplyPrice: 1000, consumerPrice: null, purchaseCost: 800, categoryId: "bj-cat-farm", imageUrls: [], prices: [], supplier: { id: "sup-x" }, isVisible: true, isSoldOut: false };
-    const item = (templateMatch: string) => pushItem({ productId: `p-${templateMatch}`, action: "create", baljuoraId: null, templateId: "bj-x", templateMatch, code: `X-${templateMatch}`, name: "새 상품", supplierName: "엑스상회", fields: ["name", "supplyPrice"], values: { ...NEW_GRAPE, name: "새 상품" } });
+    const item = (templateMatch: string) => pushItem({ productId: `p-${templateMatch}`, action: "create", baljuoraId: null, templateId: "bj-x", templateMatch, code: `X-${templateMatch}`, name: `새 상품 ${templateMatch}`, supplierName: "엑스상회", fields: ["name", "supplyPrice"], values: { ...NEW_GRAPE, name: `새 상품 ${templateMatch}` } });
     const runner = runnerFor(fake);
     const trusted = createReport();
     await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: null, items: [item("supplier")] }, trusted, "ABCDE23456");

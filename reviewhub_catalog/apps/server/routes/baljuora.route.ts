@@ -182,7 +182,8 @@ baljuoraRouter.get("/admin/jobs", adminRoute, async (c) => {
 
 baljuoraRouter.get("/admin/jobs/:id", adminRoute, async (c) => {
   try {
-    return c.json(apiSuccess({ job: await getBaljuoraJob(c.req.param("id")) }));
+    // ?light=1: 진행 중 2초마다 확인할 때(진행·요약만)
+    return c.json(apiSuccess({ job: await getBaljuoraJob(c.req.param("id"), { light: c.req.query("light") === "1" }) }));
   } catch (error) {
     return errorResponse(c, error);
   }

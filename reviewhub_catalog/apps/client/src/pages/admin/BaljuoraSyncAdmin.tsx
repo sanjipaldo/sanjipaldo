@@ -228,7 +228,8 @@ export function BaljuoraSyncAdmin() {
     let stopped = false;
     const timer = window.setInterval(async () => {
       try {
-        const { job: next } = await readData<{ job: JobView }>(await apiFetch(`/baljuora/admin/jobs/${jobId}`, { silent: true }));
+        // light=1: 진행·요약만 받습니다(상품별 결과·기술 정보는 '자세히 보기'에서).
+        const { job: next } = await readData<{ job: JobView }>(await apiFetch(`/baljuora/admin/jobs/${jobId}?light=1`, { silent: true }));
         if (stopped) return;
         setJob((current) => current && current.view.id === next.id ? { ...current, view: next } : current);
         if (next.status !== "waiting" && next.status !== "running") {

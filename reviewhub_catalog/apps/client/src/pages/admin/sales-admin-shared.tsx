@@ -100,7 +100,7 @@ export function SalesSyncCard({ sync, onDone, compact = false }: { sync: SalesSy
     let stopped = false;
     void (async () => {
       try {
-        const { job: view } = await readData<{ job: JobView }>(await apiFetch(`/baljuora/admin/jobs/${saved.id}`, { silent: true }));
+        const { job: view } = await readData<{ job: JobView }>(await apiFetch(`/baljuora/admin/jobs/${saved.id}?light=1`, { silent: true }));
         if (stopped) return;
         if (view.status === "waiting" || view.status === "running") setJob((current) => current ?? { view, code: saved.code, consoleUrl: saved.consoleUrl });
         else clearJobCode(saved.id);
@@ -135,7 +135,7 @@ export function SalesSyncCard({ sync, onDone, compact = false }: { sync: SalesSy
 
   const jobId = job?.view.id;
   const poll = useCallback(async (id: string) => {
-    const { job: next } = await readData<{ job: JobView }>(await apiFetch(`/baljuora/admin/jobs/${id}`, { silent: true }));
+    const { job: next } = await readData<{ job: JobView }>(await apiFetch(`/baljuora/admin/jobs/${id}?light=1`, { silent: true }));
     setJob((current) => current && current.view.id === next.id ? { ...current, view: next } : current);
     if (next.status !== "waiting" && next.status !== "running") clearJobCode(next.id);
     if (next.status === "done") {

@@ -327,9 +327,54 @@ export function consoleUrlFor(merchantSlug: string, code: string) {
   return `${BALJUORA_CONSOLE_ORIGIN}/${encodeURIComponent(merchantSlug)}/dashboard#doogo-sync=${code}`;
 }
 
-export function jobView(row: BaljuoraSyncJob, withDetails = false) {
-  const plan = parseJson<BaljuoraPlan | null>(row.plan, null);
-  const results = parseJson<JobResults | null>(row.results, null);
+// ─── 작업 행 가볍게 읽기(2026-11-27 동기화 속도) ─────────────────────────────────
+// 보내기 작업의 plan(상품 2,000개면 몇 MB)·results·diagnostics는 큽니다. 책갈피가 1.5초마다 보내는 진행·결과·이미지 요청과
+// 관리자 화면의 2초 확인·작업 목록이 매번 이 큰 칸을 통째로 읽어 동기화와 화면이 느려졌습니다. 그래서 자주 읽는 곳은 작은 칸만 읽고,
+// 화면에 필요한 plan 정보(보낼 상품 수·아침 동기화·판매 기간)는 DB가 plan에서 그 값만 꺼내 줍니다.
+const JOB_LIGHT_COLUMNS = {
+  id: baljuoraSyncJobs.id,
+  codeHash: baljuoraSyncJobs.codeHash,
+  type: baljuoraSyncJobs.type,
+  status: baljuoraSyncJobs.status,
+  progress: baljuoraSyncJobs.progress,
+  summary: baljuoraSyncJobs.summary,
+  createdBy: baljuoraSyncJobs.createdBy,
+  createdAt: baljuoraSyncJobs.createdAt,
+  startedAt: baljuoraSyncJobs.startedAt,
+  finishedAt: baljuoraSyncJobs.finishedAt,
+  expiresAt: baljuoraSyncJobs.expiresAt
+};
+// 끝난 보내기 작업은 summary.total(보낼 상품 수)이 있어 큰 plan을 풀지 않습니다(비교·판매 작업의 plan은 작음).
+const JOB_META_COLUMNS = {
+  metaTotal: sql<number | null>`case when ${baljuoraSyncJobs.type} = 'push' then coalesce(case when json_valid(${baljuoraSyncJobs.summary}) then json_extract(${baljuoraSyncJobs.summary}, '$.total') end, json_array_length(${baljuoraSyncJobs.plan}, '$.items')) end`,
+  metaDaily: sql<number | null>`case when ${baljuoraSyncJobs.type} = 'compare' then json_extract(${baljuoraSyncJobs.plan}, '$.daily') end`,
+  metaSalesStart: sql<string | null>`case ${baljuoraSyncJobs.type} when 'sales' then json_extract(${baljuoraSyncJobs.plan}, '$.start') when 'compare' then json_extract(${baljuoraSyncJobs.plan}, '$.sales.start') end`,
+  metaSalesEnd: sql<string | null>`case ${baljuoraSyncJobs.type} when 'sales' then json_extract(${baljuoraSyncJobs.plan}, '$.end') when 'compare' then json_extract(${baljuoraSyncJobs.plan}, '$.sales.end') end`
+};
+type JobLight = Omit<BaljuoraSyncJob, "plan" | "results" | "diagnostics">;
+type JobLightWithMeta = JobLight & { metaTotal: number | null; metaDaily: number | null; metaSalesStart: string | null; metaSalesEnd: string | null };
+type PlanMeta = { total: number | null; daily: boolean; salesRange: { start: string; end: string } | null };
+
+function planMetaOf(plan: BaljuoraPlan | null): PlanMeta {
+  const sales = plan && plan.type !== "push" ? (plan.type === "sales" ? plan : plan.sales ?? null) : null;
+  return {
+    total: plan?.type === "push" ? plan.items.length : null,
+    daily: plan?.type === "compare" && plan.daily === true,
+    salesRange: sales ? { start: sales.start, end: sales.end } : null
+  };
+}
+
+function planMetaFromColumns(row: JobLightWithMeta): PlanMeta {
+  const total = row.metaTotal === null || row.metaTotal === undefined ? null : Number(row.metaTotal);
+  return {
+    total: row.type === "push" && Number.isFinite(total) ? total : null,
+    daily: row.type === "compare" && Number(row.metaDaily) === 1,
+    salesRange: typeof row.metaSalesStart === "string" && typeof row.metaSalesEnd === "string" ? { start: row.metaSalesStart, end: row.metaSalesEnd } : null
+  };
+}
+
+function buildJobView(row: JobLight, meta: PlanMeta, details?: { results: string | null; diagnostics: string | null }) {
+  const results = details ? parseJson<JobResults | null>(details.results, null) : null;
   return {
     id: row.id,
     type: row.type,
@@ -338,14 +383,53 @@ export function jobView(row: BaljuoraSyncJob, withDetails = false) {
     startedAt: row.startedAt,
     finishedAt: row.finishedAt,
     expiresAt: row.expiresAt,
-    total: plan?.type === "push" ? plan.items.length : null,
-    daily: plan?.type === "compare" && plan.daily === true,
-    salesRange: plan && plan.type !== "push" && (plan.type === "sales" ? plan : plan.sales) ? { start: (plan.type === "sales" ? plan : plan.sales as SalesStep).start, end: (plan.type === "sales" ? plan : plan.sales as SalesStep).end } : null,
+    total: meta.total,
+    daily: meta.daily,
+    salesRange: meta.salesRange,
     progress: parseJson<{ done: number; total: number; message: string } | null>(row.progress, null),
     summary: parseJson<Record<string, unknown> | null>(row.summary, null),
-    items: withDetails ? (results?.items ?? []) : undefined,
-    diagnostics: withDetails ? parseJson<Record<string, unknown> | null>(row.diagnostics, null) : undefined
+    items: details ? (results?.items ?? []) : undefined,
+    diagnostics: details ? parseJson<Record<string, unknown> | null>(details.diagnostics, null) : undefined
   };
+}
+
+export function jobView(row: BaljuoraSyncJob, withDetails = false) {
+  return buildJobView(row, planMetaOf(parseJson<BaljuoraPlan | null>(row.plan, null)), withDetails ? { results: row.results, diagnostics: row.diagnostics } : undefined);
+}
+
+function lightJobView(row: JobLightWithMeta) {
+  return buildJobView(row, planMetaFromColumns(row));
+}
+
+// 작업 내용(plan)은 만든 뒤 바뀌지 않습니다(작업 코드 다시 받기도 코드만 바꿈). 책갈피가 결과·이미지를 보낼 때마다 몇 MB짜리 plan을
+// DB에서 읽어 풀지 않게, 최근 작업 몇 개의 plan을 서버 메모리에 기억합니다(서버가 새로 뜨면 한 번 다시 읽음).
+const PLAN_CACHE_LIMIT = 3;
+const planCache = new Map<string, BaljuoraPlan>();
+
+async function jobPlan(id: string): Promise<BaljuoraPlan | null> {
+  const cached = planCache.get(id);
+  if (cached) return cached;
+  const rows = await getDb().select({ plan: baljuoraSyncJobs.plan }).from(baljuoraSyncJobs).where(eq(baljuoraSyncJobs.id, id)).limit(1);
+  const plan = parseJson<BaljuoraPlan | null>(rows[0]?.plan ?? null, null);
+  if (plan) {
+    planCache.set(id, plan);
+    while (planCache.size > PLAN_CACHE_LIMIT) {
+      const oldest = planCache.keys().next().value;
+      if (oldest === undefined) break;
+      planCache.delete(oldest);
+    }
+  }
+  return plan;
+}
+
+// 한 작업만 볼 때: 기다리거나 진행 중인데 만료 시각이 지났으면 그 작업만 만료로 바꿉니다(2초마다 모든 작업을 고치는 쓰기를 하지 않음).
+async function expireJobIfStale<T extends JobLight>(row: T): Promise<T> {
+  if ((row.status === "waiting" || row.status === "running") && row.expiresAt < nowIso()) {
+    const finishedAt = nowIso();
+    await getDb().update(baljuoraSyncJobs).set({ status: "expired", finishedAt }).where(and(eq(baljuoraSyncJobs.id, row.id), inArray(baljuoraSyncJobs.status, ["waiting", "running"])));
+    return { ...row, status: "expired", finishedAt };
+  }
+  return row;
 }
 
 export async function expireStaleJobs() {
@@ -708,29 +792,38 @@ export async function cancelBaljuoraJob(id: string) {
   });
 }
 
-export async function getBaljuoraJob(id: string) {
+// light: 관리자 화면이 진행 중인 작업을 2초마다 볼 때(진행·요약만, 상품별 결과·기술 정보·plan은 읽지 않음).
+export async function getBaljuoraJob(id: string, options: { light?: boolean } = {}) {
   return guard(async () => {
-    await expireStaleJobs();
+    if (options.light) {
+      const rows = await getDb().select({ ...JOB_LIGHT_COLUMNS, ...JOB_META_COLUMNS }).from(baljuoraSyncJobs).where(eq(baljuoraSyncJobs.id, id)).limit(1);
+      if (!rows[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "작업을 찾을 수 없습니다.", 404);
+      return lightJobView(await expireJobIfStale(rows[0]));
+    }
     const rows = await getDb().select().from(baljuoraSyncJobs).where(eq(baljuoraSyncJobs.id, id)).limit(1);
     if (!rows[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "작업을 찾을 수 없습니다.", 404);
-    return jobView(rows[0], true);
+    return jobView(await expireJobIfStale(rows[0]), true);
   });
 }
 
 export async function listBaljuoraJobs(limit = 15) {
   return guard(async () => {
     await expireStaleJobs();
-    const rows = await getDb().select().from(baljuoraSyncJobs).orderBy(desc(baljuoraSyncJobs.createdAt)).limit(Math.min(Math.max(limit, 1), 50));
-    return rows.map((row) => jobView(row));
+    const rows = await getDb().select({ ...JOB_LIGHT_COLUMNS, ...JOB_META_COLUMNS }).from(baljuoraSyncJobs).orderBy(desc(baljuoraSyncJobs.createdAt)).limit(Math.min(Math.max(limit, 1), 50));
+    return rows.map((row) => lightJobView(row));
   });
 }
 
 // ─── 책갈피 스크립트(발주오라 창)용 ──────────────────────────────────────────────
 
-async function findJobByCode(code: string) {
+// 책갈피 요청마다 부르므로 작은 칸만 읽습니다(plan은 jobPlan, 결과를 받을 때만 results·diagnostics를 함께).
+async function findJobByCode(code: string): Promise<JobLight>;
+async function findJobByCode(code: string, options: { data: true }): Promise<JobLight & { results: string | null; diagnostics: string | null }>;
+async function findJobByCode(code: string, options: { data?: boolean } = {}) {
   const normalized = normalizeBaljuoraCode(code);
   if (normalized.length !== BALJUORA_CODE_LENGTH) throw new DatabaseError("DATABASE_QUERY_FAILED", "작업 코드는 10글자입니다. DB센터 화면에 보이는 코드를 확인해 주세요.", 400);
-  const rows = await getDb().select().from(baljuoraSyncJobs).where(eq(baljuoraSyncJobs.codeHash, hashJobCode(normalized))).limit(1);
+  const columns = options.data ? { ...JOB_LIGHT_COLUMNS, results: baljuoraSyncJobs.results, diagnostics: baljuoraSyncJobs.diagnostics } : JOB_LIGHT_COLUMNS;
+  const rows: Array<JobLight & { results?: string | null; diagnostics?: string | null }> = await getDb().select(columns).from(baljuoraSyncJobs).where(eq(baljuoraSyncJobs.codeHash, hashJobCode(normalized))).limit(1);
   const row = rows[0];
   if (!row) throw new DatabaseError("DATABASE_QUERY_FAILED", "작업 코드를 찾을 수 없습니다. DB센터에서 동기화를 다시 시작해 주세요.", 404);
   if (["waiting", "running"].includes(row.status) && row.expiresAt < nowIso()) {
@@ -749,7 +842,7 @@ async function findJobByCode(code: string) {
   return row;
 }
 
-function assertRunnable(row: BaljuoraSyncJob) {
+function assertRunnable(row: JobLight) {
   if (row.status === "expired") throw new DatabaseError("DATABASE_QUERY_FAILED", "작업 코드가 만료되었습니다. DB센터에서 다시 시작해 주세요.", 409);
   if (row.status === "cancelled") throw new DatabaseError("DATABASE_QUERY_FAILED", "DB센터에서 취소한 작업입니다.", 409);
   if (row.status === "done" || row.status === "failed") throw new DatabaseError("DATABASE_QUERY_FAILED", "이미 끝난 작업입니다. DB센터에서 결과를 확인해 주세요.", 409);
@@ -759,7 +852,7 @@ export async function startRunnerJob(code: string) {
   return guard(async () => {
     const row = await findJobByCode(code);
     assertRunnable(row);
-    const plan = parseJson<BaljuoraPlan | null>(row.plan, null);
+    const plan = await jobPlan(row.id);
     if (!plan) throw new DatabaseError("DATABASE_QUERY_FAILED", "작업 내용을 읽지 못했습니다.", 500);
     if (row.status === "waiting") {
       await getDb().update(baljuoraSyncJobs)
@@ -779,7 +872,10 @@ export async function recordRunnerProgress(code: string, progress: { done: numbe
       total: Math.max(0, Math.floor(progress.total)),
       message: collapseName(progress.message).slice(0, 300)
     };
-    await getDb().update(baljuoraSyncJobs).set({ progress: JSON.stringify(value), status: "running", startedAt: row.startedAt ?? nowIso() }).where(eq(baljuoraSyncJobs.id, row.id));
+    // 늦게 도착한 진행 소식이 이미 끝난(완료·취소) 작업을 '진행 중'으로 되돌리지 않게 기다림·진행 중일 때만 적습니다.
+    await getDb().update(baljuoraSyncJobs)
+      .set({ progress: JSON.stringify(value), status: "running", startedAt: row.startedAt ?? nowIso() })
+      .where(and(eq(baljuoraSyncJobs.id, row.id), inArray(baljuoraSyncJobs.status, ["waiting", "running"])));
     return { ok: true };
   });
 }
@@ -922,7 +1018,7 @@ async function removeConflictingLinks(rows: Array<{ externalProductId: string; e
   for (const part of chunk(stale, 300)) await db.delete(externalProductLinks).where(inArray(externalProductLinks.id, part));
 }
 
-async function ingestCompareBatch(row: BaljuoraSyncJob, snapshots: BaljuoraProductSnapshot[], results: JobResults) {
+async function ingestCompareBatch(snapshots: BaljuoraProductSnapshot[], results: JobResults) {
   const [productRows, links, settings, context] = await Promise.all([loadProductRows(), loadLinks(), getBaljuoraSettings(), loadSyncContext()]);
   const byCode = new Map<string, ProductRow>();
   for (const product of productRows) {
@@ -981,7 +1077,6 @@ async function ingestCompareBatch(row: BaljuoraSyncJob, snapshots: BaljuoraProdu
   await removeConflictingLinks(upserts.map((link) => ({ externalProductId: link.externalProductId, externalProductCode: link.externalProductCode, productId: link.productId })));
   await upsertLinks(upserts);
   results.linked += upserts.length;
-  void row;
 }
 
 // 책갈피가 보낸 카테고리 트리 맞추기 결과: 발주오라에 새로 만든 카테고리 id를 DB센터 카테고리·2차 카테고리 연결에 적고,
@@ -1119,6 +1214,34 @@ async function ingestPushItems(plan: PushPlan, items: RunnerItemResult[], result
   await upsertLinks(upserts);
 }
 
+function runSummaryLog(plan: BaljuoraPlan, results: JobResults, diagnostics: Record<string, unknown>, startedAt: string | null, status: string | null) {
+  const stats = diagnostics.stats && typeof diagnostics.stats === "object" ? diagnostics.stats as Record<string, unknown> : {};
+  const extra = diagnostics.extra && typeof diagnostics.extra === "object" ? diagnostics.extra as Record<string, unknown> : {};
+  const number = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? Math.round(value) : null;
+  const started = startedAt ? Date.parse(startedAt) : NaN;
+  return {
+    status,
+    version: typeof diagnostics.version === "string" ? diagnostics.version.slice(0, 20) : null,
+    seconds: Number.isFinite(started) ? Math.max(0, Math.round((Date.now() - started) / 1000)) : null,
+    items: plan.type === "push" ? plan.items.length : null,
+    ok: plan.type === "push" ? results.items.filter((item) => item.ok).length : null,
+    failed: plan.type === "push" ? results.items.filter((item) => !item.ok).length : null,
+    received: plan.type === "compare" ? results.received : null,
+    throttled: number(diagnostics.throttled),
+    gapMs: number(diagnostics.gapMs),
+    requests: number(stats.requests),
+    writes: number(stats.writes),
+    avgMs: number(stats.avgMs),
+    maxMs: number(stats.maxMs),
+    pausedSeconds: number(stats.pausedSeconds),
+    concurrency: number(stats.concurrency),
+    resultPosts: number(stats.resultPosts),
+    resultRetries: number(stats.resultRetries),
+    rateHeaders: Array.isArray(stats.rateHeaders) ? stats.rateHeaders.filter((name): name is string => typeof name === "string").slice(0, 8).map((name) => name.slice(0, 60)) : null,
+    listInclude: typeof extra.listInclude === "string" ? extra.listInclude.slice(0, 80) : null
+  };
+}
+
 function logParts(label: string, text: string, limit: number) {
   const body = text.slice(0, limit);
   const parts = Math.max(1, Math.ceil(body.length / 3000));
@@ -1128,16 +1251,16 @@ function logParts(label: string, text: string, limit: number) {
 export async function ingestRunnerResults(code: string, input: RunnerResultInput) {
   return guard(async () => {
     const db = getDb();
-    const row = await findJobByCode(code);
+    const row = await findJobByCode(code, { data: true });
     assertRunnable(row);
-    const plan = parseJson<BaljuoraPlan | null>(row.plan, null);
+    const plan = await jobPlan(row.id);
     if (!plan) throw new DatabaseError("DATABASE_QUERY_FAILED", "작업 내용을 읽지 못했습니다.", 500);
     const results = parseJson<JobResults>(row.results, { items: [], linked: 0, unmatched: [], received: 0 });
     const diagnostics = { ...parseJson<Record<string, unknown>>(row.diagnostics, {}), ...(input.diagnostics && typeof input.diagnostics === "object" ? input.diagnostics : {}) };
 
     if (plan.type === "compare") {
       const snapshots = (Array.isArray(input.snapshots) ? input.snapshots : []).slice(0, MAX_SNAPSHOTS_PER_POST).map(sanitizeSnapshot).filter((snapshot): snapshot is BaljuoraProductSnapshot => snapshot !== null);
-      if (snapshots.length > 0) await ingestCompareBatch(row, snapshots, results);
+      if (snapshots.length > 0) await ingestCompareBatch(snapshots, results);
       if (input.categories !== undefined) {
         const flat = Array.isArray(input.categories) && input.categories.every((item) => item && typeof item === "object" && "path" in (item as object))
           ? (input.categories as BaljuoraCategory[]).filter((item) => typeof item.id === "string" && typeof item.name === "string").slice(0, 2000)
@@ -1225,6 +1348,8 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
         // 매출처 그룹 공급가 저장 방식 찾기: 발주오라 화면의 공개 코드 일부(값·토큰 없음)를 여러 줄로 나눠 남깁니다.
         if (diagnostics.discovery && typeof diagnostics.discovery === "object") logParts("discovery", JSON.stringify(diagnostics.discovery), 60_000);
       }
+      // 속도 확인용 한 줄(2026-11-27): 걸린 시간·상품 수·발주오라 요청 수·평균 응답 시간·429로 쉰 횟수·요청 간격(값·토큰 없음).
+      console.info(`[baljuora-sync] ${plan.type} summary ${JSON.stringify(runSummaryLog(plan, results, diagnostics, row.startedAt, update.status ?? null))}`);
     }
     await db.update(baljuoraSyncJobs).set(update).where(eq(baljuoraSyncJobs.id, row.id));
     return { ok: true, final, received: results.received, linked: results.linked, items: results.items.length };
@@ -1236,7 +1361,7 @@ export async function getRunnerImage(code: string, productId: string) {
   return guard(async () => {
     const row = await findJobByCode(code);
     assertRunnable(row);
-    const plan = parseJson<BaljuoraPlan | null>(row.plan, null);
+    const plan = await jobPlan(row.id);
     const item = plan?.type === "push" ? plan.items.find((entry) => entry.productId === productId) : undefined;
     if (!item?.values.imageUrl) throw new DatabaseError("DATABASE_QUERY_FAILED", "이 작업에 든 상품 이미지가 아닙니다.", 404);
     const url = item.values.imageUrl;
@@ -1408,8 +1533,8 @@ export async function getBaljuoraOverview() {
       loadCategoryContext(),
       readStore<{ id: string; name: string } | null>(STORE_GROUP, null),
       db.select({ count: freshLinkCount }).from(externalProductLinks).where(eq(externalProductLinks.provider, PROVIDER)),
-      db.select().from(baljuoraSyncJobs).orderBy(desc(baljuoraSyncJobs.createdAt)).limit(12),
-      db.select().from(baljuoraSyncJobs).where(inArray(baljuoraSyncJobs.status, ["waiting", "running"])).orderBy(desc(baljuoraSyncJobs.createdAt)).limit(1),
+      db.select({ ...JOB_LIGHT_COLUMNS, ...JOB_META_COLUMNS }).from(baljuoraSyncJobs).orderBy(desc(baljuoraSyncJobs.createdAt)).limit(12),
+      db.select({ ...JOB_LIGHT_COLUMNS, ...JOB_META_COLUMNS }).from(baljuoraSyncJobs).where(inArray(baljuoraSyncJobs.status, ["waiting", "running"])).orderBy(desc(baljuoraSyncJobs.createdAt)).limit(1),
       loadDoogoShippingPolicies(),
       readStore<BaljuoraShippingPolicy[]>(STORE_POLICIES, [])
     ]);
@@ -1438,8 +1563,8 @@ export async function getBaljuoraOverview() {
       linkedCount: Number(linkCount[0]?.count ?? 0),
       lastCompareAt: lastCompare?.finishedAt ?? null,
       lastPushAt: lastPush?.finishedAt ?? null,
-      activeJob: active[0] ? jobView(active[0]) : null,
-      jobs: recentJobs.map((job) => jobView(job))
+      activeJob: active[0] ? lightJobView(active[0]) : null,
+      jobs: recentJobs.map((job) => lightJobView(job))
     };
   });
 }
