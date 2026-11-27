@@ -285,3 +285,43 @@
   .bj-tree-ops li.is-add { grid-template-columns: auto minmax(0, 1fr); }
   .bj-tree-ops li.is-add > .bj-tree-skip { grid-column: 2; justify-self: start; }
 }
+
+/* 같은 이름 상품 · DB센터에서 지운 상품(2026-11-27 직원 신고) */
+.bj-diff.is-same { border-color: #f2d6a2; background: #fff8eb; color: #6b3b00; }
+.bj-diff.is-same b { color: #8a4b00; }
+.bj-diff.is-same i { color: #6b7686; font-weight: 700; }
+.bj-diff.is-restore { border-color: #bfe3cf; background: #effaf4; color: #0f5f42; font-weight: 800; }
+.bj-same { align-items: center; }
+.bj-same-link { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 12px; border: 1px solid #163300; border-radius: 999px; color: #fff; background: #163300; font-size: 12px; font-weight: 800; cursor: pointer; }
+.bj-same-link:disabled { opacity: .5; cursor: default; }
+.bj-same-note { flex-basis: 100%; color: #b42318; font-size: 11.5px; line-height: 1.5; }
+.bj-same-all { white-space: nowrap; }
+.bj-master-sub { color: #6b7686; font-size: 11px; font-weight: 700; }
+.bj-master-sub.is-block { display: block; flex-basis: 100%; margin-top: 2px; line-height: 1.5; }
+
+/* 도매몰 노출이 다른 상품 두 묶음(2026-11-27) */
+.bj-visible-split { display: grid; gap: 8px; margin-top: 8px; padding: 10px 12px; border: 1px dashed #cfdff3; border-radius: 12px; background: #f8fbff; }
+.bj-visible-split > p { margin: 0; color: #4c5868; font-size: 12px; line-height: 1.6; }
+.bj-visible-split.is-off .bj-visible-group { opacity: .65; }
+.bj-visible-group { display: grid; gap: 4px; padding: 8px 10px; border: 1px solid #e3eaf3; border-radius: 10px; background: #fff; }
+.bj-visible-head { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: center; cursor: pointer; }
+.bj-visible-head input { margin: 0; }
+.bj-visible-head span { display: grid; gap: 1px; min-width: 0; }
+.bj-visible-head strong { color: #22303d; font-size: 13px; }
+.bj-visible-head small { color: #6b7686; font-size: 11.5px; line-height: 1.45; }
+.bj-visible-head em { padding: 1px 8px; border-radius: 999px; background: #e8f1fc; color: #1f4f8a; font-style: normal; font-size: 11.5px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bj-visible-group details summary { color: #2f6fb8; font-size: 12px; font-weight: 800; cursor: pointer; }
+.bj-visible-group ul { display: grid; gap: 2px; max-height: 260px; margin: 6px 0 0; padding: 0; overflow-y: auto; list-style: none; }
+.bj-visible-group li label { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 2px; border-bottom: 1px solid #f1f4f7; font-size: 12px; cursor: pointer; }
+.bj-visible-group li label input { margin: 0; }
+.bj-visible-group li label span { min-width: 0; color: #22303d; overflow-wrap: anywhere; }
+.bj-visible-group li label small { color: #8491a2; font-size: 11px; }
+@media (max-width: 720px) {
+  .bj-visible-head { grid-template-columns: 18px minmax(0, 1fr); }
+  .bj-visible-head em { grid-column: 2; justify-self: start; }
+  .bj-visible-group li label { grid-template-columns: 18px minmax(0, 1fr); }
+  .bj-visible-group li label small { grid-column: 2; }
+  .bj-same-link { width: 100%; justify-content: center; }
+  /* 휴대폰에서 '전체 N개 선택' 머리 줄이 썸네일 칸(40px)에 끼어 세 줄로 접히던 것 */
+  .bj-row.bj-row-head { grid-template-columns: 20px minmax(0, 1fr); }
+}

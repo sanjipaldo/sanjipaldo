@@ -19,6 +19,7 @@ import {
   ignoreBaljuoraDifferences,
   importBaljuoraSubcategories,
   ingestRunnerResults,
+  linkSameNameProducts,
   listBaljuoraChanges,
   listBaljuoraJobs,
   pullFromBaljuora,
@@ -244,6 +245,17 @@ baljuoraRouter.post("/admin/categories/import-subcategories", adminRoute, async 
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "가져올 발주오라 카테고리를 확인해 주세요."), 400);
   try {
     return c.json(apiSuccess(await importBaljuoraSubcategories(parsed.data)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 같은 상품으로 연결(2026-11-27): 신규 등록 상품을 이름이 같은 발주오라 상품과 잇습니다(상품코드를 발주오라 코드로, 숨김 중복 상품은 삭제).
+baljuoraRouter.post("/admin/link-same-name", adminRoute, async (c) => {
+  const parsed = z.object({ productIds: ProductIdsSchema.min(1).max(100) }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "연결할 상품을 골라 주세요."), 400);
+  try {
+    return c.json(apiSuccess(await linkSameNameProducts(parsed.data.productIds)));
   } catch (error) {
     return errorResponse(c, error);
   }

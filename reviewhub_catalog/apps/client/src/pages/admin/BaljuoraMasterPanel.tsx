@@ -5,6 +5,8 @@
 // - 발주오라 기준: 고른 칸 중 지금 다른 칸만 DB센터를 바꿉니다(서버 pullFromBaljuora, 같은 칸·'이대로 두기'로 뺀 칸은 그대로). 25개씩 나눠 보냅니다.
 // - DB센터 기준: 고른 칸 중 지금 다른 칸만 발주오라로 보내는 동기화 작업을 만듭니다(책갈피로 실행). 상품 정보 칸은 DB센터가 비어 있으면 보내지 않습니다.
 // - 도매몰 노출은 공개 단가표 노출과 이어져 있어 처음에는 고르지 않은 상태로 둡니다(발주오라에만 있던 상품은 DB센터에서 숨김으로 등록되기 때문).
+//   2026-11-27 직원 질문 "도매몰 노출 130건은 어떻게 동기화하나요": 다른 상품을 두 묶음(발주오라 노출·DB센터 숨김 / 발주오라 미노출·DB센터 공개)으로
+//   나눠 보여 주고, 묶음·상품마다 맞출지 고릅니다(방향은 위 '발주오라 → DB센터 / DB센터 → 발주오라').
 import { useMemo, useState } from "react";
 import { ArrowDownToLine, ArrowUpFromLine, Link2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -19,7 +21,7 @@ import {
   type BaljuoraSyncField
 } from "@repo/shared/baljuora-sync";
 
-type MasterItem = { productId: string; kind: "new" | "update"; diffs: BaljuoraFieldDiff[] };
+type MasterItem = { productId: string; kind: "new" | "update"; diffs: BaljuoraFieldDiff[]; name?: string; code?: string | null };
 type PullSkip = { id: string; name: string; field: BaljuoraSyncField; reason: string };
 type PullResult = { updated: number; created: number; unchanged?: number; failed: Array<{ id: string; name: string; error: string }>; skipped?: PullSkip[] };
 type Summary = { updated: number; created: number; unchanged: number; failed: PullResult["failed"]; skipped: PullSkip[] };
@@ -74,9 +76,13 @@ function movable(mode: MasterMode, diff: BaljuoraFieldDiff) {
   return mode === "pull" ? canPullDiff(diff, true) : canPushDiff(diff, true);
 }
 
-export function BaljuoraMasterPanel({ items, baljuoraOnlyIds, doogoOnlyCount, compared, lastCompareAt, disabled, onCompare, onDone, onPush }: {
+export function BaljuoraMasterPanel({ items, baljuoraOnlyIds, restoreCount = 0, sameNameOnlyCount = 0, doogoOnlyCount, compared, lastCompareAt, disabled, onCompare, onDone, onPush }: {
   items: MasterItem[];
   baljuoraOnlyIds: string[];
+  // 발주오라에만 있는 상품 중 DB센터에서 지운 상품(상품코드 같음 → 숨김으로 되살림) 수
+  restoreCount?: number;
+  // 발주오라에만 있는 상품 중 DB센터에 이름이 같은 신규 등록 상품이 있어 여기서 빼 둔 수('신규 등록' 탭에서 같은 상품으로 연결)
+  sameNameOnlyCount?: number;
   doogoOnlyCount: number;
   compared: boolean;
   lastCompareAt: string | null;
@@ -91,7 +97,23 @@ export function BaljuoraMasterPanel({ items, baljuoraOnlyIds, doogoOnlyCount, co
   const [includeOnly, setIncludeOnly] = useState(true);
   const [running, setRunning] = useState<{ done: number; total: number } | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
+  // 도매몰 노출을 맞추지 않을 상품(묶음·상품마다 고름)
+  const [visibleSkip, setVisibleSkip] = useState<Set<string>>(() => new Set());
   const pushMode = mode === "push";
+
+  // 도매몰 노출(= DB센터 공개 단가표 노출)이 다른 상품: 발주오라 노출·DB센터 숨김(baljuoraOn) / 발주오라 미노출·DB센터 공개(baljuoraOff)
+  const visibleGroups = useMemo(() => {
+    const baljuoraOn: MasterItem[] = [];
+    const baljuoraOff: MasterItem[] = [];
+    for (const item of items) {
+      if (item.kind !== "update") continue;
+      const diff = item.diffs.find((entry) => entry.field === "visible" && movable(mode, entry));
+      if (!diff) continue;
+      if (Number(diff.baljuora) === 1 && Number(diff.doogo) === 0) baljuoraOn.push(item);
+      else if (Number(diff.baljuora) === 0 && Number(diff.doogo) === 1) baljuoraOff.push(item);
+    }
+    return { baljuoraOn, baljuoraOff };
+  }, [items, mode]);
 
   const counts = useMemo(() => {
     const result = Object.fromEntries(MASTER_FIELDS.map((field) => [field, 0])) as Record<BaljuoraSyncField, number>;
@@ -102,7 +124,13 @@ export function BaljuoraMasterPanel({ items, baljuoraOnlyIds, doogoOnlyCount, co
     return result;
   }, [items, mode]);
   const chosen = useMemo(() => MASTER_FIELDS.filter((field) => fields.has(field) && fieldAllowed(mode, field)), [fields, mode]);
-  const targets = useMemo(() => items.filter((item) => item.kind === "update" && item.diffs.some((diff) => chosen.includes(diff.field) && movable(mode, diff))).map((item) => item.productId), [items, chosen, mode]);
+  // 상품마다 맞출 칸: 고른 칸 중 지금 다르고 옮길 수 있는 칸(도매몰 노출은 빼 둔 상품이면 뺌)
+  const fieldsFor = useMemo(() => (item: MasterItem) => [...new Set(item.diffs
+    .filter((diff) => chosen.includes(diff.field) && movable(mode, diff) && !(diff.field === "visible" && visibleSkip.has(item.productId)))
+    .map((diff) => diff.field))], [chosen, mode, visibleSkip]);
+  const targets = useMemo(() => items.filter((item) => item.kind === "update" && fieldsFor(item).length > 0).map((item) => item.productId), [items, fieldsFor]);
+  const visibleChosen = fields.has("visible");
+  const visibleCount = (list: MasterItem[]) => list.filter((item) => !visibleSkip.has(item.productId)).length;
   const onlyIds = includeOnly && !pushMode ? baljuoraOnlyIds : [];
   const staleMinutes = lastCompareAt && !Number.isNaN(parseTime(lastCompareAt).getTime()) ? Math.floor((Date.now() - parseTime(lastCompareAt).getTime()) / 60000) : null;
   const stale = staleMinutes !== null && staleMinutes >= STALE_MINUTES;
@@ -118,7 +146,7 @@ export function BaljuoraMasterPanel({ items, baljuoraOnlyIds, doogoOnlyCount, co
     const fieldsByProduct: Record<string, BaljuoraSyncField[]> = {};
     for (const item of items) {
       if (item.kind !== "update") continue;
-      const list = [...new Set(item.diffs.filter((diff) => chosen.includes(diff.field) && canPushDiff(diff, true)).map((diff) => diff.field))];
+      const list = fieldsFor(item);
       if (list.length > 0) fieldsByProduct[item.productId] = list;
     }
     const productCount = Object.keys(fieldsByProduct).length;
@@ -131,8 +159,11 @@ export function BaljuoraMasterPanel({ items, baljuoraOnlyIds, doogoOnlyCount, co
       "",
       `· 상품 ${productCount.toLocaleString("ko-KR")}개: ${chosen.map((field) => FIELD_LABELS[field]).join(", ")} 중 지금 다른 칸만 발주오라로 보냅니다.`,
       "· 상품 정보 칸은 DB센터에 값이 있을 때만 보냅니다(비어 있는 칸으로 발주오라 값을 지우지 않음).",
+      visibleChosen && (visibleCount(visibleGroups.baljuoraOn) + visibleCount(visibleGroups.baljuoraOff)) > 0
+        ? `· 도매몰 노출: 발주오라 노출 → 미노출 ${visibleCount(visibleGroups.baljuoraOn).toLocaleString("ko-KR")}개(도매몰에서 주문할 수 없게 돼요) · 미노출 → 노출 ${visibleCount(visibleGroups.baljuoraOff).toLocaleString("ko-KR")}개`
+        : "",
       "· 동기화 작업을 만들고 발주오라 관리자 창을 엽니다. 그 창에서 책갈피를 눌러 주세요."
-    ];
+    ].filter(Boolean);
     if (!window.confirm(lines.join("\n"))) return;
     onPush(fieldsByProduct);
   };
@@ -146,8 +177,10 @@ export function BaljuoraMasterPanel({ items, baljuoraOnlyIds, doogoOnlyCount, co
       "발주오라 값을 기준으로 DB센터를 맞출까요?",
       "",
       targets.length > 0 ? `· 상품 ${targets.length.toLocaleString("ko-KR")}개: ${chosen.map((field) => FIELD_LABELS[field]).join(", ")} 중 지금 다른 칸만 발주오라 값으로 바꿉니다.` : "",
-      onlyIds.length > 0 ? `· 발주오라에만 있는 상품 ${onlyIds.length.toLocaleString("ko-KR")}개를 DB센터에 숨김으로 등록합니다.` : "",
-      fields.has("visible") && targets.length > 0 ? "· 도매몰 노출을 골라서 공개 단가표 노출(공개/숨김)도 발주오라와 같게 바뀝니다." : "",
+      onlyIds.length > 0 ? `· 발주오라에만 있는 상품 ${onlyIds.length.toLocaleString("ko-KR")}개를 DB센터에 숨김으로 등록합니다${restoreCount ? `(DB센터에서 지운 상품 ${restoreCount.toLocaleString("ko-KR")}개는 새로 만들지 않고 숨김으로 되살림)` : ""}.` : "",
+      visibleChosen && (visibleCount(visibleGroups.baljuoraOn) + visibleCount(visibleGroups.baljuoraOff)) > 0
+        ? `· 도매몰 노출: DB센터 숨김 → 공개 ${visibleCount(visibleGroups.baljuoraOn).toLocaleString("ko-KR")}개 · 공개 → 숨김 ${visibleCount(visibleGroups.baljuoraOff).toLocaleString("ko-KR")}개(공개 단가표에 바로 보이거나 사라져요).`
+        : "",
       "· 가격이 바뀌면 가격변동 이력에 남습니다. 발주오라는 바뀌지 않습니다."
     ].filter(Boolean);
     if (!window.confirm(lines.join("\n"))) return;
@@ -157,8 +190,15 @@ export function BaljuoraMasterPanel({ items, baljuoraOnlyIds, doogoOnlyCount, co
     setSummary(null);
     setRunning({ done: 0, total });
     try {
-      for (const part of chunks(targets, CHUNK)) {
-        const result = await postPull({ productIds: part, fields: chosen });
+      // 도매몰 노출을 빼 둔 상품은 그 칸 없이 따로 보냅니다(서버는 요청마다 같은 칸 목록을 씀).
+      const skipVisible = targets.filter((id) => visibleSkip.has(id));
+      const withVisible = targets.filter((id) => !visibleSkip.has(id));
+      const batches = [
+        ...chunks(withVisible, CHUNK).map((part) => ({ part, fields: chosen })),
+        ...chunks(skipVisible, CHUNK).map((part) => ({ part, fields: chosen.filter((field) => field !== "visible") }))
+      ];
+      for (const { part, fields: partFields } of batches) {
+        const result = await postPull({ productIds: part, fields: partFields });
         next.updated += result.updated;
         next.unchanged += result.unchanged ?? 0;
         next.failed.push(...result.failed);
@@ -227,13 +267,40 @@ export function BaljuoraMasterPanel({ items, baljuoraOnlyIds, doogoOnlyCount, co
                 </div>
               </div>
             ))}
+            {compared && (visibleGroups.baljuoraOn.length > 0 || visibleGroups.baljuoraOff.length > 0) && (
+              <div className={`bj-visible-split${visibleChosen ? "" : " is-off"}`} aria-label="도매몰 노출이 다른 상품">
+                <p>
+                  <b>도매몰 노출 = DB센터 공개 단가표 노출</b>이에요. 어느 쪽이 맞는지 묶음마다 골라 주세요.
+                  {visibleChosen
+                    ? (pushMode ? " 고른 상품은 발주오라 도매몰 노출이 DB센터와 같게 바뀌어요." : " 고른 상품은 DB센터 공개 단가표 노출이 발주오라와 같게 바뀌어요.")
+                    : " 위에서 '도매몰 노출'을 고르면 아래 고른 상품만 맞춰요."}
+                </p>
+                <VisibleGroup
+                  title={pushMode ? "발주오라 노출 → 미노출" : "DB센터 숨김 → 공개"}
+                  hint={pushMode ? "DB센터에서 숨긴 상품 · 맞추면 도매몰에서 주문할 수 없게 돼요" : "발주오라 도매몰에서 노출 중 · 맞추면 공개 단가표에 보여요"}
+                  items={visibleGroups.baljuoraOn}
+                  skip={visibleSkip}
+                  onChange={setVisibleSkip}
+                  disabled={busy || !visibleChosen}
+                />
+                <VisibleGroup
+                  title={pushMode ? "발주오라 미노출 → 노출" : "DB센터 공개 → 숨김"}
+                  hint={pushMode ? "DB센터 공개 단가표에 보이는 상품 · 맞추면 도매몰에도 노출돼요" : "발주오라 도매몰에서 미노출 · 맞추면 공개 단가표에서 사라져요"}
+                  items={visibleGroups.baljuoraOff}
+                  skip={visibleSkip}
+                  onChange={setVisibleSkip}
+                  disabled={busy || !visibleChosen}
+                />
+              </div>
+            )}
             {!pushMode && (
               <div className="bj-master-fields" role="group" aria-label="발주오라에만 있는 상품">
                 <label className={`bj-master-field is-wide${baljuoraOnlyIds.length ? "" : " is-zero"}`}>
                   <input type="checkbox" checked={includeOnly} onChange={(event) => setIncludeOnly(event.target.checked)} disabled={busy} />
-                  <span>발주오라에만 있는 상품 DB센터에 등록(숨김)</span>
+                  <span>발주오라에만 있는 상품 DB센터에 등록(숨김){restoreCount > 0 && <small className="bj-master-sub"> · 지운 상품 {restoreCount.toLocaleString("ko-KR")}개는 되살림</small>}</span>
                   <em>{compared ? baljuoraOnlyIds.length.toLocaleString("ko-KR") : "-"}</em>
                 </label>
+                {sameNameOnlyCount > 0 && <small className="bj-master-sub is-block">DB센터에 이름이 같은 상품이 있는 {sameNameOnlyCount.toLocaleString("ko-KR")}개는 빼 두었어요. 같은 상품이면 아래 '신규 등록' 탭에서 '같은 상품으로 연결'을 눌러 주세요.</small>}
               </div>
             )}
           </div>
@@ -268,5 +335,60 @@ export function BaljuoraMasterPanel({ items, baljuoraOnlyIds, doogoOnlyCount, co
       )}
       <p className="bj-master-note">DB센터에만 있는 상품 {doogoOnlyCount.toLocaleString("ko-KR")}개는 지우지 않습니다. 발주오라에도 올리려면 아래 <b>신규 등록</b> 탭에서 동기화해 주세요. 인증은 발주오라에서 인증번호와 함께 관리해 가져오기만 하고, 해외배송은 DB센터 배송유형으로 보내기만 합니다.</p>
     </section>
+  );
+}
+
+// 도매몰 노출 묶음 하나: 묶음 체크(모두·없음) + 상품 목록(펼쳐서 상품마다 고름)
+function VisibleGroup({ title, hint, items, skip, onChange, disabled }: {
+  title: string;
+  hint: string;
+  items: MasterItem[];
+  skip: Set<string>;
+  onChange: (next: Set<string>) => void;
+  disabled: boolean;
+}) {
+  if (items.length === 0) return null;
+  const picked = items.filter((item) => !skip.has(item.productId)).length;
+  const all = picked === items.length;
+  const setAll = (on: boolean) => {
+    const next = new Set(skip);
+    for (const item of items) {
+      if (on) next.delete(item.productId); else next.add(item.productId);
+    }
+    onChange(next);
+  };
+  const toggle = (id: string) => {
+    const next = new Set(skip);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    onChange(next);
+  };
+  return (
+    <div className="bj-visible-group">
+      <label className="bj-visible-head">
+        <input
+          type="checkbox"
+          checked={all}
+          ref={(element) => { if (element) element.indeterminate = picked > 0 && !all; }}
+          onChange={() => setAll(!all)}
+          disabled={disabled}
+        />
+        <span><strong>{title}</strong><small>{hint}</small></span>
+        <em>{picked.toLocaleString("ko-KR")} / {items.length.toLocaleString("ko-KR")}</em>
+      </label>
+      <details>
+        <summary>상품 {items.length.toLocaleString("ko-KR")}개 보고 고르기</summary>
+        <ul>
+          {items.map((item) => (
+            <li key={item.productId}>
+              <label>
+                <input type="checkbox" checked={!skip.has(item.productId)} onChange={() => toggle(item.productId)} disabled={disabled} />
+                <span>{item.name ?? item.productId}</span>
+                {item.code && <small>{item.code}</small>}
+              </label>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </div>
   );
 }

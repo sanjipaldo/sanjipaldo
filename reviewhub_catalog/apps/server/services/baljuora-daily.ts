@@ -183,7 +183,9 @@ export async function applyDailySync(changedBy: string) {
     const pendingProducts = remaining.changes.items
       .filter((item) => item.kind === "update" && item.diffs.some((diff) => canPullDiff(diff, false) && diff.direction !== "both"))
       .map((item) => item.productId);
-    const pendingOnly = settings.dailyRegisterNew ? remaining.changes.baljuoraOnly.map((snapshot) => snapshot.id) : [];
+    // 자동 등록은 새 상품만: DB센터에서 지운 상품(상품코드가 같음)은 되살리지 않고, DB센터에 이름이 같은 신규 등록 상품이 있으면
+    // 같은 상품이 두 개 생기지 않게 만들지 않습니다(둘 다 발주오라 동기화 화면에서 직접 고름 — 2026-11-27 직원 신고).
+    const pendingOnly = settings.dailyRegisterNew ? remaining.changes.baljuoraOnly.filter((snapshot) => !snapshot.deletedMatch && !snapshot.sameNameProduct).map((snapshot) => snapshot.id) : [];
     run = {
       jobId: job.id,
       comparedAt: job.finishedAt,

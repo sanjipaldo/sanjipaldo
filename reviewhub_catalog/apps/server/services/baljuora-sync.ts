@@ -59,7 +59,7 @@ import { DatabaseError, getDb } from "../_core/db";
 import { baljuoraSalesLines, baljuoraSyncJobs, baljuoraSyncStore, categories, externalProductLinks, products, shippingPolicies, subcategories, type BaljuoraSyncJob } from "../db/schema";
 import { finalizeSalesSync, ingestBuyers, ingestProductTax, ingestSalesLines, isMissingSalesTable, knownTaxProductIds, salesRangeFor } from "./baljuora-sales";
 import { asProductInput } from "./catalog-excel";
-import { createCategory, createProduct, createShippingPolicy, createSubcategory, getAdminCatalog, updateProduct } from "./catalog";
+import { createCategory, createProduct, createShippingPolicy, createSubcategory, getAdminCatalog, restoreDeletedProduct, updateProduct } from "./catalog";
 import { emptyProductExtras, type ProductExtras } from "@repo/shared/product-extras";
 import { EXTRAS_NOT_READY_MESSAGE, loadProductExtrasMap, saveProductExtras } from "./product-extras";
 
@@ -1406,22 +1406,129 @@ export type BaljuoraChangeItem = {
   supplierName: string | null;
   // 신규 등록인데 같은 매입처로 연결된 상품이 하나도 없음(새 매입처): 발주오라에 그 매입처 상품이 있어야 등록됩니다.
   newSupplier?: boolean;
+  // 신규 등록인데 발주오라에 이름이 같은 상품이 있음(발주오라는 같은 이름 상품을 새로 받지 않음 → '같은 상품으로 연결')
+  sameName?: BaljuoraSameName;
   diffs: BaljuoraFieldDiff[];
   syncStatus: string | null;
   lastPushedAt: string | null;
 };
 
+// ─── 같은 이름 상품 · DB센터에서 지운 상품(2026-11-27 직원 신고) ──────────────────
+// ① '신규 등록' 3건(마우리엔젯 로얄제리 등)을 보내면 매번 "발주오라에 이름이 같은 상품이 이미 있어 새로 등록하지 않았습니다".
+//    발주오라는 상품명이 같은 상품을 새로 받지 않는데, 그 발주오라 상품은 상품코드가 달라 이 DB센터 상품과 연결되지 않고
+//    DB센터의 다른(숨김) 상품과 연결돼 있거나 아무 상품과도 연결되지 않았습니다. '같은 상품으로 연결'(linkSameNameProducts)은
+//    이 DB센터 상품의 상품코드를 발주오라 상품코드로 바꿔(두 사이트는 상품코드로 1:1 연결) 바로 연결하고,
+//    같은 발주오라 상품에 연결돼 있던 DB센터 숨김 중복 상품은 지웁니다(발주오라는 바꾸지 않음).
+// ② '발주오라에만 있음' 8건을 'DB센터로 가져오기' 하면 "상품코드 X는 이미 'Y' 상품에서 쓰고 있습니다": 상품코드가 DB센터에서 지운 상품
+//    (숨김 + deletedAt, 지운 상품도 상품코드를 계속 가짐)과 같아 비교는 지운 상품을 보지 않는데 새 상품은 같은 코드로 만들 수 없었습니다.
+//    이제 가져오면 그 지운 상품을 숨김으로 되살려 발주오라 값으로 채우고 연결합니다(엑셀 올리기의 삭제 상품 복원과 같은 방식).
+//    아침 동기화의 자동 등록은 지운 상품을 되살리지 않고, DB센터에 이름이 같은 신규 등록 상품이 있는 발주오라 상품도 새로 만들지 않습니다
+//    (같은 상품이 DB센터에 두 개 생기지 않게 — 동기화 화면에서 직접 고름).
+
+export type BaljuoraSameName = {
+  baljuoraId: string;
+  code: string | null;
+  name: string;
+  // 그 발주오라 상품과 지금 연결된 DB센터 상품(없으면 null = 발주오라에만 있는 상품)
+  holder: { id: string; name: string; code: string | null; isVisible: boolean; deleted: boolean } | null;
+  // 바로 연결할 수 없는 까닭(있으면 버튼 대신 이 안내)
+  blocked: string | null;
+};
+
+// '발주오라에만 있음' 상품에 덧붙이는 표시
+export type BaljuoraOnlyItem = BaljuoraProductSnapshot & {
+  // 상품코드가 같은 DB센터 지운 상품: 가져오면 이 상품을 숨김으로 되살립니다.
+  deletedMatch?: { id: string; name: string; code: string };
+  // 이름이 같은 DB센터 신규 등록 상품(발주오라와 연결 안 됨): 같은 상품이면 '신규 등록' 탭에서 '같은 상품으로 연결'
+  sameNameProduct?: { id: string; name: string; code: string | null };
+};
+
+type DeletedProductRef = { id: string; name: string; code: string | null };
+
+// 발주오라 상품명 비교: 띄어쓰기 여러 칸·앞뒤 공백은 같게 봅니다.
+function sameNameKey(name: string | null | undefined) {
+  return collapseName(name);
+}
+
+async function loadDeletedProducts(): Promise<DeletedProductRef[]> {
+  const rows = await getDb().select({ id: products.id, productCode: products.productCode, name: products.name }).from(products).where(sql`${products.deletedAt} IS NOT NULL`);
+  return rows.map((row) => ({ id: row.id, name: row.name, code: row.productCode?.trim() || null }));
+}
+
+function deletedByCodeMap(rows: DeletedProductRef[]) {
+  const map = new Map<string, DeletedProductRef & { code: string }>();
+  for (const row of rows) if (row.code && !map.has(row.code.toUpperCase())) map.set(row.code.toUpperCase(), { ...row, code: row.code });
+  return map;
+}
+
+// 연결 기록(발주오라 상품 → DB센터 상품)과 발주오라에만 있는 상품을 이름으로 찾는 함수를 만듭니다.
+function sameNameFinder(productRows: ProductRow[], links: LinkRow[], onlyList: BaljuoraProductSnapshot[], deleted: DeletedProductRef[]) {
+  const byProduct = new Map(productRows.map((row) => [row.id, row]));
+  const deletedById = new Map(deleted.map((row) => [row.id, row]));
+  const index = new Map<string, Array<{ snapshot: BaljuoraProductSnapshot; holderId: string | null }>>();
+  const add = (snapshot: BaljuoraProductSnapshot, holderId: string | null) => {
+    const key = sameNameKey(snapshot.name);
+    if (key) index.set(key, [...(index.get(key) ?? []), { snapshot, holderId }]);
+  };
+  const linked = new Set<string>();
+  for (const link of links) {
+    const state = linkState(link);
+    if (!state) continue;
+    linked.add(link.externalProductId);
+    add({ ...state.snapshot, id: link.externalProductId }, link.productId);
+  }
+  for (const snapshot of onlyList) if (!linked.has(snapshot.id)) add(snapshot, null);
+  const holderOf = (holderId: string | null): BaljuoraSameName["holder"] => {
+    if (!holderId) return null;
+    const row = byProduct.get(holderId);
+    if (row) return { id: row.id, name: row.name, code: row.productCode?.trim() || null, isVisible: row.isVisible, deleted: false };
+    const gone = deletedById.get(holderId);
+    return { id: holderId, name: gone?.name ?? "지운 상품", code: gone?.code ?? null, isVisible: false, deleted: true };
+  };
+  return (product: { id: string; name: string }): (BaljuoraSameName & { snapshot: BaljuoraProductSnapshot }) | null => {
+    const candidates = (index.get(sameNameKey(product.name)) ?? []).filter((entry) => entry.holderId !== product.id);
+    if (candidates.length === 0) return null;
+    // 아무 상품과도 연결되지 않은 발주오라 상품 → 지운·숨김 상품과 연결된 것 → 공개 상품과 연결된 것 순서로 고릅니다.
+    const rank = (entry: { holderId: string | null }) => {
+      const holder = holderOf(entry.holderId);
+      return !holder ? 0 : holder.isVisible ? 2 : 1;
+    };
+    const best = [...candidates].sort((first, second) => rank(first) - rank(second))[0]!;
+    const holder = holderOf(best.holderId);
+    const code = best.snapshot.code?.trim() || null;
+    const blocked = !code
+      ? "발주오라 상품에 상품코드가 없어 바로 연결할 수 없어요. 발주오라에서 상품코드를 넣고 '발주오라 상품 불러오기(비교)'를 다시 해 주세요."
+      : holder?.isVisible
+        ? `DB센터 공개 상품 '${holder.name}'(${holder.code ?? "상품코드 없음"})이 이미 이 발주오라 상품과 연결돼 있어요. 같은 상품이면 둘 중 하나를 삭제한 뒤 '발주오라 상품 불러오기(비교)'를 다시 해 주세요.`
+        : null;
+    return { baljuoraId: best.snapshot.id, code, name: best.snapshot.name, holder, blocked, snapshot: best.snapshot };
+  };
+}
+
+function publicSameName(match: BaljuoraSameName & { snapshot?: BaljuoraProductSnapshot }): BaljuoraSameName {
+  return { baljuoraId: match.baljuoraId, code: match.code, name: match.name, holder: match.holder, blocked: match.blocked };
+}
+
+// 상품코드를 비울 때(지운 상품이 같은 코드를 쥐고 있으면 새 상품·다른 상품이 그 코드를 쓸 수 없음 — 상품코드는 고유).
+// 상품 id 끝 8자(예전 엑셀 가져오기 상품은 id가 모두 'baljuora-'로 시작해 앞자리는 겹침)를 붙여 겹치지 않게 합니다.
+function releasedCode(code: string, productId: string) {
+  return `${code}-DUP-${productId.replace(/[^A-Za-z0-9]/g, "").slice(-8).toUpperCase()}`;
+}
+
 export async function listBaljuoraChanges() {
   return guard(async () => {
-    const [productRows, links, settings, { doogoCategories, baljuoraCategories }, onlyList, lastCompare, context] = await Promise.all([
+    const [productRows, links, settings, { doogoCategories, baljuoraCategories }, onlyList, lastCompare, context, deletedRows] = await Promise.all([
       loadProductRows(),
       loadLinks(),
       getBaljuoraSettings(),
       loadCategoryContext(),
       readStore<BaljuoraProductSnapshot[]>(STORE_ONLY, []),
       getDb().select({ finishedAt: baljuoraSyncJobs.finishedAt }).from(baljuoraSyncJobs).where(and(eq(baljuoraSyncJobs.type, "compare"), eq(baljuoraSyncJobs.status, "done"))).orderBy(desc(baljuoraSyncJobs.finishedAt)).limit(1),
-      loadSyncContext()
+      loadSyncContext(),
+      loadDeletedProducts()
     ]);
+    const onlyArray = Array.isArray(onlyList) ? onlyList : [];
+    const findSameName = sameNameFinder(productRows, links, onlyArray, deletedRows);
     const linkByProduct = new Map(links.map((link) => [link.productId, link]));
     // 발주오라 상품과 연결된 상품이 있는 매입처(DB센터 매입처명) — 없으면 신규 등록 때 "새 매입처"로 알립니다.
     const linkedSuppliers = new Set(productRows.filter((row) => {
@@ -1439,7 +1546,8 @@ export async function listBaljuoraChanges() {
       // 연결이 없거나, 예전 형식 연결만 있는 상품(비교 때 발주오라에서 찾지 못함)은 신규 등록 대상입니다.
       if (!link || !state) {
         const supplierName = product.supplierName?.trim();
-        items.push({ productId: product.id, kind: "new", code: values.code, name: values.name, imageUrl: values.imageUrl, categoryId: product.categoryId, isVisible: product.isVisible, baljuoraId: null, supplierName: product.supplierName, newSupplier: Boolean(supplierName && !linkedSuppliers.has(supplierName)), diffs: [], syncStatus: link ? "stale" : null, lastPushedAt: null });
+        const same = findSameName(product);
+        items.push({ productId: product.id, kind: "new", code: values.code, name: values.name, imageUrl: values.imageUrl, categoryId: product.categoryId, isVisible: product.isVisible, baljuoraId: null, supplierName: product.supplierName, newSupplier: Boolean(supplierName && !linkedSuppliers.has(supplierName)), ...(same ? { sameName: publicSameName(same) } : {}), diffs: [], syncStatus: link ? "stale" : null, lastPushedAt: null });
         continue;
       }
       linkedCount += 1;
@@ -1449,6 +1557,18 @@ export async function listBaljuoraChanges() {
       items.push({ productId: product.id, kind: "update", code: values.code, name: values.name, imageUrl: values.imageUrl, categoryId: product.categoryId, isVisible: product.isVisible, baljuoraId: link.externalProductId, supplierName: product.supplierName, diffs, syncStatus: link.syncStatus, lastPushedAt: link.lastPushedAt });
     }
     const unmappedCategories = doogoCategories.filter((category) => category.isActive && !settings.categoryMap[category.id]).map((category) => ({ id: category.id, name: category.name }));
+    const deletedByCode = deletedByCodeMap(deletedRows);
+    const newByName = new Map<string, BaljuoraChangeItem>();
+    for (const item of items) if (item.kind === "new" && !newByName.has(sameNameKey(item.name))) newByName.set(sameNameKey(item.name), item);
+    const baljuoraOnly: BaljuoraOnlyItem[] = onlyArray.filter((snapshot) => !linkByProductCode(links, snapshot)).map((snapshot) => {
+      const deleted = snapshot.code ? deletedByCode.get(snapshot.code.trim().toUpperCase()) : undefined;
+      const sameNew = newByName.get(sameNameKey(snapshot.name));
+      return {
+        ...snapshot,
+        ...(deleted ? { deletedMatch: { id: deleted.id, name: deleted.name, code: deleted.code } } : {}),
+        ...(sameNew ? { sameNameProduct: { id: sameNew.productId, name: sameNew.name, code: sameNew.code } } : {})
+      };
+    });
     return {
       compared: Boolean(lastCompare[0]?.finishedAt),
       lastCompareAt: lastCompare[0]?.finishedAt ?? null,
@@ -1456,11 +1576,119 @@ export async function listBaljuoraChanges() {
       groupPriceReadable: linkedCount === 0 || groupPriceRead > 0,
       productCount: productRows.length,
       items,
-      baljuoraOnly: (Array.isArray(onlyList) ? onlyList : []).filter((snapshot) => !linkByProductCode(links, snapshot)),
+      baljuoraOnly,
       unmappedCategories,
       // 상품 정보 칸 표(037)가 있는지. false면 원산지·택배사·판매 상태 밖의 상품 정보 칸은 비교하지 않습니다(운영 배포 전).
       extrasReady: context.extras !== null
     };
+  });
+}
+
+// '같은 상품으로 연결'(2026-11-27): 신규 등록 상품을 이름이 같은 발주오라 상품과 연결합니다(발주오라는 바꾸지 않음).
+// ① DB센터에서 그 발주오라 상품코드를 쥔 다른 상품(같은 발주오라 상품에 연결된 숨김 중복 상품·지운 상품)은 지우고 상품코드를 비웁니다
+//    (상품코드는 지운 상품도 계속 가져 고유) — 공개(노출) 상품이면 지우지 않고 멈춥니다.
+// ② 이 상품의 상품코드를 발주오라 상품코드로 바꿉니다(두 사이트는 상품코드로 1:1 연결 — 다음 비교에서도 그대로 연결됨).
+// ③ 바로 연결합니다: 기준(마지막으로 맞춘 값)은 지금 양쪽 값이라, 값이 다른 칸은 '처음부터 다름'으로 보이고 맞추기 카드·보낼 변경에서 방향을 고릅니다.
+export async function linkSameNameProducts(productIds: string[]) {
+  return guard(async () => {
+    const db = getDb();
+    const [productRows, links, settings, onlyList, deletedRows] = await Promise.all([
+      loadProductRows(),
+      loadLinks(),
+      getBaljuoraSettings(),
+      readStore<BaljuoraProductSnapshot[]>(STORE_ONLY, []),
+      loadDeletedProducts()
+    ]);
+    const onlyArray = Array.isArray(onlyList) ? onlyList : [];
+    const findSameName = sameNameFinder(productRows, links, onlyArray, deletedRows);
+    const byId = new Map(productRows.map((row) => [row.id, row]));
+    const linkedProducts = new Set(links.filter((link) => linkState(link)).map((link) => link.productId));
+    const taken = new Set<string>();
+    const now = nowIso();
+    const result = {
+      linked: 0,
+      removed: 0,
+      items: [] as Array<{ productId: string; name: string; code: string; previousCode: string | null; baljuoraId: string; removed: Array<{ id: string; name: string }> }>,
+      failed: [] as Array<{ id: string; name: string; error: string }>
+    };
+    const linkedSnapshotIds = new Set<string>();
+    for (const productId of [...new Set(productIds)].slice(0, 100)) {
+      const product = byId.get(productId);
+      if (!product) {
+        result.failed.push({ id: productId, name: productId, error: "DB센터 상품을 찾지 못했습니다(지웠거나 화면을 새로 불러와야 해요)." });
+        continue;
+      }
+      if (linkedProducts.has(product.id)) {
+        result.failed.push({ id: product.id, name: product.name, error: "이미 발주오라 상품과 연결돼 있어요." });
+        continue;
+      }
+      const match = findSameName(product);
+      if (!match) {
+        result.failed.push({ id: product.id, name: product.name, error: "발주오라에 이름이 같은 상품이 없어요('발주오라 상품 불러오기(비교)'를 다시 해 보세요)." });
+        continue;
+      }
+      if (match.blocked || !match.code) {
+        result.failed.push({ id: product.id, name: product.name, error: match.blocked ?? "발주오라 상품코드가 없어요." });
+        continue;
+      }
+      if (taken.has(match.baljuoraId)) {
+        result.failed.push({ id: product.id, name: product.name, error: "이름이 같은 다른 DB센터 상품이 먼저 이 발주오라 상품과 연결됐어요." });
+        continue;
+      }
+      const code = match.code;
+      try {
+        // 그 상품코드를 쥔 DB센터 상품(대소문자 무시 — 비교와 같은 규칙)
+        const holders = await db.select({ id: products.id, name: products.name, productCode: products.productCode, isVisible: products.isVisible, deletedAt: products.deletedAt })
+          .from(products).where(sql`upper(trim(${products.productCode})) = ${code.toUpperCase()}`);
+        const others = holders.filter((row) => row.id !== product.id);
+        const visible = others.find((row) => !row.deletedAt && row.isVisible);
+        if (visible) {
+          result.failed.push({ id: product.id, name: product.name, error: `DB센터 공개 상품 '${visible.name}'이 상품코드 ${code}를 쓰고 있어요. 같은 상품이면 둘 중 하나를 삭제한 뒤 다시 해 주세요.` });
+          continue;
+        }
+        await db.transaction(async (tx) => {
+          for (const holder of others) {
+            await tx.update(products).set({ productCode: releasedCode(code, holder.id), isVisible: false, deletedAt: holder.deletedAt ?? now, updatedAt: now }).where(eq(products.id, holder.id));
+            await tx.delete(externalProductLinks).where(and(eq(externalProductLinks.provider, PROVIDER), eq(externalProductLinks.productId, holder.id)));
+          }
+          await tx.update(products).set({ productCode: code, updatedAt: now }).where(eq(products.id, product.id));
+        });
+        const context = await loadSyncContext([product.id]);
+        const values = syncValues({ ...product, productCode: code }, settings, context);
+        const snapshot = { ...match.snapshot, id: match.baljuoraId };
+        const baseline: BaljuoraBaseline = { doogo: doogoComparable(values), baljuora: baljuoraComparable(snapshot), pushedImageUrl: snapshot.imageUrls.length > 0 ? values.imageUrl : null, at: now };
+        const link: typeof externalProductLinks.$inferInsert = {
+          provider: PROVIDER,
+          externalProductId: snapshot.id,
+          externalProductCode: code,
+          productId: product.id,
+          externalUpdatedAt: snapshot.updatedAt,
+          lastPulledAt: now,
+          lastPushedAt: null,
+          syncStatus: "imported",
+          rawSnapshot: stateJson({ snapshot, baseline }),
+          createdAt: now,
+          updatedAt: now
+        };
+        await removeConflictingLinks([{ externalProductId: link.externalProductId, externalProductCode: link.externalProductCode, productId: link.productId }]);
+        await upsertLinks([link]);
+        taken.add(match.baljuoraId);
+        linkedProducts.add(product.id);
+        linkedSnapshotIds.add(snapshot.id);
+        const removed = others.filter((row) => !row.deletedAt).map((row) => ({ id: row.id, name: row.name }));
+        result.linked += 1;
+        result.removed += removed.length;
+        result.items.push({ productId: product.id, name: product.name, code, previousCode: product.productCode?.trim() || null, baljuoraId: snapshot.id, removed });
+        // 운영 확인용(상품 값 없음): 어느 상품을 어느 발주오라 상품에 이었는지만 남깁니다.
+        console.info(`[baljuora-sync] same-name link product=${product.id.slice(0, 8)} baljuora=${snapshot.id.slice(0, 12)} removedDuplicates=${removed.length} releasedCodes=${others.length}`);
+      } catch (error) {
+        result.failed.push({ id: product.id, name: product.name, error: error instanceof Error ? error.message : "연결하지 못했습니다." });
+      }
+    }
+    if (linkedSnapshotIds.size > 0 && onlyArray.some((snapshot) => linkedSnapshotIds.has(snapshot.id))) {
+      await writeStore(STORE_ONLY, onlyArray.filter((snapshot) => !linkedSnapshotIds.has(snapshot.id)));
+    }
+    return result;
   });
 }
 
@@ -1684,7 +1912,8 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
     ]);
     const fields = (input.fields?.length ? input.fields : BALJUORA_SYNC_FIELDS).filter((field) => BALJUORA_SYNC_FIELDS.includes(field));
     const productById = new Map(catalog.products.map((product) => [product.id, product]));
-    const result = { updated: 0, created: 0, unchanged: 0, failed: [] as Array<{ id: string; name: string; error: string }>, skipped: [] as Array<{ id: string; name: string; field: BaljuoraSyncField; reason: string }> };
+    // restored: 발주오라에만 있던 상품 중 상품코드가 같은 DB센터 지운 상품을 되살려 가져온 수(created에도 들어감)
+    const result = { updated: 0, created: 0, restored: 0, unchanged: 0, failed: [] as Array<{ id: string; name: string; error: string }>, skipped: [] as Array<{ id: string; name: string; field: BaljuoraSyncField; reason: string }> };
     const now = nowIso();
     const policyContext: PolicyContext | null = fields.includes("shippingPolicy")
       ? { doogoPolicies: await loadDoogoShippingPolicies(), baljuoraPolicies: await readStore<BaljuoraShippingPolicy[]>(STORE_POLICIES, []), map: { ...settings.shippingPolicyMap }, changed: false }
@@ -1798,16 +2027,47 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
     if (wanted.size > 0) {
       const fallback = doogoCategories.find((category) => category.isActive && category.shippingType === "domestic" && UNCATEGORIZED_NAMES.has(category.name))
         ?? doogoCategories.find((category) => category.isActive && category.shippingType === "domestic");
-      // 새로 만드는 상품의 상품 정보 칸을 담을 곳(표가 없으면 null — 037 전 DB)
-      const onlyContext = await loadSyncContext([]);
+      const picked = (Array.isArray(onlyList) ? onlyList : []).filter((item) => wanted.has(item.id));
+      // 상품코드가 같은 DB센터 지운 상품(지운 상품도 상품코드를 계속 가져 같은 코드로 새로 만들 수 없음 → 되살려 가져옴)
+      const deletedByCode = deletedByCodeMap(picked.some((item) => item.code) ? await loadDeletedProducts() : []);
+      const restoreIds = picked.map((item) => (item.code ? deletedByCode.get(item.code.trim().toUpperCase())?.id : undefined)).filter((id): id is string => Boolean(id));
+      // 새로 만드는·되살리는 상품의 상품 정보 칸을 담을 곳(표가 없으면 null — 037 전 DB)
+      const onlyContext = await loadSyncContext(restoreIds);
       const upserts: Array<typeof externalProductLinks.$inferInsert> = [];
-      for (const snapshot of (Array.isArray(onlyList) ? onlyList : []).filter((item) => wanted.has(item.id))) {
+      for (const snapshot of picked) {
         try {
           const categoryId = reverseCategory(snapshot, settings, baljuoraCategories, doogoCategories) ?? fallback?.id;
           const category = doogoCategories.find((item) => item.id === categoryId);
           if (!category) throw new Error("DB센터 카테고리를 찾지 못했습니다. 카테고리 연결을 먼저 해 주세요.");
           const supplyPrice = snapshot.supplyPrice ?? 0;
-          const created = await createProduct({
+          const deleted = snapshot.code ? deletedByCode.get(snapshot.code.trim().toUpperCase()) : undefined;
+          const courierText = snapshot.extra && courierComparable(snapshot.extra.courier) ? syncText(snapshot.extra.courier)?.slice(0, 100) ?? null : null;
+          const originText = syncText(snapshot.extra?.originText)?.slice(0, 100) ?? null;
+          const created = deleted ? await (async () => {
+            // DB센터에서 지운 상품을 숨김으로 되살리고 발주오라 값(상품명·가격·이미지·카테고리·품절·원산지·택배사)으로 채웁니다.
+            // 매입처·배송 정책·판매기간·안내 문구 같은 DB센터 값은 그대로 둡니다(배송유형이 바뀌면 배송 정책만 뺌). 가격은 가격변동 이력에 남습니다.
+            const restored = await restoreDeletedProduct(deleted.id);
+            const base = asProductInput(restored as unknown as Parameters<typeof asProductInput>[0]);
+            const sameShipping = restored.shippingType === category.shippingType;
+            return updateProduct(deleted.id, {
+              ...base,
+              name: snapshot.name || restored.name,
+              imageUrl: snapshot.imageUrls[0] ?? restored.imageUrl ?? null,
+              costPrice: snapshot.purchaseCost ?? restored.costPrice,
+              aPrice: snapshot.groupPrice ?? supplyPrice,
+              generalPrice: supplyPrice,
+              salePrice: snapshot.consumerPrice,
+              salePriceMode: snapshot.consumerPrice ? "fixed" : "autonomous",
+              shippingType: category.shippingType,
+              categoryId: category.id,
+              shippingPolicyId: sameShipping ? base.shippingPolicyId ?? null : null,
+              isVisible: false,
+              isSoldOut: snapshot.isSoldOut ?? false,
+              isSeasonEnded: false,
+              origin: originText ?? restored.origin ?? null,
+              courier: courierText ?? restored.courier ?? null
+            }, changedBy);
+          })() : await createProduct({
             productCode: snapshot.code,
             name: snapshot.name || snapshot.code || "발주오라 상품",
             imageUrl: snapshot.imageUrls[0] ?? null,
@@ -1821,15 +2081,16 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
             isVisible: false,
             isSoldOut: snapshot.isSoldOut ?? false,
             isAlwaysOnSale: true,
-            origin: syncText(snapshot.extra?.originText)?.slice(0, 100) ?? null,
-            courier: snapshot.extra && courierComparable(snapshot.extra.courier) ? syncText(snapshot.extra.courier)?.slice(0, 100) ?? null : null
+            origin: originText,
+            courier: courierText
           });
-          // 상품 정보 칸(과세 여부·관리코드·바코드 등)도 발주오라 값으로 채웁니다(표가 있을 때).
+          // 상품 정보 칸(과세 여부·관리코드·바코드 등)도 발주오라 값으로 채웁니다(표가 있을 때). 되살린 상품은 DB센터에 있던 값 위에 덮습니다.
+          const currentExtras = (deleted ? onlyContext.extras?.get(created.id) : undefined) ?? emptyProductExtras();
           if (onlyContext.extras && snapshot.extra) {
-            const fromBaljuora = await saveProductExtras(created.id, { ...emptyProductExtras(), ...extrasPatchFromSnapshot(snapshot, [...EXTRAS_TABLE_FIELDS]) });
+            const fromBaljuora = await saveProductExtras(created.id, { ...currentExtras, ...extrasPatchFromSnapshot(snapshot, [...EXTRAS_TABLE_FIELDS]) });
             onlyContext.extras.set(created.id, fromBaljuora);
           } else if (onlyContext.extras && typeof snapshot.isTaxable === "boolean") {
-            onlyContext.extras.set(created.id, await saveProductExtras(created.id, { ...emptyProductExtras(), isTaxable: snapshot.isTaxable }));
+            onlyContext.extras.set(created.id, await saveProductExtras(created.id, { ...currentExtras, isTaxable: snapshot.isTaxable }));
           }
           const values = syncValues(created, settings, onlyContext);
           upserts.push({
@@ -1846,6 +2107,7 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
             updatedAt: now
           });
           result.created += 1;
+          if (deleted) result.restored += 1;
         } catch (error) {
           result.failed.push({ id: snapshot.id, name: snapshot.name, error: error instanceof Error ? error.message : "등록 실패" });
         }

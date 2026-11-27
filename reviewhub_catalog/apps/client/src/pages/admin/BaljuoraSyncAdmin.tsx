@@ -74,9 +74,25 @@ type ChangeItem = {
   supplierName: string | null;
   // 신규 등록인데 같은 매입처로 연결된 상품이 하나도 없음(새 매입처, 2026-11-25)
   newSupplier?: boolean;
+  // 신규 등록인데 발주오라에 이름이 같은 상품이 있음(발주오라는 같은 이름 상품을 새로 받지 않음 → '같은 상품으로 연결', 2026-11-27)
+  sameName?: SameName;
   diffs: BaljuoraFieldDiff[];
   syncStatus: string | null;
   lastPushedAt: string | null;
+};
+type SameName = {
+  baljuoraId: string;
+  code: string | null;
+  name: string;
+  // 그 발주오라 상품과 지금 연결된 DB센터 상품(없으면 아직 아무 상품과도 연결 안 됨)
+  holder: { id: string; name: string; code: string | null; isVisible: boolean; deleted: boolean } | null;
+  // 바로 연결할 수 없는 까닭
+  blocked: string | null;
+};
+// 발주오라에만 있는 상품 + 표시(2026-11-27): 상품코드가 같은 DB센터 지운 상품(가져오면 숨김으로 되살림) · 이름이 같은 DB센터 신규 등록 상품
+type OnlyItem = BaljuoraProductSnapshot & {
+  deletedMatch?: { id: string; name: string; code: string };
+  sameNameProduct?: { id: string; name: string; code: string | null };
 };
 type Changes = {
   compared: boolean;
@@ -86,7 +102,7 @@ type Changes = {
   groupPriceReadable?: boolean;
   productCount: number;
   items: ChangeItem[];
-  baljuoraOnly: BaljuoraProductSnapshot[];
+  baljuoraOnly: OnlyItem[];
   unmappedCategories: Array<{ id: string; name: string }>;
   // 상품 정보 칸 표(037)가 있는지(false = 운영 배포 전 → 원산지·택배사·판매 상태·과세 밖의 상품 정보 칸은 비교하지 않음)
   extrasReady?: boolean;
@@ -186,7 +202,7 @@ export function BaljuoraSyncAdmin() {
   const [page, setPage] = useState(1);
   const [includeHidden, setIncludeHidden] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const [busy, setBusy] = useState<"" | "compare" | "push" | "pull" | "ignore" | "settings" | "cancel">("");
+  const [busy, setBusy] = useState<"" | "compare" | "push" | "pull" | "ignore" | "settings" | "cancel" | "link">("");
   const [job, setJob] = useState<{ view: JobView; code: string | null; consoleUrl: string | null } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState<Settings | null>(null);
@@ -281,6 +297,9 @@ export function BaljuoraSyncAdmin() {
     return source.filter((item) => match(`${item.code ?? ""} ${item.name} ${item.supplierName ?? ""}`));
   }, [tab, query, lists, includeHidden, changes]);
 
+  // 신규 등록 탭에서 바로 연결할 수 있는 '이름이 같은 발주오라 상품' 줄(검색·숨김 보기 조건 그대로)
+  const sameNameRows = useMemo(() => (tab === "new" ? rows.filter((row): row is ChangeItem => "productId" in row && Boolean(row.sameName && !row.sameName.blocked && row.sameName.code)) : []), [tab, rows]);
+
   useEffect(() => { setPage(1); setSelected(new Set()); }, [tab, query, includeHidden]);
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -312,10 +331,54 @@ export function BaljuoraSyncAdmin() {
   };
 
   const pushSelected = () => {
-    const ids = [...selected];
+    let ids = [...selected];
     if (ids.length === 0) return toast.info("동기화할 상품을 골라 주세요.");
     if (tab === "changed") return pushChanged(ids);
+    if (tab === "new") {
+      // 발주오라에 이름이 같은 상품이 있으면 발주오라가 새로 받지 않아(매번 실패) 보내지 않고 '같은 상품으로 연결'로 안내합니다.
+      const sameNameIds = new Set(lists.new.filter((item) => item.sameName).map((item) => item.productId));
+      const skipped = ids.filter((id) => sameNameIds.has(id)).length;
+      ids = ids.filter((id) => !sameNameIds.has(id));
+      if (skipped > 0) toast.info(`발주오라에 이름이 같은 상품이 있는 ${skipped}개는 보내지 않았어요. 그 상품 줄의 '같은 상품으로 연결'을 눌러 주세요.`);
+      if (ids.length === 0) return;
+    }
     void startJob({ type: "push", productIds: ids }, "push");
+  };
+
+  // 같은 상품으로 연결(2026-11-27 직원 신고 "신규 등록 3건 → 이미 발주오라에 있습니다"): DB센터 상품코드를 발주오라 상품코드로 바꿔 잇고,
+  // 같은 발주오라 상품에 연결돼 있던 DB센터 숨김 중복 상품은 지웁니다(발주오라는 바뀌지 않음).
+  const linkSameName = async (targets: ChangeItem[]) => {
+    const linkable = targets.filter((item) => item.sameName && !item.sameName.blocked && item.sameName.code);
+    if (linkable.length === 0) return toast.info("바로 연결할 수 있는 상품이 없습니다.");
+    const duplicates = linkable.filter((item) => item.sameName?.holder && !item.sameName.holder.deleted);
+    const first = linkable[0];
+    const firstSame = first.sameName as SameName;
+    const lines = linkable.length === 1 ? [
+      `'${first.name}'을(를) 발주오라 상품(상품코드 ${firstSame.code})과 같은 상품으로 연결할까요?`,
+      "",
+      `· DB센터 상품코드 ${first.code ?? "없음"} → ${firstSame.code} (발주오라와 같은 코드로 바꿔 1:1로 연결해요)`,
+      firstSame.holder && !firstSame.holder.deleted ? `· 이 발주오라 상품에 연결돼 있던 DB센터 숨김 상품 '${firstSame.holder.name}'(${firstSame.holder.code ?? "상품코드 없음"})은 중복이라 삭제해요.` : "",
+      "· 발주오라는 바뀌지 않아요. 연결 뒤 값이 다른 칸은 '보낼 변경(전체)'과 맞추기 카드에서 방향을 골라 맞춰요."
+    ] : [
+      `발주오라에 이름이 같은 상품이 있는 ${linkable.length}개를 같은 상품으로 연결할까요?`,
+      "",
+      `· DB센터 상품코드를 발주오라 상품코드로 바꿔 1:1로 연결해요(${linkable.slice(0, 3).map((item) => `${item.code ?? "없음"} → ${item.sameName?.code}`).join(", ")}${linkable.length > 3 ? " 등" : ""}).`,
+      duplicates.length > 0 ? `· 같은 발주오라 상품에 연결돼 있던 DB센터 숨김 중복 상품 ${duplicates.length}개는 삭제해요.` : "",
+      "· 발주오라는 바뀌지 않아요. 연결 뒤 값이 다른 칸은 '보낼 변경(전체)'과 맞추기 카드에서 방향을 골라 맞춰요."
+    ];
+    if (!window.confirm(lines.filter(Boolean).join("\n"))) return;
+    setBusy("link");
+    try {
+      const result = await readData<{ linked: number; removed: number; failed: Array<{ name: string; error: string }> }>(await apiFetch("/baljuora/admin/link-same-name", jsonInit("POST", { productIds: linkable.map((item) => item.productId) })));
+      if (result.linked > 0) toast.success(`${result.linked}개를 발주오라 상품과 연결했습니다${result.removed ? ` · DB센터 숨김 중복 상품 ${result.removed}개 삭제` : ""}.`);
+      if (result.failed.length > 0) toast.error(`${result.failed.length}개는 연결하지 못했습니다: ${result.failed.slice(0, 2).map((item) => `${item.name} (${item.error})`).join(", ")}`);
+      setSelected(new Set());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "연결하지 못했습니다.");
+    } finally {
+      setBusy("");
+      await load();
+    }
   };
 
   // DB센터에서 바꿈: 고른 상품의 'DB센터에서 바뀜·양쪽에서 바뀜' 칸만 보냅니다('처음부터 다름' 칸은 건드리지 않음).
@@ -355,13 +418,20 @@ export function BaljuoraSyncAdmin() {
   const pullSelected = async () => {
     const ids = [...selected];
     if (ids.length === 0) return toast.info("가져올 상품을 골라 주세요.");
+    const onlyById = new Map((changes?.baljuoraOnly ?? []).map((snapshot) => [snapshot.id, snapshot]));
+    const restoreCount = tab === "only" ? ids.filter((id) => onlyById.get(id)?.deletedMatch).length : 0;
+    const sameNameCount = tab === "only" ? ids.filter((id) => onlyById.get(id)?.sameNameProduct).length : 0;
     const message = tab === "only"
-      ? `발주오라에만 있는 상품 ${ids.length}개를 DB센터에 새 상품으로 등록할까요? (공개 단가표에는 숨김으로 등록됩니다)`
+      ? [
+        `발주오라에만 있는 상품 ${ids.length}개를 DB센터에 등록할까요? (공개 단가표에는 숨김으로 등록됩니다)`,
+        restoreCount > 0 ? `· 그중 ${restoreCount}개는 DB센터에서 지운 상품과 상품코드가 같아 새로 만들지 않고 그 상품을 숨김으로 되살려 발주오라 값으로 채워요.` : "",
+        sameNameCount > 0 ? `· 그중 ${sameNameCount}개는 DB센터에 이름이 같은 상품이 있어요. 같은 상품이면 취소하고 '신규 등록' 탭에서 '같은 상품으로 연결'을 눌러 주세요(가져오면 같은 이름 상품이 하나 더 생겨요).` : ""
+      ].filter(Boolean).join("\n")
       : `고른 ${ids.length}개 상품의 DB센터 값을 발주오라 값으로 바꿀까요? (가격이 바뀌면 가격변동 이력에 남습니다)`;
     if (!window.confirm(message)) return;
     setBusy("pull");
     // 많이 고르면(처음 맞출 때 전체 선택 등) 25개씩 나눠 보냅니다(서버는 한 번에 500개까지, 함수 시간 제한도 넘지 않게).
-    const total = { updated: 0, created: 0, failed: [] as Array<{ name: string; error: string }> };
+    const total = { updated: 0, created: 0, restored: 0, failed: [] as Array<{ name: string; error: string }> };
     let done = 0;
     setPullProgress({ done: 0, total: ids.length });
     try {
@@ -369,14 +439,15 @@ export function BaljuoraSyncAdmin() {
         const part = ids.slice(index, index + PULL_CHUNK);
         // '발주오라에서 바뀜' 탭: 발주오라에서 바뀐 칸만 가져옵니다(DB센터에서 고친 칸은 그대로).
         const body = tab === "only" ? { baljuoraIds: part } : { productIds: part, onlyPulled: true };
-        const result = await readData<{ updated: number; created: number; failed: Array<{ name: string; error: string }> }>(await apiFetch("/baljuora/admin/pull", jsonInit("POST", body)));
+        const result = await readData<{ updated: number; created: number; restored?: number; failed: Array<{ name: string; error: string }> }>(await apiFetch("/baljuora/admin/pull", jsonInit("POST", body)));
         total.updated += result.updated;
         total.created += result.created;
+        total.restored += result.restored ?? 0;
         total.failed.push(...result.failed);
         done += part.length;
         setPullProgress({ done, total: ids.length });
       }
-      toast.success(tab === "only" ? `${total.created}개를 DB센터에 등록했습니다.` : `${total.updated}개를 발주오라 값으로 바꿨습니다.`);
+      toast.success(tab === "only" ? `${total.created}개를 DB센터에 등록했습니다${total.restored ? `(지운 상품 ${total.restored}개는 숨김으로 되살림)` : ""}.` : `${total.updated}개를 발주오라 값으로 바꿨습니다.`);
       if (total.failed.length) toast.error(`${total.failed.length}개 실패: ${total.failed.slice(0, 2).map((item) => `${item.name} (${item.error})`).join(", ")}`);
       setSelected(new Set());
     } catch (error) {
@@ -559,7 +630,9 @@ export function BaljuoraSyncAdmin() {
 
       <BaljuoraMasterPanel
         items={changes?.items ?? []}
-        baljuoraOnlyIds={(changes?.baljuoraOnly ?? []).map((snapshot) => snapshot.id)}
+        baljuoraOnlyIds={(changes?.baljuoraOnly ?? []).filter((snapshot) => !snapshot.sameNameProduct).map((snapshot) => snapshot.id)}
+        restoreCount={(changes?.baljuoraOnly ?? []).filter((snapshot) => snapshot.deletedMatch && !snapshot.sameNameProduct).length}
+        sameNameOnlyCount={(changes?.baljuoraOnly ?? []).filter((snapshot) => snapshot.sameNameProduct).length}
         doogoOnlyCount={lists.new.length}
         compared={compared}
         lastCompareAt={changes?.lastCompareAt ?? overview?.lastCompareAt ?? null}
@@ -624,6 +697,7 @@ export function BaljuoraSyncAdmin() {
           {tab === "new" && <label className="bj-check"><input type="checkbox" checked={includeHidden} onChange={(event) => setIncludeHidden(event.target.checked)} /> 숨긴 상품도 보기</label>}
           <div className="bj-toolbar-actions">
             <span>{selected.size > 0 ? `${selected.size}개 선택` : `${rows.length.toLocaleString("ko-KR")}개`}</span>
+            {tab === "new" && sameNameRows.length > 0 && <button type="button" className="outline-button bj-same-all" onClick={() => void linkSameName(sameNameRows)} disabled={Boolean(busy)}>{busy === "link" ? <Loader2 className="bj-spin" size={15} /> : <Link2 size={15} />} 이름 같은 상품 연결 {sameNameRows.length}개</button>}
             {(tab === "changed" || tab === "push" || tab === "new") && <button type="button" className="primary-action" onClick={pushSelected} disabled={!compared || selected.size === 0 || Boolean(busy) || jobActive}>{busy === "push" ? <Loader2 className="bj-spin" size={15} /> : <Send size={15} />} 선택 {selected.size}개 {tab === "changed" ? "바꾼 칸 보내기" : "동기화"}</button>}
             {(tab === "pull" || tab === "only") && <button type="button" className="primary-action" onClick={() => void pullSelected()} disabled={selected.size === 0 || Boolean(busy)}>{busy === "pull" ? <Loader2 className="bj-spin" size={15} /> : <ArrowDownToLine size={15} />} {busy === "pull" && pullProgress ? `가져오는 중 ${pullProgress.done.toLocaleString("ko-KR")} / ${pullProgress.total.toLocaleString("ko-KR")}` : tab === "only" ? "DB센터로 가져오기" : "발주오라 값 가져오기"}</button>}
             {(tab === "changed" || tab === "push" || tab === "pull") && <button type="button" className="outline-button" onClick={() => void ignoreSelected()} disabled={selected.size === 0 || Boolean(busy)}>이대로 두기</button>}
@@ -647,6 +721,12 @@ export function BaljuoraSyncAdmin() {
                       <div className="bj-row-main">
                         <strong>{snapshot.name || "(이름 없음)"}</strong>
                         <small>{snapshot.code ?? "상품코드 없음"} · 공급가 {won(snapshot.supplyPrice)}{snapshot.isVisible === false ? " · 발주오라 미노출" : ""}</small>
+                        {(snapshot.deletedMatch || snapshot.sameNameProduct) && (
+                          <div className="bj-diffs">
+                            {snapshot.deletedMatch && <span className="bj-diff is-restore" title={`DB센터에서 지운 상품 '${snapshot.deletedMatch.name}'이 같은 상품코드(${snapshot.deletedMatch.code})를 갖고 있어요. 'DB센터로 가져오기'를 하면 새로 만들지 않고 그 상품을 숨김으로 되살려 발주오라 값으로 채우고 연결해요.`}>DB센터에서 지운 상품 · 가져오면 숨김으로 되살려요</span>}
+                            {snapshot.sameNameProduct && <span className="bj-diff is-supplier">DB센터에 이름이 같은 상품({snapshot.sameNameProduct.code ?? "상품코드 없음"}) · 같은 상품이면 '신규 등록' 탭에서 연결해 주세요</span>}
+                          </div>
+                        )}
                       </div>
                     </label>
                   );
@@ -660,7 +740,24 @@ export function BaljuoraSyncAdmin() {
                     <div className="bj-row-main">
                       <strong>{item.name}{!item.isVisible && <em className="bj-tag">숨김</em>}{item.syncStatus === "failed" && <em className="bj-tag is-danger">지난 동기화 실패</em>}</strong>
                       <small>{item.code ?? "상품코드 없음(발주오라가 새 코드를 만듭니다)"} · {doogoCategoryName(item.categoryId)}{item.supplierName ? ` · ${item.supplierName}` : ""}</small>
-                      {item.kind === "new" ? (
+                      {item.kind === "new" && item.sameName ? (
+                        <div className="bj-diffs bj-same">
+                          <span className={`bj-diff is-same${item.sameName.blocked ? " is-blocked" : ""}`}>
+                            <b>발주오라에 같은 이름 상품</b>
+                            <span>{item.sameName.code ?? "상품코드 없음"}</span>
+                            <i>{item.sameName.holder
+                              ? item.sameName.holder.deleted
+                                ? "DB센터에서 지운 상품과 연결돼 있었어요"
+                                : item.sameName.holder.isVisible
+                                  ? `DB센터 공개 상품 '${item.sameName.holder.name}'과 연결됨`
+                                  : `DB센터 숨김 상품(${item.sameName.holder.code ?? "상품코드 없음"})과 연결됨 · 연결하면 그 중복 상품은 삭제`
+                              : "아직 DB센터 상품과 연결 안 됨"}</i>
+                          </span>
+                          {item.sameName.blocked
+                            ? <small className="bj-same-note">{item.sameName.blocked}</small>
+                            : <button type="button" className="bj-same-link" onClick={(event) => { event.preventDefault(); event.stopPropagation(); void linkSameName([item]); }} disabled={Boolean(busy)}><Link2 size={13} aria-hidden="true" /> 같은 상품으로 연결</button>}
+                        </div>
+                      ) : item.kind === "new" ? (
                         <div className="bj-diffs">
                           <span className="bj-diff is-new">발주오라에 새로 등록</span>
                           {/* 새 상품은 복사한 상품의 매입처로 등록돼서, 같은 매입처 상품이 발주오라에 없으면 책갈피가 등록을 멈춥니다(1.8.0). */}

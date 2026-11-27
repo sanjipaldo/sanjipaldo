@@ -907,6 +907,16 @@ export function buildCategoryTreePlan(input: {
   const used = new Map<string, string>();
   const parents = new Map<string, { baljuoraId: string | null; ref: string | null }>();
   const sameName = (name: string, parentId: string | null) => list.find((category) => category.parentId === parentId && !excludedIds.has(category.id) && !used.has(category.id) && plainCategoryName(category.name) === plainCategoryName(name));
+  // 발주오라는 카테고리 이름이 트리 전체에서 겹치면 안 됩니다(앞뒤 공백·대소문자 무시 — 책갈피 planTreeSave와 같은 규칙).
+  // 2026-11-27 직원 신고: '💊 국내 건강식품' 이름 변경이 "같은 이름의 카테고리가 이미 있어 바꾸지 않았습니다"로 매번 못 한 것 1건으로 남고
+  // 'DB센터에서 바꾼 것 · 카테고리 1건'이 0이 되지 않았습니다. 발주오라가 받지 않는 이름 변경·추가는 보낼 것(ops)에 넣지 않고 이유(notes)로 보여 줍니다.
+  const treeNameKey = (name: string) => name.trim().toLowerCase();
+  const plannedNames = new Set<string>();
+  const nameClash = (name: string, except: string | null) => list.find((category) => category.id !== except && treeNameKey(category.name) === treeNameKey(name))
+    ?? (plannedNames.has(treeNameKey(name)) ? { id: "", name, path: name } as Pick<BaljuoraCategory, "id" | "name" | "path"> : undefined);
+  const clashReason = (clash: Pick<BaljuoraCategory, "id" | "path">, action: string) => clash.id
+    ? `발주오라에 같은 이름의 카테고리 '${clash.path}'가 이미 있어 ${action}(발주오라는 카테고리 이름이 겹치면 안 됩니다). 이름을 맞추려면 발주오라에서 '${clash.path}'의 이름을 바꾸거나, 동기화 설정 > 카테고리 연결에서 보낼 곳을 바꿔 주세요.`
+    : `같은 이름의 DB센터 카테고리가 먼저 보내져 ${action}(발주오라는 카테고리 이름이 겹치면 안 됩니다).`;
 
   for (const category of [...input.doogoCategories].sort(byOrder)) {
     if (isExcludedCategoryName(category.name, excludeNames)) continue;
@@ -932,10 +942,24 @@ export function buildCategoryTreePlan(input: {
       }
       used.set(node.id, category.name);
       parents.set(category.id, { baljuoraId: node.id, ref: null });
-      if (node.name.trim() !== category.name.trim()) plan.ops.push({ type: "rename", level: 1, baljuoraId: node.id, from: node.name, to: category.name.trim(), doogoId: category.id });
+      if (node.name.trim() !== category.name.trim()) {
+        const clash = nameClash(category.name, node.id);
+        if (clash) plan.notes.push({ doogoId: category.id, name: category.name, reason: `${clashReason(clash, `연결된 발주오라 '${node.path}'의 이름은 바꾸지 않습니다`)} 상품은 지금처럼 '${node.path}'로 보내요.` });
+        else {
+          plannedNames.add(treeNameKey(category.name));
+          plan.ops.push({ type: "rename", level: 1, baljuoraId: node.id, from: node.name, to: category.name.trim(), doogoId: category.id });
+        }
+      }
     } else {
+      const clash = nameClash(category.name, null);
+      if (clash) {
+        // 1차를 만들 수 없으면 그 아래 2차도 보내지 않습니다(parents에 넣지 않음).
+        plan.notes.push({ doogoId: category.id, name: category.name, reason: clashReason(clash, "새로 추가하지 않습니다") });
+        continue;
+      }
       const ref = `c:${category.id}`;
       parents.set(category.id, { baljuoraId: null, ref });
+      plannedNames.add(treeNameKey(category.name));
       plan.ops.push({ type: "add", level: 1, ref, name: category.name.trim(), doogoId: category.id, parentBaljuoraId: null, parentRef: null });
     }
   }
@@ -961,8 +985,21 @@ export function buildCategoryTreePlan(input: {
       }
       used.set(node.id, sub.name);
       if (parent.baljuoraId && node.parentId !== parent.baljuoraId) plan.notes.push({ doogoId: sub.id, name: sub.name, reason: `발주오라에서는 '${node.path}'에 있어 위치는 바꾸지 않습니다.` });
-      if (node.name.trim() !== sub.name.trim()) plan.ops.push({ type: "rename", level: 2, baljuoraId: node.id, from: node.name, to: sub.name.trim(), doogoId: sub.id });
+      if (node.name.trim() !== sub.name.trim()) {
+        const clash = nameClash(sub.name, node.id);
+        if (clash) plan.notes.push({ doogoId: sub.id, name: sub.name, reason: clashReason(clash, `연결된 발주오라 '${node.path}'의 이름은 바꾸지 않습니다`) });
+        else {
+          plannedNames.add(treeNameKey(sub.name));
+          plan.ops.push({ type: "rename", level: 2, baljuoraId: node.id, from: node.name, to: sub.name.trim(), doogoId: sub.id });
+        }
+      }
     } else {
+      const clash = nameClash(sub.name, null);
+      if (clash) {
+        plan.notes.push({ doogoId: sub.id, name: sub.name, reason: clashReason(clash, "새로 추가하지 않습니다") });
+        continue;
+      }
+      plannedNames.add(treeNameKey(sub.name));
       plan.ops.push({ type: "add", level: 2, ref: `s:${sub.id}`, name: sub.name.trim(), doogoId: sub.id, parentBaljuoraId: parent.baljuoraId, parentRef: parent.ref });
     }
   }
