@@ -943,7 +943,9 @@ export async function getAdminOverview() {
   };
 }
 
-export async function createProduct(input: ProductInput) {
+// options.quiet: 신규 등록·품절 기록(공개 '신규상품'·'품절이슈'·이번 달 상품 현황)을 남기지 않습니다 — 발주오라와 한꺼번에 맞출 때
+// (오래전부터 발주오라에 있던 상품을 DB센터로 가져오는 것이라 '오늘 새로 들어옴·오늘 품절'이 아님).
+export async function createProduct(input: ProductInput, options: { quiet?: boolean } = {}) {
   const db = getDb();
   const updatedAt = new Date().toISOString();
   const normalizedSaleFields = await normalizeSaleFields(input);
@@ -1013,7 +1015,7 @@ export async function createProduct(input: ProductInput) {
       updatedAt
     }));
     if (normalizedOptions.length > 0) await tx.insert(productOptions).values(normalizedOptions);
-    await tx.insert(catalogActivityLogs).values([
+    if (!options.quiet) await tx.insert(catalogActivityLogs).values([
       {
         productId: product.id,
         productName: product.name,
@@ -1058,7 +1060,8 @@ export async function restoreDeletedProduct(id: string) {
   return { ...rows[0], options: optionRows };
 }
 
-export async function updateProduct(id: string, input: ProductInput, changedBy: string) {
+// options.quiet: 가격변동 이력·품절/재입고 기록(공개 '가격변동'·'품절이슈')을 남기지 않습니다 — 발주오라와 한꺼번에 맞출 때만 씀.
+export async function updateProduct(id: string, input: ProductInput, changedBy: string, options: { quiet?: boolean } = {}) {
   const db = getDb();
   const previous = await db.select().from(products).where(eq(products.id, id)).limit(1);
   if (!previous[0]) {
@@ -1189,7 +1192,7 @@ export async function updateProduct(id: string, input: ProductInput, changedBy: 
       }
     }
 
-    if (changes.length > 0) {
+    if (changes.length > 0 && !options.quiet) {
       await tx.insert(priceHistories).values(
         changes.map((item) => ({
           productId: id,
@@ -1236,7 +1239,7 @@ export async function updateProduct(id: string, input: ProductInput, changedBy: 
         });
       }
     }
-    if (activityChanges.length > 0) await tx.insert(catalogActivityLogs).values(activityChanges);
+    if (activityChanges.length > 0 && !options.quiet) await tx.insert(catalogActivityLogs).values(activityChanges);
 
     await tx.delete(productOptions).where(eq(productOptions.productId, id));
     if (normalizedOptions.length > 0) await tx.insert(productOptions).values(normalizedOptions);

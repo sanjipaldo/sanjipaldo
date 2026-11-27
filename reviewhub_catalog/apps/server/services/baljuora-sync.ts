@@ -2068,7 +2068,9 @@ export async function getBaljuoraReconcile(): Promise<BaljuoraReconcile> {
         .where(and(eq(baljuoraSyncJobs.type, "compare"), eq(baljuoraSyncJobs.status, "done"))).orderBy(desc(baljuoraSyncJobs.finishedAt)).limit(1)
     ]);
     const lastCompare = lastCompareRows[0] ?? null;
-    const onlyArray = (Array.isArray(onlyList) ? onlyList : []).filter((snapshot) => snapshot.kind !== "bundle");
+    const storedOnly = (Array.isArray(onlyList) ? onlyList : []).filter((snapshot) => snapshot.kind !== "bundle");
+    // 마지막 비교 뒤 DB센터에서 지운 상품과 이어져 있던 발주오라 상품도 발주오라에만 있는 상품으로 셉니다(orphanSnapshots)
+    const onlyArray = [...storedOnly, ...orphanSnapshots(productRows, links, storedOnly, lastCompare?.startedAt ?? null)];
     const linkByProduct = new Map(links.map((link) => [link.productId, link]));
     const activeExternal = activeLinkedExternalIds(productRows, links);
     const activeIds = new Set(productRows.map((row) => row.id));
@@ -2143,16 +2145,18 @@ export async function getBaljuoraReconcile(): Promise<BaljuoraReconcile> {
       else baljuoraOnly.importIds.push(snapshot.id);
     }
 
+    // 발주오라 수: 마지막으로 읽은 값(연결 상품 + 발주오라에만 있는 상품)으로 셉니다 — 비교 뒤에 보낸·가져온 결과까지 들어 있어
+    // '발주오라와 똑같이 맞추기'가 맞추는 값과 같습니다. 이번 배포 전 비교(발주오라 상태 수를 따로 세지 않은 비교)면 "추정"으로 표시합니다.
     const summary = parseJson<{ states?: BaljuoraStateCounts | null } | null>(lastCompare?.summary, null);
     const exact = summary?.states && typeof summary.states.total === "number" ? summary.states : null;
-    const baljuora = !lastCompare ? null : exact ? { ...exact, source: "compare" as const } : {
+    const baljuora = !lastCompare ? null : {
       total: linkedStates.total + baljuoraOnly.total,
       selling: linkedStates.selling + baljuoraOnly.selling,
       soldOut: linkedStates.soldOut + baljuoraOnly.soldOut,
       visible: linkedStates.visible + baljuoraOnly.visible,
       hidden: linkedStates.hidden + baljuoraOnly.hidden,
       hiddenSoldOut: linkedStates.hiddenSoldOut + baljuoraOnly.hiddenSoldOut,
-      source: "estimated" as const
+      source: exact ? "compare" as const : "estimated" as const
     };
     return {
       compared: Boolean(lastCompare),
@@ -2165,6 +2169,261 @@ export async function getBaljuoraReconcile(): Promise<BaljuoraReconcile> {
       soldOut: { ...soldOut, productIds: soldOutIds },
       visible
     };
+  });
+}
+
+// ── 발주오라와 똑같이 맞추기(1차, 2026-11-27 관리자 요청 "발주오라 전체 상품이 품절이든 미노출이든 2,998개인데 DB센터는 2,140개 —
+// 2,998개 전부 DB센터로 가져와 판매중·품절·미노출·전체 상품 수를 발주오라와 똑같이") ───────────────────────────────────────────────────
+// 마지막으로 읽은 발주오라 값(연결 기록 + 발주오라에만 있음, 묶음 상품 제외)을 기준으로 할 일을 셉니다. 발주오라는 바꾸지 않습니다.
+//   ① 이름 같은 상품 연결: DB센터에만 있는 상품과 이름이 같은 발주오라에만 있는 상품(어느 DB센터 상품과도 이어지지 않았거나 지운 상품과만
+//      이어진 것)만 저절로 잇습니다 — 숨김·공개 DB센터 상품과 이어진 발주오라 상품은 지우는 일이 생겨 '신규 등록' 탭에서 직접(sameNameReview)
+//   ② 발주오라에만 있는 상품 가져오기: 지운 상품은 되살리고 나머지는 새로 등록, 발주오라 도매몰 노출·품절 그대로
+//   ③ 판매 상태·노출: 연결 상품의 품절·노출을 발주오라 값으로. 상품 리스트 '품절' 칸(isSoldOut)까지 같게, 발주오라 품절인데 DB센터에서
+//      직접 시즌종료로 둔 상품은 품절로 바꿉니다(발주오라에는 시즌종료가 없음).
+// DB센터 품절 = isSoldOut(상품 리스트 '품절 상품' 칸과 같음), 시즌종료(직접 지정) = isSeasonEnded이고 품절 아님.
+export type BaljuoraAlignCounts = { total: number; selling: number; soldOut: number; seasonEnded: number; visible: number; hidden: number };
+export type BaljuoraAlignState = {
+  compared: boolean;
+  lastCompareAt: string | null;
+  bundles: number;
+  doogo: BaljuoraAlignCounts;
+  // 품절·노출을 모르는 발주오라 상품(예전 책갈피 기록) 수 — 그 상품은 상태를 바꾸지 않음
+  baljuora: BaljuoraAlignCounts & { unknown: number };
+  linked: number;
+  doogoOnly: { total: number; visible: number; soldOut: number };
+  sameNameIds: string[];
+  sameNameReview: number;
+  importIds: string[];
+  importRestore: number;
+  // 그중 마지막 비교 뒤 DB센터에서 지운 상품과 이어져 있던 것(가져오기 전에 '발주오라에만 있음'에 다시 넣음)
+  orphans: number;
+  stateIds: string[];
+  stateDetail: { soldOut: number; restock: number; seasonToSoldOut: number; show: number; hide: number };
+};
+
+export async function getBaljuoraAlignState(): Promise<BaljuoraAlignState> {
+  return guard(async () => {
+    const db = getDb();
+    const [productRows, links, onlyList, deletedRows, lastCompareRows] = await Promise.all([
+      loadProductRows(),
+      loadLinks(),
+      readStore<BaljuoraProductSnapshot[]>(STORE_ONLY, []),
+      loadDeletedProducts(),
+      db.select({ startedAt: baljuoraSyncJobs.startedAt, finishedAt: baljuoraSyncJobs.finishedAt, summary: baljuoraSyncJobs.summary }).from(baljuoraSyncJobs)
+        .where(and(eq(baljuoraSyncJobs.type, "compare"), eq(baljuoraSyncJobs.status, "done"))).orderBy(desc(baljuoraSyncJobs.finishedAt)).limit(1)
+    ]);
+    const lastCompare = lastCompareRows[0] ?? null;
+    const summary = parseJson<{ bundles?: number } | null>(lastCompare?.summary, null);
+    const storedOnly = (Array.isArray(onlyList) ? onlyList : []).filter((snapshot) => snapshot.kind !== "bundle");
+    // 마지막 비교 뒤 DB센터에서 지운 상품과 이어져 있던 발주오라 상품도 '발주오라에만 있음'으로 셉니다(가져오기 전에 다시 넣음)
+    const orphans = orphanSnapshots(productRows, links, storedOnly, lastCompare?.startedAt ?? null);
+    const onlyArray = [...storedOnly, ...orphans];
+    // DB센터 상품마다 쓸 수 있는 연결 하나(여러 개면 가장 최근)
+    const linkByProduct = new Map<string, { link: LinkRow; state: BaljuoraLinkState }>();
+    for (const link of links) {
+      const state = linkState(link);
+      if (!state) continue;
+      const previous = linkByProduct.get(link.productId);
+      if (!previous || String(link.updatedAt ?? "") > String(previous.link.updatedAt ?? "")) linkByProduct.set(link.productId, { link, state });
+    }
+    const activeExternal = activeLinkedExternalIds(productRows, links);
+    const deletedByCode = deletedByCodeMap(deletedRows);
+    const findSameName = sameNameFinder(productRows, links, onlyArray, deletedRows);
+    const onlyIds = new Set(onlyArray.filter((snapshot) => !activeExternal.has(snapshot.id)).map((snapshot) => snapshot.id));
+    const doogo: BaljuoraAlignCounts = { total: 0, selling: 0, soldOut: 0, seasonEnded: 0, visible: 0, hidden: 0 };
+    const baljuora = { total: 0, selling: 0, soldOut: 0, seasonEnded: 0, visible: 0, hidden: 0, unknown: 0 };
+    const countBaljuora = (snapshot: BaljuoraProductSnapshot) => {
+      baljuora.total += 1;
+      if (snapshot.isSoldOut === true) baljuora.soldOut += 1;
+      else if (snapshot.isSoldOut === false) baljuora.selling += 1;
+      if (snapshot.isVisible === true) baljuora.visible += 1;
+      else if (snapshot.isVisible === false) baljuora.hidden += 1;
+      if (typeof snapshot.isSoldOut !== "boolean" || typeof snapshot.isVisible !== "boolean") baljuora.unknown += 1;
+    };
+    const doogoOnly = { total: 0, visible: 0, soldOut: 0 };
+    const sameNameIds: string[] = [];
+    const sameNameTaken = new Set<string>();
+    let sameNameReview = 0;
+    const stateIds: string[] = [];
+    const stateDetail = { soldOut: 0, restock: 0, seasonToSoldOut: 0, show: 0, hide: 0 };
+    let linked = 0;
+    for (const product of productRows) {
+      doogo.total += 1;
+      if (product.isSoldOut) doogo.soldOut += 1;
+      else if (product.isSeasonEnded) doogo.seasonEnded += 1;
+      else doogo.selling += 1;
+      if (product.isVisible) doogo.visible += 1;
+      else doogo.hidden += 1;
+      const entry = linkByProduct.get(product.id);
+      if (!entry) {
+        doogoOnly.total += 1;
+        if (product.isVisible) doogoOnly.visible += 1;
+        if (product.isSoldOut) doogoOnly.soldOut += 1;
+        const match = findSameName(product);
+        if (match) {
+          const safe = !match.blocked && Boolean(match.code) && (!match.holder || match.holder.deleted) && onlyIds.has(match.baljuoraId) && !sameNameTaken.has(match.baljuoraId);
+          if (safe) {
+            sameNameIds.push(product.id);
+            sameNameTaken.add(match.baljuoraId);
+          } else sameNameReview += 1;
+        }
+        continue;
+      }
+      linked += 1;
+      const snapshot = entry.state.snapshot;
+      countBaljuora(snapshot);
+      let differs = false;
+      if (typeof snapshot.isSoldOut === "boolean") {
+        if (snapshot.isSoldOut && !product.isSoldOut) {
+          differs = true;
+          if (product.isSeasonEnded) stateDetail.seasonToSoldOut += 1;
+          else stateDetail.soldOut += 1;
+        } else if (!snapshot.isSoldOut && (product.isSoldOut || product.isSeasonEnded)) {
+          differs = true;
+          stateDetail.restock += 1;
+        }
+      }
+      if (typeof snapshot.isVisible === "boolean" && Boolean(product.isVisible) !== snapshot.isVisible) {
+        differs = true;
+        if (snapshot.isVisible) stateDetail.show += 1;
+        else stateDetail.hide += 1;
+      }
+      if (differs) stateIds.push(product.id);
+    }
+    const importIds: string[] = [];
+    let importRestore = 0;
+    for (const snapshot of onlyArray) {
+      if (activeExternal.has(snapshot.id)) continue;
+      countBaljuora(snapshot);
+      if (sameNameTaken.has(snapshot.id)) continue;
+      importIds.push(snapshot.id);
+      if (snapshot.code && deletedByCode.has(snapshot.code.trim().toUpperCase())) importRestore += 1;
+    }
+    return {
+      compared: Boolean(lastCompare),
+      lastCompareAt: lastCompare?.finishedAt ?? null,
+      bundles: typeof summary?.bundles === "number" ? summary.bundles : 0,
+      doogo,
+      baljuora,
+      linked,
+      doogoOnly,
+      sameNameIds,
+      sameNameReview,
+      importIds,
+      importRestore,
+      orphans: orphans.filter((snapshot) => !activeExternal.has(snapshot.id)).length,
+      stateIds,
+      stateDetail
+    };
+  });
+}
+
+// ③ 연결 상품의 품절·노출을 마지막으로 읽은 발주오라 값으로 맞춥니다('이대로 두기'와 상관없이 — 관리자가 수까지 같게 해 달라고 함).
+// 공개 '품절이슈'·'가격변동'에 남기지 않고(quiet), 맞춘 칸은 연결 기준도 새로 적어 다음 비교에서 방향이 맞게 보입니다.
+export async function alignLinkedStates(productIds: string[], changedBy: string) {
+  return guard(async () => {
+    const ids = [...new Set(productIds)].slice(0, 500);
+    const result = { updated: 0, unchanged: 0, failed: [] as Array<{ id: string; name: string; error: string }> };
+    if (ids.length === 0) return result;
+    const settings = await getBaljuoraSettings();
+    const [{ baljuoraCategories }, catalog, links, context] = await Promise.all([loadCategoryContext(), getAdminCatalog(), loadLinks(ids), loadSyncContext(ids)]);
+    const productById = new Map(catalog.products.map((product) => [product.id, product]));
+    const byProduct = new Map<string, { link: LinkRow; state: BaljuoraLinkState }>();
+    for (const link of links) {
+      const state = linkState(link);
+      if (!state) continue;
+      const previous = byProduct.get(link.productId);
+      if (!previous || String(link.updatedAt ?? "") > String(previous.link.updatedAt ?? "")) byProduct.set(link.productId, { link, state });
+    }
+    const now = nowIso();
+    for (const id of ids) {
+      const entry = byProduct.get(id);
+      const product = productById.get(id);
+      if (!entry || !product) {
+        result.unchanged += 1;
+        continue;
+      }
+      const { link, state } = entry;
+      const snapshot = state.snapshot;
+      const next = asProductInput(product);
+      let changed = false;
+      if (typeof snapshot.isSoldOut === "boolean") {
+        if (snapshot.isSoldOut && (!next.isSoldOut || next.isSeasonEnded)) {
+          next.isSoldOut = true;
+          next.isSeasonEnded = false;
+          changed = true;
+        } else if (!snapshot.isSoldOut && (next.isSoldOut || next.isSeasonEnded)) {
+          next.isSoldOut = false;
+          next.isSeasonEnded = false;
+          changed = true;
+        }
+      }
+      if (typeof snapshot.isVisible === "boolean" && Boolean(next.isVisible) !== snapshot.isVisible) {
+        next.isVisible = snapshot.isVisible;
+        changed = true;
+      }
+      if (!changed) {
+        result.unchanged += 1;
+        continue;
+      }
+      try {
+        const saved = await updateProduct(product.id, next, changedBy, { quiet: true });
+        const values = syncValues(saved, settings, context);
+        const fresh: BaljuoraBaseline = { doogo: doogoComparable(values), baljuora: baljuoraComparable(snapshot), pushedImageUrl: state.baseline?.pushedImageUrl ?? null, at: now };
+        const still = diffBaljuoraProduct(values, { snapshot, baseline: fresh }, baljuoraCategories).map((diff) => diff.field);
+        const baseline = carryBaseline(state.baseline, fresh, still);
+        await getDb().update(externalProductLinks).set({ rawSnapshot: stateJson({ snapshot, baseline, ignored: state.ignored }), updatedAt: now }).where(eq(externalProductLinks.id, link.id));
+        result.updated += 1;
+      } catch (error) {
+        result.failed.push({ id: product.id, name: product.name, error: error instanceof Error ? error.message : "저장 실패" });
+      }
+    }
+    return result;
+  });
+}
+
+// 마지막 비교 뒤에 DB센터에서 지운 상품과 이어져 있던 발주오라 상품: 비교 때는 DB센터 상품과 이어져 '발주오라에만 있음'에 없지만,
+// 지금은 지운 상품하고만 이어져 어디에도 세지 않습니다. 연결 기록이 마지막 비교(시작) 뒤에 적힌 것만 — 그 비교에서 발주오라에 있던 상품이라
+// 발주오라에서 지운 상품을 되살리지 않습니다. '발주오라와 똑같이 맞추기'는 이 상품도 '발주오라에만 있음'에 다시 넣어 가져옵니다.
+function orphanSnapshots(productRows: Array<{ id: string }>, links: LinkRow[], onlyArray: BaljuoraProductSnapshot[], lastCompareStartedAt: string | null): BaljuoraProductSnapshot[] {
+  // ISO("2026-11-27T12:00:00.000Z")와 SQLite 기본값("2026-11-27 12:00:00", UTC) 모두 같은 기준으로 비교합니다.
+  const toMs = (value: string | null | undefined) => {
+    if (!value) return Number.NaN;
+    const text = String(value);
+    return Date.parse(text.includes("T") ? text : `${text.replace(" ", "T")}Z`);
+  };
+  const since = toMs(lastCompareStartedAt);
+  if (!Number.isFinite(since)) return [];
+  const activeIds = new Set(productRows.map((row) => row.id));
+  const activeExternal = activeLinkedExternalIds(productRows, links);
+  const onlyIds = new Set(onlyArray.map((snapshot) => snapshot.id));
+  const found = new Map<string, BaljuoraProductSnapshot>();
+  for (const link of links) {
+    if (activeIds.has(link.productId) || activeExternal.has(link.externalProductId) || onlyIds.has(link.externalProductId)) continue;
+    const at = toMs(link.updatedAt);
+    if (!Number.isFinite(at) || at < since) continue;
+    const state = linkState(link);
+    if (!state || state.snapshot.kind === "bundle") continue;
+    found.set(link.externalProductId, { ...state.snapshot, id: link.externalProductId });
+  }
+  return [...found.values()];
+}
+
+// '발주오라와 똑같이 맞추기' 가져오기 전에: 위 상품을 '발주오라에만 있음'(STORE_ONLY)에 다시 넣습니다(다음 비교가 하는 일과 같음).
+export async function resurfaceOrphanSnapshots() {
+  return guard(async () => {
+    const db = getDb();
+    const [productRows, links, onlyList, lastCompareRows] = await Promise.all([
+      loadProductRows(),
+      loadLinks(),
+      readStore<BaljuoraProductSnapshot[]>(STORE_ONLY, []),
+      db.select({ startedAt: baljuoraSyncJobs.startedAt }).from(baljuoraSyncJobs)
+        .where(and(eq(baljuoraSyncJobs.type, "compare"), eq(baljuoraSyncJobs.status, "done"))).orderBy(desc(baljuoraSyncJobs.finishedAt)).limit(1)
+    ]);
+    const onlyArray = Array.isArray(onlyList) ? onlyList : [];
+    const orphans = orphanSnapshots(productRows, links, onlyArray, lastCompareRows[0]?.startedAt ?? null);
+    if (orphans.length > 0) await writeStore(STORE_ONLY, [...onlyArray, ...orphans].slice(0, 6000));
+    return orphans.length;
   });
 }
 
@@ -2328,7 +2587,9 @@ function extrasPatchFromSnapshot(snapshot: BaljuoraProductSnapshot, fields: Balj
 // onlyPulled: '가져올 변경' 탭처럼 발주오라에서 바뀐 칸(pull·both)만. 없으면 '발주오라 기준 맞추기'처럼 다른 칸 전부(fields로 고름).
 // skipConflicts: 양쪽에서 바뀐 칸(both)은 건드리지 않습니다(아침 동기화가 저절로 반영할 때 — 관리자가 동기화 화면에서 고름).
 // placeAtEnd: 발주오라에만 있는 상품을 진열순서 맨 뒤로 가져옴('상품 수 맞춰 보기'에서 한꺼번에 가져올 때 — 오래된 숨김 상품이 상품 리스트 맨 앞을 채우지 않게)
-export async function pullFromBaljuora(input: { productIds?: string[]; fields?: BaljuoraSyncField[]; baljuoraIds?: string[]; onlyPulled?: boolean; skipConflicts?: boolean; placeAtEnd?: boolean }, changedBy: string) {
+// visibility "baljuora": 발주오라에만 있던 상품을 숨김이 아니라 발주오라 도매몰 노출 그대로 등록('발주오라와 똑같이 맞추기' — 미노출 수까지 같게).
+// quiet: 가격변동 이력·신규 등록·품절 기록을 남기지 않음(오래된 발주오라 상품이 공개 '가격변동'·'품절이슈'·'신규상품'에 오늘 일로 뜨지 않게).
+export async function pullFromBaljuora(input: { productIds?: string[]; fields?: BaljuoraSyncField[]; baljuoraIds?: string[]; onlyPulled?: boolean; skipConflicts?: boolean; placeAtEnd?: boolean; visibility?: "hidden" | "baljuora"; quiet?: boolean }, changedBy: string) {
   return guard(async () => {
     const settings = await getBaljuoraSettings();
     const [{ doogoCategories, baljuoraCategories }, onlyList, catalog] = await Promise.all([
@@ -2339,7 +2600,8 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
     const fields = (input.fields?.length ? input.fields : BALJUORA_SYNC_FIELDS).filter((field) => BALJUORA_SYNC_FIELDS.includes(field));
     const productById = new Map(catalog.products.map((product) => [product.id, product]));
     // restored: 발주오라에만 있던 상품 중 상품코드가 같은 DB센터 지운 상품을 되살려 가져온 수(created에도 들어감)
-    const result = { updated: 0, created: 0, restored: 0, unchanged: 0, failed: [] as Array<{ id: string; name: string; error: string }>, skipped: [] as Array<{ id: string; name: string; field: BaljuoraSyncField; reason: string }> };
+    // createdIds: 새로 만든 상품 id(되살린 상품 제외 — '발주오라와 똑같이 맞추기'가 신규상품 화면에서 뺄 때 씀)
+    const result = { updated: 0, created: 0, restored: 0, unchanged: 0, createdIds: [] as string[], failed: [] as Array<{ id: string; name: string; error: string }>, skipped: [] as Array<{ id: string; name: string; field: BaljuoraSyncField; reason: string }> };
     const now = nowIso();
     const policyContext: PolicyContext | null = fields.includes("shippingPolicy")
       ? { doogoPolicies: await loadDoogoShippingPolicies(), baljuoraPolicies: await readStore<BaljuoraShippingPolicy[]>(STORE_POLICIES, []), map: { ...settings.shippingPolicyMap }, changed: false }
@@ -2428,7 +2690,7 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
             context.extras.set(product.id, savedExtras);
           }
         }
-        const saved = productChanged ? await updateProduct(product.id, next, changedBy) : product;
+        const saved = productChanged ? await updateProduct(product.id, next, changedBy, { quiet: input.quiet }) : product;
         // 가져오면서 새로 만든·연결한 배송 정책 연결을 반영해 비교합니다(설정 저장은 끝에서 한 번).
         const values = syncValues(saved, policyContext?.changed ? { ...settings, shippingPolicyMap: policyContext.map } : settings, context);
         const fresh: BaljuoraBaseline = { doogo: doogoComparable(values), baljuora: baljuoraComparable(snapshot), pushedImageUrl: state.baseline?.pushedImageUrl ?? null, at: now };
@@ -2469,6 +2731,7 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
           const deleted = snapshot.code ? deletedByCode.get(snapshot.code.trim().toUpperCase()) : undefined;
           const courierText = snapshot.extra && courierComparable(snapshot.extra.courier) ? syncText(snapshot.extra.courier)?.slice(0, 100) ?? null : null;
           const originText = syncText(snapshot.extra?.originText)?.slice(0, 100) ?? null;
+          const importVisible = input.visibility === "baljuora" && snapshot.isVisible === true;
           const created = deleted ? await (async () => {
             // DB센터에서 지운 상품을 숨김으로 되살리고 발주오라 값(상품명·가격·이미지·카테고리·품절·원산지·택배사)으로 채웁니다.
             // 매입처·배송 정책·판매기간·안내 문구 같은 DB센터 값은 그대로 둡니다(배송유형이 바뀌면 배송 정책만 뺌). 가격은 가격변동 이력에 남습니다.
@@ -2487,12 +2750,12 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
               shippingType: category.shippingType,
               categoryId: category.id,
               shippingPolicyId: sameShipping ? base.shippingPolicyId ?? null : null,
-              isVisible: false,
+              isVisible: importVisible,
               isSoldOut: snapshot.isSoldOut ?? false,
               isSeasonEnded: false,
               origin: originText ?? restored.origin ?? null,
               courier: courierText ?? restored.courier ?? null
-            }, changedBy);
+            }, changedBy, { quiet: input.quiet });
           })() : await createProduct({
             productCode: snapshot.code,
             name: snapshot.name || snapshot.code || "발주오라 상품",
@@ -2504,12 +2767,12 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
             salePriceMode: snapshot.consumerPrice ? "fixed" : "autonomous",
             shippingType: category.shippingType,
             categoryId: category.id,
-            isVisible: false,
+            isVisible: importVisible,
             isSoldOut: snapshot.isSoldOut ?? false,
             isAlwaysOnSale: true,
             origin: originText,
             courier: courierText
-          });
+          }, { quiet: input.quiet });
           // 상품 정보 칸(과세 여부·관리코드·바코드 등)도 발주오라 값으로 채웁니다(표가 있을 때). 되살린 상품은 DB센터에 있던 값 위에 덮습니다.
           const currentExtras = (deleted ? onlyContext.extras?.get(created.id) : undefined) ?? emptyProductExtras();
           if (onlyContext.extras && snapshot.extra) {
@@ -2538,6 +2801,7 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
           }
           result.created += 1;
           if (deleted) result.restored += 1;
+          else result.createdIds.push(created.id);
         } catch (error) {
           result.failed.push({ id: snapshot.id, name: snapshot.name, error: error instanceof Error ? error.message : "등록 실패" });
         }

@@ -162,7 +162,7 @@ function cleanOptions(input: Partial<ProductSyncOptions> | null | undefined): Pr
 }
 
 // 다른 발주오라 작업이 발주오라 창에서 돌고 있으면 새로 시작하지 않습니다(두 창이 함께 보내면 발주오라 요청 제한(429)에 더 자주 걸림).
-async function assertNothingRunning() {
+export async function assertNothingRunning() {
   const db = getDb();
   await db.update(baljuoraSyncJobs).set({ status: "expired", finishedAt: nowIso() })
     .where(and(inArray(baljuoraSyncJobs.status, ["waiting", "running"]), lt(baljuoraSyncJobs.expiresAt, nowIso())));

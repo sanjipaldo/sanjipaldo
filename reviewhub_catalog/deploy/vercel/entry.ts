@@ -4,3 +4,5 @@ import { handle } from "@hono/node-server/vercel";
 import app from "../../apps/server/_core/create-app";
 
 export default handle(app);
+// 운영 빌드가 한 번 부르는 1회성 데이터 작업(deploy/vercel/run-deploy-tasks.mjs) — 함수 요청에는 쓰지 않습니다.
+export { runDeployTasks } from "../../apps/server/services/deploy-tasks";

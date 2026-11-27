@@ -14,3 +14,8 @@ if (process.env.VERCEL_ENV === "production" && process.env.TURSO_DATABASE_URL) {
 }
 run("pnpm", ["--filter", "client", "build"]);
 run(path.join(root, "node_modules/.bin/vite"), ["build", "--config", path.join(root, "deploy/vercel/vite.config.ts")], path.join(root, "apps/server"));
+// 운영 배포면 관리자가 요청한 1회성 데이터 작업을 한 번 돌립니다(apps/server/services/deploy-tasks.ts, 작업마다 한 번만).
+// 결과와 상관없이 배포는 계속합니다.
+if (process.env.VERCEL_ENV === "production" && process.env.TURSO_DATABASE_URL) {
+  spawnSync("node", [path.join(root, "deploy/vercel/run-deploy-tasks.mjs")], { cwd: root, stdio: "inherit", env: process.env });
+}

@@ -1,7 +1,7 @@
 // 2026-11-27 관리자 요청 화면:
 // ① 운영 홈 버튼 2개 — 주문 동기화(발주오라 → DB센터) · 상품 동기화(DB센터 → 발주오라, 보낼 것 미리보기·고르기 → 책갈피 한 번으로 읽고 이어서 보냄)
 // ② 발주오라 동기화 화면 숫자 카드 팝업 — 보낼 변경 칸별 상세(DB센터·발주오라·마지막으로 맞춘 값) · 연결된 상품 20개씩 · 신규 등록 · 발주오라에만 있음
-// ③ DB센터 ↔ 발주오라 상품 수 맞춰 보기 — 원인별 수와 맞추기 버튼(가져오기 25개씩)
+// ③ DB센터 ↔ 발주오라 상품 수 맞춰 보기 — 원인별 수와 '발주오라와 똑같이 맞추기'(끝날 때까지 이어서)
 import React from "react";
 import { MemoryRouter } from "react-router-dom";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -14,7 +14,7 @@ vi.mock("@/lib/api", () => ({ apiFetch: (...args: unknown[]) => apiFetch(...args
 
 import { OpsSyncButtons, OpsSyncPanel, formatSyncTime, relativeTime, useOpsSync, type OpsJobView, type OpsStatus, type ProductPreview } from "@/pages/admin/OpsSync";
 import { BaljuoraStatModal, type StatChangeItem } from "@/pages/admin/BaljuoraStatModals";
-import { BaljuoraReconcileCard, type ReconcileView } from "@/pages/admin/BaljuoraReconcileCard";
+import { BaljuoraReconcileCard, type AlignView, type ReconcileView } from "@/pages/admin/BaljuoraReconcileCard";
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(status < 400 ? { ok: true, data } : { ok: false, error: { message: "실패" } }), { status, headers: { "Content-Type": "application/json" } });
@@ -256,46 +256,98 @@ describe("DB센터 ↔ 발주오라 상품 수 맞춰 보기", () => {
     compared: true,
     lastCompareAt: "2026-11-27T11:36:00.000Z",
     baljuora: { total: 2998, selling: 1779, soldOut: 1219, visible: 1838, hidden: 1160, hiddenSoldOut: 1160, source: "compare" },
-    doogo: { total: 2143, selling: 1723, soldOut: 420, seasonEnded: 0, visible: 1681, hidden: 462, hiddenSoldOut: 400, deleted: 900 },
+    doogo: { total: 2140, selling: 1804, soldOut: 336, seasonEnded: 0, visible: 1809, hidden: 331, hiddenSoldOut: 300, deleted: 900 },
     linked: 2140,
-    doogoOnly: { total: 3, visible: 3, hidden: 0 },
-    baljuoraOnly: { total: 858, deleted: 840, deletedLinked: 10, never: 8, selling: 60, soldOut: 798, visible: 2, hidden: 856, hiddenSoldOut: 790, sameName: 1, importIds: Array.from({ length: 57 }, (_, index) => `bj-${index}`) },
+    doogoOnly: { total: 0, visible: 0, hidden: 0 },
+    baljuoraOnly: { total: 858, deleted: 840, deletedLinked: 10, never: 8, selling: 60, soldOut: 798, visible: 2, hidden: 856, hiddenSoldOut: 790, sameName: 0, importIds: Array.from({ length: 858 }, (_, index) => `bj-${index}`) },
     soldOut: { doogoSellingBaljuoraSoldOut: 3, doogoSoldOutBaljuoraSelling: 1, productIds: ["p-1", "p-2", "p-3", "p-4"] },
     visible: { doogoHiddenBaljuoraVisible: 0, doogoVisibleBaljuoraHidden: 2 }
   };
+  const counts = (total: number, selling: number, soldOut: number, visible: number) => ({ total, selling, soldOut, seasonEnded: 0, visible, hidden: total - visible });
+  const align = (overrides: Partial<AlignView> = {}): AlignView => ({
+    compared: true,
+    lastCompareAt: "2026-11-27T11:36:00.000Z",
+    bundles: 0,
+    doogo: counts(2140, 1804, 336, 1809),
+    baljuora: { ...counts(2998, 1779, 1219, 1838), unknown: 0 },
+    linked: 2140,
+    doogoOnly: { total: 0, visible: 0, soldOut: 0 },
+    pending: { sameName: 0, sameNameReview: 0, imports: 858, importRestore: 850, orphans: 0, states: 6, stateDetail: { soldOut: 3, restock: 1, seasonToSoldOut: 0, show: 0, hide: 2 }, total: 864 },
+    matched: false,
+    run: null,
+    last: null,
+    ...overrides
+  });
+  const doneLast: NonNullable<AlignView["last"]> = {
+    startedAt: "2026-11-27T13:40:00.000Z",
+    finishedAt: "2026-11-27T13:42:00.000Z",
+    by: "master",
+    trigger: "admin",
+    totals: { linked: 0, removed: 0, imported: 858, restored: 850, created: 8, states: 6, failed: 0 },
+    failures: [],
+    before: { doogo: counts(2140, 1804, 336, 1809), baljuora: { ...counts(2998, 1779, 1219, 1838), unknown: 0 } },
+    after: { doogo: counts(2998, 1779, 1219, 1838), baljuora: { ...counts(2998, 1779, 1219, 1838), unknown: 0 } },
+    doogoOnly: 0,
+    sameNameReview: 0,
+    bundles: 0,
+    lastCompareAt: "2026-11-27T11:36:00.000Z",
+    matched: true
+  };
 
-  it("양쪽 전체·판매중·품절·노출 수와 차이 원인을 보여 주고, 발주오라에만 있는 상품을 25개씩 숨김으로 가져옵니다", async () => {
-    vi.stubGlobal("confirm", vi.fn(() => true));
-    const bodies: Array<Record<string, unknown>> = [];
+  it("양쪽 전체·판매중·품절·노출 수와 차이 원인을 보여 주고, '발주오라와 똑같이 맞추기'를 끝날 때까지 이어서 부릅니다", async () => {
+    const confirm = vi.fn((_message?: string) => true);
+    vi.stubGlobal("confirm", confirm);
     const onChanged = vi.fn(async () => undefined);
-    apiFetch.mockImplementation(async (path: string, init?: RequestInit) => {
+    let runs = 0;
+    apiFetch.mockImplementation(async (path: string) => {
       if (path === "/baljuora/admin/reconcile") return json(view);
-      bodies.push(JSON.parse(String(init?.body)));
-      return json({ created: 25, restored: 20, failed: [] });
+      if (path === "/baljuora/admin/align") return json(align());
+      if (path === "/baljuora/admin/align/run") {
+        runs += 1;
+        // 첫 번째는 시간 안에 다 못 끝냄 → 화면이 다시 부름 → 두 번째에 끝
+        if (runs === 1) return json({ done: false, busy: false, view: align({ pending: { ...align().pending, imports: 400, total: 406 }, run: { startedAt: doneLast.startedAt, trigger: "admin", active: false, totals: { ...doneLast.totals, imported: 458, restored: 450, created: 8, states: 0 }, failures: 0 } }) });
+        return json({ done: true, busy: false, view: align({ doogo: doneLast.after.doogo, pending: { ...align().pending, imports: 0, importRestore: 0, states: 0, total: 0 }, matched: true, last: doneLast }) });
+      }
+      throw new Error(`unexpected ${path}`);
     });
     render(<BaljuoraReconcileCard stamp={1} disabled={false} onChanged={onChanged} />);
     const table = await screen.findByRole("table", { name: "DB센터와 발주오라 상품 수" });
     const total = within(table).getAllByRole("row").find((row) => row.textContent?.startsWith("전체 상품"))!;
-    expect(total.textContent).toContain("2,143");
+    expect(total.textContent).toContain("2,140");
     expect(total.textContent).toContain("2,998");
-    expect(total.textContent).toContain("발주오라 +855");
+    expect(total.textContent).toContain("발주오라 +858");
     expect(screen.getByText(/DB센터에서 지운 상품 850개\(발주오라에는 남아 있음\)/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /DB센터로 가져오기\(숨김\) 57개/ }));
+    // 할 일: 가져올 상품 858개(지운 상품 850개 되살림) · 판매 상태·노출 6개
+    expect(screen.getByText("858개")).toBeTruthy();
+    expect(screen.getByText(/DB센터에서 지운 상품 850개는 되살림/)).toBeTruthy();
+    expect(screen.getByText(/품절로 3 · 판매중으로 1 · 숨김으로 2/)).toBeTruthy();
+    // 예전의 숨김 가져오기·품절만 맞추기 버튼은 없고 한 번에 맞추는 버튼 하나
+    expect(screen.queryByRole("button", { name: /DB센터로 가져오기\(숨김\)/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "발주오라 기준으로 품절 맞추기" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "발주오라와 똑같이 맞추기" }));
+    expect(String(confirm.mock.calls[0]?.[0])).toContain("발주오라에만 있는 상품 858개");
+    expect(String(confirm.mock.calls[0]?.[0])).toContain("공개 '가격변동'·'품절이슈'·'신규상품'에는 올리지 않아요");
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
-    expect(bodies.map((body) => (body.baljuoraIds as string[]).length)).toEqual([25, 25, 7]);
-    expect(bodies.every((body) => body.placeAtEnd === true)).toBe(true);
+    expect(runs).toBe(2);
+    expect(toastMock.success).toHaveBeenCalledWith(expect.stringContaining("DB센터 2,998개 = 발주오라 2,998개"));
+    expect(await screen.findByText(/발주오라와 상품 수가 같아요/)).toBeTruthy();
+    expect(screen.getByText(/가져온 상품 858개\(지운 상품 되살림 850 · 새로 8\)/)).toBeTruthy();
   });
 
-  it("판매 상태가 다른 연결 상품은 발주오라 기준으로 품절을 맞춥니다", async () => {
-    vi.stubGlobal("confirm", vi.fn(() => true));
-    const bodies: Array<Record<string, unknown>> = [];
-    apiFetch.mockImplementation(async (path: string, init?: RequestInit) => {
+  it("맞춘 뒤에는 같다고 보여 주고(배포 때 자동이면 그렇게), 취소하면 부르지 않습니다", async () => {
+    const confirm = vi.fn((_message?: string) => false);
+    vi.stubGlobal("confirm", confirm);
+    const calls: string[] = [];
+    apiFetch.mockImplementation(async (path: string) => {
+      calls.push(path);
       if (path === "/baljuora/admin/reconcile") return json(view);
-      bodies.push(JSON.parse(String(init?.body)));
-      return json({ updated: 4, failed: [] });
+      if (path === "/baljuora/admin/align") return json(align({ pending: { ...align().pending, imports: 2, importRestore: 0, states: 0, total: 2 }, last: { ...doneLast, trigger: "deploy" } }));
+      return json({});
     });
     render(<BaljuoraReconcileCard stamp={1} disabled={false} onChanged={vi.fn()} />);
-    fireEvent.click(await screen.findByRole("button", { name: "발주오라 기준으로 품절 맞추기" }));
-    await waitFor(() => expect(bodies).toEqual([{ productIds: ["p-1", "p-2", "p-3", "p-4"], fields: ["soldOut"] }]));
+    expect(await screen.findByText(/운영 배포 때 자동/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "발주오라와 똑같이 맞추기" }));
+    expect(confirm).toHaveBeenCalled();
+    expect(calls).not.toContain("/baljuora/admin/align/run");
   });
 });

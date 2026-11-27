@@ -29,6 +29,7 @@ import {
   saveBaljuoraSettings,
   startRunnerJob
 } from "../services/baljuora-sync";
+import { getAlignOverview, runAlignStep } from "../services/baljuora-align";
 import {
   buildFeeInvoiceFile,
   buildHometaxFile,
@@ -91,6 +92,25 @@ baljuoraRouter.get("/admin/changes", adminRoute, async (c) => {
 baljuoraRouter.get("/admin/reconcile", adminRoute, async (c) => {
   try {
     return c.json(apiSuccess(await getBaljuoraReconcile()));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 발주오라와 똑같이 맞추기(2026-11-27 관리자 요청 "발주오라 2,998개 전체를 DB센터로 — 판매중·품절·미노출·전체 수를 똑같이"):
+// 할 일 수·마지막 결과(GET), 한 번 부를 때 40초씩 이어서 맞춤(POST, 화면이 done이 될 때까지 되풀이). 발주오라는 바꾸지 않습니다.
+baljuoraRouter.get("/admin/align", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess(await getAlignOverview()));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+baljuoraRouter.post("/admin/align/run", adminRoute, async (c) => {
+  try {
+    const user = c.var.currentUser;
+    return c.json(apiSuccess(await runAlignStep({ budgetMs: 40_000, by: user?.username || user?.email || "admin", trigger: "admin" })));
   } catch (error) {
     return errorResponse(c, error);
   }
