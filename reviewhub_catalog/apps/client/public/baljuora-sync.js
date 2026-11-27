@@ -7,11 +7,12 @@
  *  1) DB센터 작업 코드로 작업 내용을 받습니다(GET {DB센터}/api/baljuora/runner/:code).
  *  2) 이 창의 로그인으로 발주오라 관리자 화면과 같은 방식(api.baljuora.com)으로 상품을 읽거나(비교) 고칩니다(보내기).
  *  3) 결과와 진단 정보(발주오라 응답의 칸 이름·형식, 오류 문구)를 DB센터로 돌려줍니다. 발주오라 로그인 토큰은 보내지 않습니다.
+ *  4) (1.12.0) 한 번 누른 창에는 오른쪽 아래 '동기화' 버튼이 남고, DB센터가 같은 창으로 보낸 다음 작업(#doogo-sync=코드)을 바로 시작합니다.
  */
 (function () {
   "use strict";
 
-  var VERSION = "1.11.0";
+  var VERSION = "1.12.0";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   // 상품명은 상품 정보 저장(PUT products/:id/info), 카테고리는 상품 수정(PUT products/:id)으로 따로 보냅니다(1.9.1, 아래 applyCategory).
@@ -2905,24 +2906,46 @@
 
   // ─── 화면(발주오라 창 오른쪽 아래 작은 패널) ─────────────────────────────────
 
+  // 1.12.0: 이 창에 남는 동기화 버튼(아래 installResident)이 켜져 있으면 패널이 보이는 동안 버튼을 숨기고,
+  // 패널을 접거나 닫으면 버튼을 다시 보여 줍니다(작업 중이면 버튼에 진행률).
+  var activeResident = null;
+
   function createPanel(doc, options) {
     var settings = options || {};
     var old = doc.getElementById("doogo-sync-panel");
     if (old) old.remove();
+    // 작업 패널은 '접기'(오른쪽 아래 동기화 버튼으로 줄어들고 작업은 계속), 고르기·정산 패널은 '닫기'(그만두기)
+    var minimizable = Boolean(settings.minimize && activeResident);
+    var closeLabel = minimizable ? "접기" : "닫기";
     var panel = doc.createElement("section");
     panel.id = "doogo-sync-panel";
     panel.setAttribute("role", "status");
     panel.style.cssText = "box-sizing:border-box;position:fixed;right:18px;bottom:18px;z-index:2147483647;width:min(420px,calc(100vw - 36px));max-height:70vh;display:flex;flex-direction:column;gap:10px;padding:16px 16px 14px;border:2px solid #163300;border-radius:16px;background:#fff;color:#0e0f0c;box-shadow:0 18px 50px rgba(0,0,0,.25);font:14px/1.5 -apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
-    panel.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><strong data-title style="font-size:15px"></strong><button type="button" data-close aria-label="닫기" style="border:0;background:#f1f3ef;border-radius:8px;padding:4px 10px;font-size:13px;cursor:pointer">닫기</button></div><p data-status style="margin:0;font-weight:700"></p><div style="height:8px;border-radius:99px;background:#e8ebe6;overflow:hidden"><div data-bar style="height:100%;width:0;background:#9fe870;transition:width .3s"></div></div><ol data-log style="margin:0;padding:0 0 0 18px;overflow:auto;max-height:36vh;font-size:12.5px;color:#454745"></ol><div data-actions style="display:none;flex-wrap:wrap;gap:8px"></div><small data-note style="color:#6b6e6a"></small>';
+    panel.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><strong data-title style="font-size:15px"></strong><button type="button" data-close aria-label="' + closeLabel + '" style="border:0;background:#f1f3ef;border-radius:8px;padding:4px 10px;font-size:13px;cursor:pointer">' + closeLabel + '</button></div><p data-status style="margin:0;font-weight:700"></p><div style="height:8px;border-radius:99px;background:#e8ebe6;overflow:hidden"><div data-bar style="height:100%;width:0;background:#9fe870;transition:width .3s"></div></div><ol data-log style="margin:0;padding:0 0 0 18px;overflow:auto;max-height:36vh;font-size:12.5px;color:#454745"></ol><div data-actions style="display:none;flex-wrap:wrap;gap:8px"></div><small data-note style="color:#6b6e6a"></small>';
     panel.querySelector("[data-title]").textContent = settings.title || "두고푸드 DB센터 → 발주오라 동기화";
-    panel.querySelector("[data-note]").textContent = settings.note || "이 창을 닫지 말고 끝날 때까지 기다려 주세요. 결과는 DB센터 동기화 화면에도 그대로 보입니다.";
+    panel.querySelector("[data-note]").textContent = settings.note || (minimizable
+      ? "끝날 때까지 이 창을 닫지 마세요. '접기'를 누르면 오른쪽 아래 동기화 버튼으로 줄어들고 작업은 계속돼요. 결과는 DB센터 화면에도 그대로 보입니다."
+      : "이 창을 닫지 말고 끝날 때까지 기다려 주세요. 결과는 DB센터 동기화 화면에도 그대로 보입니다.");
     doc.body.appendChild(panel);
     var pending = null;
+    function changed() { if (activeResident) activeResident.panelChanged(api); }
     var api = {
       closed: false,
+      hidden: false,
+      percent: null,
+      statusText: "",
       element: panel,
-      status: function (text) { panel.querySelector("[data-status]").textContent = text; },
-      progress: function (done, total) { panel.querySelector("[data-bar]").style.width = (total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 8) + "%"; },
+      status: function (text) {
+        api.statusText = String(text || "");
+        panel.querySelector("[data-status]").textContent = text;
+        changed();
+      },
+      progress: function (done, total) {
+        var percent = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 8;
+        api.percent = total > 0 ? percent : null;
+        panel.querySelector("[data-bar]").style.width = percent + "%";
+        changed();
+      },
       log: function (text, isError) {
         var line = doc.createElement("li");
         line.textContent = text;
@@ -2934,6 +2957,7 @@
       },
       // 버튼을 보여 주고 누른 버튼의 key를 돌려줍니다(패널을 닫으면 null).
       ask: function (buttons) {
+        if (api.hidden) api.show();
         var box = panel.querySelector("[data-actions]");
         box.innerHTML = "";
         box.style.display = "flex";
@@ -2956,21 +2980,319 @@
             box.appendChild(element);
           });
         });
+      },
+      // 1.12.0: 접은 패널 다시 보기 · 접기(작업은 계속) · 닫기(그만두기 — 묻는 중이면 null)
+      show: function () {
+        if (api.closed) return;
+        if (!panel.parentNode) doc.body.appendChild(panel);
+        panel.style.display = "flex";
+        api.hidden = false;
+        if (activeResident) activeResident.panelShown(api);
+      },
+      hide: function () {
+        if (api.closed) return;
+        panel.style.display = "none";
+        api.hidden = true;
+        if (activeResident) activeResident.panelHidden(api);
+      },
+      close: function () {
+        if (api.closed) return;
+        api.closed = true;
+        panel.remove();
+        if (pending) { var resolve = pending; pending = null; resolve(null); }
+        if (activeResident) activeResident.panelHidden(api);
       }
     };
     panel.querySelector("[data-close]").addEventListener("click", function () {
-      api.closed = true;
-      panel.remove();
-      if (pending) { var resolve = pending; pending = null; resolve(null); }
+      if (minimizable && !pending) api.hide();
+      else api.close();
     });
+    if (activeResident) activeResident.panelShown(api);
     return api;
+  }
+
+  // ─── 이 창에 남는 동기화 버튼(1.12.0) ────────────────────────────────────────
+  // 2026-11-27 관리자 요청 "휴대폰(삼성 인터넷)에서는 책갈피를 누르기 어렵다 — DB센터가 연 발주오라 창 오른쪽 아래에 동기화 아이콘이 있으면".
+  // DB센터(다른 사이트)는 브라우저 보안 때문에 발주오라 창 안에서 아무것도 실행할 수 없어, 책갈피(또는 확장 프로그램)를 그 창에서 처음 한 번은
+  // 눌러야 합니다. 한 번 누른 창에는 이 파일이 남아:
+  //  ① 오른쪽 아래 '동기화' 버튼 — 작업 중이면 진행률(누르면 진행 패널), 쉬는 중이면 할 일 고르기(작업 코드로 동기화 · 입금·정산 반영)
+  //  ② DB센터가 같은 창(창 이름 doogo-baljuora)에 주소 뒤 #doogo-sync=코드만 바꿔 보내면(# 뒤만 바뀌면 창이 새로 열리지 않음) 바로 시작
+  //     (작업 중이면 끝난 뒤 이어서, #doogo-settle이면 입금·정산 반영 도우미)
+  //  ③ 이 창을 연 DB센터 창에 "켜져 있음 · 지금 주소 경로 · 상태"만 알립니다(postMessage, DB센터 주소로만 — 값·토큰 없음).
+  //     DB센터는 그 경로로 코드를 보내 발주오라 화면을 옮겨 다닌 뒤에도 창이 새로 열리지 않게 합니다.
+  // 책갈피를 다시 누르면 새로 받은 파일이 예전 버튼을 치우고 다시 켭니다(작업 중이면 진행 패널만 다시 보여 줌).
+  var RESIDENT_KEY = "__doogoSyncResident";
+  var FAB_ID = "doogo-sync-fab";
+  var RUNNER_MESSAGE = "doogo-runner";
+  var FAB_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/></svg>';
+  var FAB_CSS = "#doogo-sync-fab{all:initial;box-sizing:border-box;position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom, 0px));z-index:2147483646;display:inline-flex;align-items:center;gap:8px;min-height:52px;padding:0 18px 0 15px;border:2px solid #9fe870;border-radius:999px;background:#163300;color:#9fe870;font:800 15px/1.2 -apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;letter-spacing:-.01em;box-shadow:0 10px 28px rgba(0,0,0,.28);cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}"
+    + "#doogo-sync-fab[hidden]{display:none}"
+    + "#doogo-sync-fab svg{flex:0 0 auto;display:block}"
+    + "#doogo-sync-fab span{all:unset;white-space:nowrap}"
+    + "#doogo-sync-fab[data-state=running] svg{animation:doogo-sync-spin 1.1s linear infinite}"
+    + "#doogo-sync-fab[data-state=done]{background:#9fe870;color:#163300;border-color:#163300}"
+    + "#doogo-sync-fab[data-state=error]{background:#fff;color:#c2343f;border-color:#c2343f}"
+    + "#doogo-sync-fab:focus-visible{outline:3px solid #2a78d6;outline-offset:3px}"
+    + "@keyframes doogo-sync-spin{to{transform:rotate(360deg)}}"
+    + "@media (prefers-reduced-motion:reduce){#doogo-sync-fab[data-state=running] svg{animation:none}}";
+
+  function codeKey(code) {
+    return String(code || "").toUpperCase().replace(/[^0-9A-Z]/g, "");
+  }
+
+  function noopResident() {
+    return { active: false, panelShown: function () {}, panelHidden: function () {}, panelChanged: function () {}, jobStarted: function () {}, jobEnded: function () {}, flushQueue: function () {}, showPanel: function () { return false; }, check: function () {}, dispose: function () {} };
+  }
+
+  function installResident(win, doogoOrigin) {
+    var doc = win.document;
+    var previous = win[RESIDENT_KEY];
+    if (previous && typeof previous.dispose === "function") {
+      try { previous.dispose(); } catch { /* 예전 버전 버튼 */ }
+    }
+    if (!doc || !doc.body || typeof doc.createElement !== "function" || typeof win.addEventListener !== "function") {
+      activeResident = null;
+      return noopResident();
+    }
+    var style = doc.getElementById(FAB_ID + "-style");
+    if (!style) {
+      style = doc.createElement("style");
+      style.id = FAB_ID + "-style";
+      (doc.head || doc.body).appendChild(style);
+    }
+    style.textContent = FAB_CSS;
+    var stale = doc.getElementById(FAB_ID);
+    if (stale) stale.remove();
+    var fab = doc.createElement("button");
+    fab.type = "button";
+    fab.id = FAB_ID;
+    fab.innerHTML = FAB_ICON + "<span data-fab-text>동기화</span>";
+    doc.body.appendChild(fab);
+
+    var state = { disposed: false, job: "idle", panel: null, queued: null, started: {}, lastResult: "", lastPath: null, ticks: 0, doneTimer: 0, lift: 0 };
+    var resident = null;
+
+    function panelVisible() {
+      var panel = state.panel;
+      return Boolean(panel && !panel.closed && !panel.hidden && panel.element && panel.element.parentNode);
+    }
+
+    function render() {
+      if (state.disposed) return;
+      fab.hidden = panelVisible();
+      fab.setAttribute("data-state", state.job);
+      var percent = state.panel && typeof state.panel.percent === "number" ? state.panel.percent : null;
+      var text = state.job === "running" ? (percent === null ? "동기화 중" : "동기화 " + percent + "%")
+        : state.job === "done" ? "동기화 완료"
+          : state.job === "error" ? "동기화 확인"
+            : "동기화";
+      fab.querySelector("[data-fab-text]").textContent = text;
+      var label = "두고푸드 " + text + (state.job === "running" ? " · 눌러서 진행 보기" : " · 눌러서 할 일 고르기");
+      fab.setAttribute("aria-label", label);
+      fab.title = label;
+    }
+
+    // DB센터 창(이 창을 연 창)에만 "켜져 있음 · 지금 경로 · 상태"를 알립니다. DB센터 주소가 아니면 브라우저가 버립니다.
+    function whereNow() {
+      try { return { path: String(win.location.pathname || ""), search: String(win.location.search || "") }; } catch { return { path: "", search: "" }; }
+    }
+
+    function beat(kind) {
+      if (state.disposed && kind !== "gone") return;
+      var where = whereNow();
+      state.lastPath = where.path + where.search;
+      var opener = null;
+      try { opener = win.opener; } catch { opener = null; }
+      if (!opener || !doogoOrigin) return;
+      try {
+        opener.postMessage({ type: RUNNER_MESSAGE, version: VERSION, state: kind || state.job, path: where.path, search: where.search, at: Date.now() }, doogoOrigin);
+      } catch { /* DB센터 창이 닫혔거나 다른 사이트로 바뀜 */ }
+    }
+
+    function startCode(code) {
+      if (state.disposed) return;
+      void runSyncJob(win, doogoOrigin, code);
+    }
+
+    // 주소 뒤 #doogo-sync=코드(DB센터가 같은 창으로 보낸 새 작업) 또는 #doogo-settle을 봅니다.
+    function checkLocation() {
+      if (state.disposed) return;
+      var hash = "";
+      try { hash = String(win.location.hash || ""); } catch { hash = ""; }
+      if (/doogo-sync=/.test(hash)) {
+        var code = codeFromLocation(win);
+        if (!code || state.started[codeKey(code)]) return;
+        if (win.__doogoSyncChoosing && state.panel && !state.panel.closed) {
+          // 할 일 고르기 패널이 열려 있으면 닫고 DB센터에서 온 작업을 시작합니다(고르기가 끝난 다음 차례에).
+          state.panel.close();
+          setTimeout(function () { startCode(code); }, 0);
+          return;
+        }
+        if (win.__doogoSyncRunning) {
+          if (state.queued !== code) {
+            state.queued = code;
+            if (state.panel && !state.panel.closed) state.panel.log("DB센터에서 새 작업이 왔어요. 지금 작업이 끝나면 이어서 시작해요.");
+          }
+          return;
+        }
+        startCode(code);
+        return;
+      }
+      if (settleRequested(win) && !win.__doogoSyncRunning && !win.__doogoSyncChoosing) void runSettlementMode(win);
+    }
+
+    // 발주오라 화면 오른쪽 아래에 고정된 다른 버튼(상담 버튼·아래 메뉴 등)이 있으면 그 위로 올려 가리지 않게 합니다.
+    function placeFab() {
+      if (state.disposed || fab.hidden) return;
+      try {
+        var width = win.innerWidth || 0;
+        var height = win.innerHeight || 0;
+        if (!width || !height || typeof doc.elementsFromPoint !== "function" || typeof win.getComputedStyle !== "function") return;
+        var lift = 0;
+        var hits = doc.elementsFromPoint(width - 44, height - 44) || [];
+        for (var index = 0; index < hits.length && !lift; index += 1) {
+          for (var node = hits[index]; node && node !== doc.body && node !== doc.documentElement; node = node.parentElement) {
+            if (node === fab || node.id === "doogo-sync-panel") break;
+            if (win.getComputedStyle(node).position === "fixed") {
+              var rect = node.getBoundingClientRect();
+              if (rect.height > 0 && rect.height < height * 0.4) lift = Math.round(height - rect.top) + 12;
+              break;
+            }
+          }
+        }
+        if (lift !== state.lift) {
+          state.lift = lift;
+          fab.style.bottom = lift ? lift + "px" : "";
+        }
+      } catch { /* 자리를 못 재면 기본 자리 */ }
+    }
+
+    function tick() {
+      if (state.disposed) return;
+      state.ticks += 1;
+      var where = whereNow();
+      if (where.path + where.search !== state.lastPath || state.ticks % 30 === 0) beat();
+      if (state.ticks % 5 === 0) placeFab();
+      var hash = "";
+      try { hash = String(win.location.hash || ""); } catch { hash = ""; }
+      if (/doogo-sync=|doogo-settle/.test(hash)) checkLocation();
+    }
+
+    async function openMenu() {
+      if (state.job === "done" || state.job === "error") { state.job = "idle"; render(); }
+      win.__doogoSyncChoosing = true;
+      var picked;
+      try { picked = await chooseMode(win, { fromFab: true, last: state.lastResult }); } finally { win.__doogoSyncChoosing = false; }
+      if (state.disposed || !picked) return;
+      if (picked.mode === "settle") return runSettlementMode(win, picked.panel);
+      if (picked.mode !== "sync") return;
+      var code = readCode(win);
+      if (code) startCode(code);
+    }
+
+    var onLocation = function () { checkLocation(); };
+    var onVisible = function () { if (!doc.hidden) { checkLocation(); beat(); placeFab(); } };
+    var onShow = function () { checkLocation(); beat(); };
+    var onHide = function () { beat("gone"); };
+    var onResize = function () { placeFab(); };
+    fab.addEventListener("click", function () {
+      if (state.disposed) return;
+      if (win.__doogoSyncRunning || win.__doogoSyncChoosing) {
+        if (state.panel && !state.panel.closed) state.panel.show();
+        return;
+      }
+      void openMenu();
+    });
+    win.addEventListener("hashchange", onLocation);
+    win.addEventListener("focus", onLocation);
+    win.addEventListener("pageshow", onShow);
+    win.addEventListener("pagehide", onHide);
+    win.addEventListener("resize", onResize);
+    if (typeof doc.addEventListener === "function") doc.addEventListener("visibilitychange", onVisible);
+    var timer = typeof win.setInterval === "function" ? win.setInterval(tick, 2000) : 0;
+
+    resident = {
+      active: true,
+      version: VERSION,
+      element: fab,
+      panelShown: function (panel) {
+        if (state.disposed) return;
+        state.panel = panel;
+        render();
+      },
+      panelHidden: function (panel) {
+        if (state.disposed) return;
+        if (panel === state.panel) render();
+        placeFab();
+      },
+      panelChanged: function (panel) {
+        if (!state.disposed && panel === state.panel && panel.hidden) render();
+      },
+      jobStarted: function (code) {
+        if (state.disposed) return;
+        state.started[codeKey(code)] = true;
+        if (state.doneTimer) { clearTimeout(state.doneTimer); state.doneTimer = 0; }
+        state.job = "running";
+        render();
+        beat("running");
+      },
+      jobEnded: function (outcome, panel) {
+        if (state.disposed) return;
+        state.job = outcome === "done" ? "done" : "error";
+        state.lastResult = (panel && panel.statusText) || "";
+        render();
+        beat(state.job);
+        // '동기화 완료'는 2분 뒤 다시 '동기화'로(오류는 확인할 때까지 남김)
+        if (state.job === "done") state.doneTimer = setTimeout(function () { if (state.job === "done") { state.job = "idle"; render(); } }, 120000);
+        resident.flushQueue();
+      },
+      // 작업 중에 DB센터에서 온 다음 작업 코드를 이어서 시작합니다.
+      flushQueue: function () {
+        if (state.disposed || !state.queued) return;
+        var next = state.queued;
+        state.queued = null;
+        setTimeout(function () {
+          if (state.disposed) return;
+          if (win.__doogoSyncRunning) state.queued = next;
+          else startCode(next);
+        }, 400);
+      },
+      showPanel: function () {
+        if (state.panel && !state.panel.closed) { state.panel.show(); return true; }
+        return false;
+      },
+      check: checkLocation,
+      state: function () { return { job: state.job, queued: state.queued, lastResult: state.lastResult, lastPath: state.lastPath, lift: state.lift }; },
+      dispose: function () {
+        if (state.disposed) return;
+        state.disposed = true;
+        if (timer && typeof win.clearInterval === "function") win.clearInterval(timer);
+        if (state.doneTimer) clearTimeout(state.doneTimer);
+        win.removeEventListener("hashchange", onLocation);
+        win.removeEventListener("focus", onLocation);
+        win.removeEventListener("pageshow", onShow);
+        win.removeEventListener("pagehide", onHide);
+        win.removeEventListener("resize", onResize);
+        if (typeof doc.removeEventListener === "function") doc.removeEventListener("visibilitychange", onVisible);
+        if (fab.parentNode) fab.remove();
+        if (activeResident === resident) activeResident = null;
+        if (win[RESIDENT_KEY] === resident) win[RESIDENT_KEY] = null;
+      }
+    };
+    win[RESIDENT_KEY] = resident;
+    activeResident = resident;
+    render();
+    placeFab();
+    beat("ready");
+    return resident;
   }
 
   function codeFromLocation(win) {
     var match = /doogo-sync=([0-9A-Za-z-]{10,16})/.exec(win.location.hash || "") || /doogo-sync=([0-9A-Za-z-]{10,16})/.exec(win.location.search || "");
     if (!match) return null;
     try { win.sessionStorage.setItem("doogo-sync-code", match[1]); } catch { /* 저장이 막힌 브라우저 */ }
-    try { win.history.replaceState(null, "", win.location.pathname + win.location.search.replace(/[?&]doogo-sync=[^&]*/, "")); } catch { /* 무시 */ }
+    // 1.12.0: 발주오라 화면(SPA)의 history.state는 그대로 두고 주소의 코드만 지웁니다.
+    try { win.history.replaceState(win.history.state === undefined ? null : win.history.state, "", win.location.pathname + win.location.search.replace(/[?&]doogo-sync=[^&]*/, "")); } catch { /* 무시 */ }
     return match[1];
   }
 
@@ -2992,16 +3314,30 @@
 
   function clearSettleHash(win) {
     if (!/doogo-settle/.test(win.location.hash || "")) return;
-    try { win.history.replaceState(null, "", win.location.pathname + win.location.search); } catch { /* 무시 */ }
+    try { win.history.replaceState(win.history.state === undefined ? null : win.history.state, "", win.location.pathname + win.location.search); } catch { /* 무시 */ }
   }
 
-  async function chooseMode(win) {
-    var panel = createPanel(win.document, { title: "두고푸드 책갈피", note: "상품 동기화는 DB센터 '발주오라 동기화'에서 작업을 만든 뒤 이 책갈피를 누르면 바로 시작됩니다." });
+  async function chooseMode(win, options) {
+    var settings = options || {};
+    var panel = createPanel(win.document, {
+      title: "두고푸드 책갈피",
+      note: settings.fromFab
+        ? "DB센터에서 '주문 동기화'·'상품 동기화'(또는 발주오라 상품 불러오기·동기화)를 누르면 이 창에서 바로 시작돼요. 이 창을 닫지 않으면 책갈피를 다시 누르지 않아도 돼요."
+        : "상품 동기화는 DB센터 '발주오라 동기화'에서 작업을 만든 뒤 이 책갈피를 누르면 바로 시작됩니다."
+    });
     panel.status("무엇을 할까요?");
-    panel.log("입금·정산 반영: 입/출금 계좌 조회 → 업체구분·거래처가 들어간 정산 대기 건 정산 반영");
-    panel.log("상품 동기화: DB센터에서 받은 작업 코드 10글자로 비교·보내기");
-    var mode = await panel.ask([{ key: "settle", label: "입금·정산 반영", primary: true }, { key: "sync", label: "상품 동기화(작업 코드)" }]);
-    if (mode && mode !== "settle") panel.element.remove();
+    if (settings.last) panel.log("마지막 작업 · " + settings.last);
+    if (settings.fromFab) {
+      panel.log("작업 코드로 동기화: DB센터 화면의 작업 코드 10글자로 시작(작업이 이 창으로 오지 않았을 때)");
+      panel.log("입금·정산 반영: 입/출금 계좌 조회 → 업체구분·거래처가 들어간 정산 대기 건 정산 반영");
+    } else {
+      panel.log("입금·정산 반영: 입/출금 계좌 조회 → 업체구분·거래처가 들어간 정산 대기 건 정산 반영");
+      panel.log("상품 동기화: DB센터에서 받은 작업 코드 10글자로 비교·보내기");
+    }
+    var mode = await panel.ask(settings.fromFab
+      ? [{ key: "sync", label: "작업 코드로 동기화", primary: true }, { key: "settle", label: "입금·정산 반영" }]
+      : [{ key: "settle", label: "입금·정산 반영", primary: true }, { key: "sync", label: "상품 동기화(작업 코드)" }]);
+    if (mode && mode !== "settle") panel.close();
     return { mode: mode, panel: panel };
   }
 
@@ -3022,11 +3358,11 @@
       return null;
     } finally {
       win.__doogoSyncRunning = false;
+      if (activeResident) activeResident.flushQueue();
     }
   }
 
   async function main(win) {
-    if (win.__doogoSyncRunning) return;
     var doogoOrigin = win.__doogoSyncOrigin || (function () {
       try { return new URL(win.document.currentScript && win.document.currentScript.src).origin; } catch { return ""; }
     })();
@@ -3034,24 +3370,42 @@
       win.alert("발주오라 관리자 화면(console.baljuora.com)에서 책갈피를 눌러 주세요.");
       return;
     }
-    // 작업 코드가 주소에 있으면 상품 동기화, 없으면 정산 반영 도우미(정산 화면·#doogo-settle) 또는 고르기
+    // 이 창에서 이미 작업 중이면(책갈피를 또 누름) 진행 패널만 다시 보여 줍니다.
+    if (win.__doogoSyncRunning) {
+      var current = win[RESIDENT_KEY];
+      if (current && typeof current.showPanel === "function") current.showPanel();
+      return;
+    }
+    // 1.12.0: 이 창 오른쪽 아래에 동기화 버튼을 켜 둡니다(예전 버튼은 새 버전으로). 다음 작업은 DB센터가 이 창으로 보내면 바로 시작돼요.
+    installResident(win, doogoOrigin);
+    // 작업 코드가 주소에 있으면 동기화, 없으면 정산 반영 도우미(정산 화면·#doogo-settle) 또는 고르기
     var code = codeFromLocation(win);
     if (!code) {
+      // 확장 프로그램·사용자 스크립트가 발주오라 창을 열 때마다 불러온 경우(__doogoSyncAutoload): 버튼만 켜 둡니다.
+      if (win.__doogoSyncAutoload) return;
       if (settleRequested(win) || isBankPage(win)) return runSettlementMode(win);
-      win.__doogoSyncRunning = true;
+      win.__doogoSyncChoosing = true;
       var picked;
-      try { picked = await chooseMode(win); } finally { win.__doogoSyncRunning = false; }
+      try { picked = await chooseMode(win); } finally { win.__doogoSyncChoosing = false; }
       if (picked.mode === "settle") return runSettlementMode(win, picked.panel);
       if (picked.mode !== "sync") return;
       code = readCode(win);
       if (!code) return;
     }
+    return runSyncJob(win, doogoOrigin, code);
+  }
+
+  // 작업 코드 하나를 실행합니다(책갈피를 누를 때 · 1.12.0부터는 이 창에 남은 버튼이 DB센터에서 온 코드를 받을 때도).
+  async function runSyncJob(win, doogoOrigin, code) {
     if (!doogoOrigin) {
       win.alert("DB센터 주소를 알 수 없습니다. DB센터 동기화 화면에서 책갈피를 다시 만들어 주세요.");
       return;
     }
     win.__doogoSyncRunning = true;
-    var panel = createPanel(win.document);
+    var resident = activeResident;
+    var panel = createPanel(win.document, { minimize: true });
+    if (resident) resident.jobStarted(code);
+    var outcome = "error";
     panel.status("DB센터에서 작업을 받는 중…");
     var lastProgressAt = 0;
     async function postJson(path, body) {
@@ -3141,6 +3495,7 @@
         panel.status("완료: 성공 " + pushed.ok + "개 · 실패 " + pushed.failed + "개. DB센터 화면에서 결과를 확인하세요.");
       }
       try { win.sessionStorage.removeItem("doogo-sync-code"); } catch { /* 무시 */ }
+      outcome = "done";
     } catch (error) {
       var message = describeError(error);
       panel.status("중단: " + message);
@@ -3150,6 +3505,7 @@
       } catch { /* 작업이 이미 끝났거나 만료 */ }
     } finally {
       win.__doogoSyncRunning = false;
+      if (resident) resident.jobEnded(outcome, panel);
     }
   }
 
@@ -3212,6 +3568,10 @@
     createSettlementHelper: createSettlementHelper,
     runSettlement: runSettlement,
     createPanel: createPanel,
+    installResident: installResident,
+    runSyncJob: runSyncJob,
+    chooseMode: chooseMode,
+    codeKey: codeKey,
     main: main
   };
 

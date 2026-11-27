@@ -5,7 +5,9 @@ import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, RefreshCw, X } from
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { clearJobCode, latestJobCode, saveJobCode } from "@/lib/baljuora-job-code";
+import { openBaljuoraWindow, runnerOpenMessage } from "@/lib/baljuora-window";
 import { BaljuoraJobCode, type ReissuedJobCode } from "./BaljuoraJobCode";
+import { BaljuoraRunnerHint, BaljuoraWindowLink } from "./baljuora-window-ui";
 
 export async function readData<T>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => ({ ok: false }))) as { ok: boolean; data: T; error?: { message?: string } };
@@ -117,8 +119,9 @@ export function SalesSyncCard({ sync, onDone, compact = false }: { sync: SalesSy
       const created = await readData<{ job: JobView; code: string; consoleUrl: string }>(await apiFetch("/baljuora/admin/jobs", jsonInit("POST", { type: "sales", months })));
       setJob({ view: created.job, code: created.code, consoleUrl: created.consoleUrl });
       saveJobCode({ id: created.job.id, type: "sales", code: created.code, consoleUrl: created.consoleUrl, expiresAt: created.job.expiresAt ?? null });
-      window.open(created.consoleUrl, "_blank", "noopener");
-      toast.success("발주오라 관리자 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 눌러 주세요.");
+      const message = runnerOpenMessage("발주오라 관리자 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 눌러 주세요.");
+      openBaljuoraWindow(created.consoleUrl);
+      toast.success(message);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "작업을 만들지 못했습니다.");
     } finally {
@@ -194,7 +197,8 @@ export function SalesSyncCard({ sync, onDone, compact = false }: { sync: SalesSy
                   setJob({ view: result.job, code: result.code, consoleUrl: result.consoleUrl });
                 }}
               />
-              <a className="outline-button" href={job.consoleUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={15} /> 발주오라 관리자 창 다시 열기</a>
+              <BaljuoraWindowLink className="outline-button" href={job.consoleUrl}><ExternalLink size={15} /> 발주오라 관리자 창 다시 열기</BaljuoraWindowLink>
+              <BaljuoraRunnerHint />
             </div>
           )}
           <div className="sa-progress"><div style={{ width: `${progressPercent}%` }} /></div>

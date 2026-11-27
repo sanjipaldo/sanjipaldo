@@ -92,7 +92,7 @@ describe("운영 홈 주문 동기화 · 상품 동기화 버튼", () => {
     const button = await screen.findByRole("button", { name: /주문 동기화/ });
     await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(button);
-    await waitFor(() => expect(open).toHaveBeenCalledWith(expect.stringContaining("#doogo-sync=ABCDE12345"), "_blank", "noopener"));
+    await waitFor(() => expect(open).toHaveBeenCalledWith(expect.stringContaining("#doogo-sync=ABCDE12345"), "doogo-baljuora"));
     expect(await screen.findByText(/주문 동기화 · 발주오라 창에서 책갈피를 눌러 주세요/)).toBeTruthy();
     expect(screen.getByText("ABCDE-12345")).toBeTruthy();
 
@@ -143,7 +143,7 @@ describe("운영 홈 주문 동기화 · 상품 동기화 버튼", () => {
     fireEvent.click(within(dialog).getByRole("checkbox", { name: /지운 상품 숨기기/ }));
     fireEvent.click(within(dialog).getByRole("button", { name: /발주오라 창 열고 시작/ }));
     await waitFor(() => expect(started).toEqual({ options: { updates: true, creates: true, hides: false, categories: true } }));
-    expect(open).toHaveBeenCalledWith(expect.stringContaining("#doogo-sync=QWERT67890"), "_blank", "noopener");
+    expect(open).toHaveBeenCalledWith(expect.stringContaining("#doogo-sync=QWERT67890"), "doogo-baljuora");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 

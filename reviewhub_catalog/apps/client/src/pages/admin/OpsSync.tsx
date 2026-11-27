@@ -12,7 +12,9 @@ import { toast } from "sonner";
 import { BALJUORA_FIELD_SHORT_LABELS, type BaljuoraSyncField } from "@repo/shared/baljuora-sync";
 import { apiFetch } from "@/lib/api";
 import { clearJobCode, loadJobCode, saveJobCode } from "@/lib/baljuora-job-code";
+import { openBaljuoraWindow, runnerOpenMessage, useBaljuoraRunner } from "@/lib/baljuora-window";
 import { AdminSheetModal } from "./admin-sheet-modal";
+import { BaljuoraRunnerHint, BaljuoraWindowLink } from "./baljuora-window-ui";
 import { BaljuoraJobCode, type ReissuedJobCode } from "./BaljuoraJobCode";
 import "./ops-sync.css";
 
@@ -201,15 +203,17 @@ export function useOpsSync(onFinished?: () => void) {
   const remember = useCallback((created: Created) => {
     saveJobCode({ id: created.job.id, type: created.job.type, code: created.code, consoleUrl: created.consoleUrl, expiresAt: created.job.expiresAt });
     setCodes((current) => ({ ...current, [created.job.id]: { code: created.code, consoleUrl: created.consoleUrl } }));
-    window.open(created.consoleUrl, "_blank", "noopener");
+    // 1.12.0: 늘 같은 발주오라 창으로(책갈피를 한 번 누른 창이면 오른쪽 아래 동기화 버튼이 받아 바로 시작)
+    openBaljuoraWindow(created.consoleUrl);
   }, []);
 
   const startOrders = useCallback(async () => {
     setBusy("orders");
     setFinishedOrders(null);
     try {
+      const message = runnerOpenMessage("발주오라 관리자 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 한 번 눌러 주세요.");
       remember(await readData<Created>(await apiFetch("/baljuora/admin/ops-sync/orders/start", jsonInit("POST", {}))));
-      toast.success("발주오라 관리자 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 한 번 눌러 주세요.");
+      toast.success(message);
       await load();
     } catch (failure) {
       toast.error(failure instanceof Error ? failure.message : "주문 동기화를 시작하지 못했어요.");
@@ -233,9 +237,10 @@ export function useOpsSync(onFinished?: () => void) {
     setBusy("products");
     setFinishedProducts(null);
     try {
+      const message = runnerOpenMessage("발주오라 관리자 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 한 번만 누르면 읽고 이어서 보내요.");
       remember(await readData<Created>(await apiFetch("/baljuora/admin/ops-sync/products/start", jsonInit("POST", { options }))));
       setPreview(null);
-      toast.success("발주오라 관리자 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 한 번만 누르면 읽고 이어서 보내요.");
+      toast.success(message);
       await load();
     } catch (failure) {
       toast.error(failure instanceof Error ? failure.message : "상품 동기화를 시작하지 못했어요.");
@@ -250,8 +255,9 @@ export function useOpsSync(onFinished?: () => void) {
       const result = await readData<{ nothing: true } | ({ nothing: false } & Created)>(await apiFetch("/baljuora/admin/ops-sync/products/continue", jsonInit("POST", {})));
       if (result.nothing) toast.success("보낼 변경이 없어요. DB센터와 발주오라 상품이 같아요.");
       else {
+        const message = runnerOpenMessage("보내기 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 한 번 더 눌러 주세요.");
         remember(result);
-        toast.success("보내기 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 한 번 더 눌러 주세요.");
+        toast.success(message);
       }
       await load();
     } catch (failure) {
@@ -306,6 +312,9 @@ export function useOpsSync(onFinished?: () => void) {
 
 export type OpsSyncState = ReturnType<typeof useOpsSync>;
 
+// 책갈피를 한 번 누른 발주오라 창(오른쪽 아래 동기화 버튼)이 있으면 그 창이 작업을 받아 바로 시작합니다(책갈피 1.12.0).
+const RUNNER_WAITING_TEXT = "발주오라 창에서 시작을 기다리는 중";
+
 const PRODUCT_PHASE_TEXT: Partial<Record<ProductPhase, string>> = {
   waiting: "발주오라 창에서 책갈피를 눌러 주세요",
   reading: "발주오라 상품을 읽는 중…",
@@ -328,9 +337,11 @@ export function OpsSyncButtons({ state }: { state: OpsSyncState }) {
   const productsLast = status?.products.last?.finishedAt ?? null;
   const productPhase = status?.products.phase ?? "idle";
   const pushProgress = status?.products.pushJob?.progress;
-  const ordersText = ordersActive ? (ordersJob?.status === "waiting" ? "발주오라 창에서 책갈피를 눌러 주세요" : ordersJob?.progress?.message || "주문을 읽는 중…") : lastLine(ordersLast, ready);
+  const runner = useBaljuoraRunner();
+  const waitingText = runner ? RUNNER_WAITING_TEXT : PRODUCT_PHASE_TEXT.waiting;
+  const ordersText = ordersActive ? (ordersJob?.status === "waiting" ? waitingText : ordersJob?.progress?.message || "주문을 읽는 중…") : lastLine(ordersLast, ready);
   const productsText = productsActive
-    ? productPhase === "sending" && pushProgress && pushProgress.total > 0 ? `발주오라로 보내는 중 ${count(pushProgress.done)} / ${count(pushProgress.total)}` : PRODUCT_PHASE_TEXT[productPhase] ?? ""
+    ? productPhase === "sending" && pushProgress && pushProgress.total > 0 ? `발주오라로 보내는 중 ${count(pushProgress.done)} / ${count(pushProgress.total)}` : productPhase === "waiting" ? waitingText : PRODUCT_PHASE_TEXT[productPhase] ?? ""
     : lastLine(productsLast, ready);
   const warn = (lastAt: string | null, active: boolean) => ready && !active && (!lastAt || !isTodaySeoul(lastAt));
   return (
@@ -371,20 +382,22 @@ function WaitingBlock({ state, job, text }: { state: OpsSyncState; job: OpsJobVi
     <>
       <p>{text}</p>
       <BaljuoraJobCode jobId={job.id} code={saved?.code ?? null} expiresAt={job.expiresAt} onReissued={state.reissued} />
-      {saved?.consoleUrl && <a className="primary-action osync-open" href={saved.consoleUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={15} aria-hidden="true" /> 발주오라 관리자 창 다시 열기</a>}
+      {saved?.consoleUrl && <BaljuoraWindowLink className="primary-action osync-open" href={saved.consoleUrl}><ExternalLink size={15} aria-hidden="true" /> 발주오라 관리자 창 다시 열기</BaljuoraWindowLink>}
+      <BaljuoraRunnerHint />
     </>
   );
 }
 
 function OrdersPanel({ state }: { state: OpsSyncState }) {
   const { status, busy, finishedOrders, dismissed } = state;
+  const runner = useBaljuoraRunner();
   const job = status?.orders.job ?? null;
   if (job && isActiveJob(job)) {
     return (
       <section className="admin-card osync-panel" aria-live="polite">
         <div className="osync-panel-head">
           <ReceiptText size={18} aria-hidden="true" />
-          <h2>{job.status === "waiting" ? "주문 동기화 · 발주오라 창에서 책갈피를 눌러 주세요" : "주문 동기화 · 발주오라 주문을 읽는 중"}</h2>
+          <h2>{job.status === "waiting" ? `주문 동기화 · ${runner ? RUNNER_WAITING_TEXT : "발주오라 창에서 책갈피를 눌러 주세요"}` : "주문 동기화 · 발주오라 주문을 읽는 중"}</h2>
           <button type="button" className="osync-close" onClick={() => void state.cancel(job.id)} disabled={busy === "cancel"} aria-label="주문 동기화 취소" title="취소"><X size={17} /></button>
         </div>
         {job.status === "waiting" ? (
@@ -472,6 +485,7 @@ function leftoverText(leftovers: Leftovers | null) {
 
 function ProductsPanel({ state }: { state: OpsSyncState }) {
   const { status, busy, finishedProducts, dismissed, linkingExpired } = state;
+  const runner = useBaljuoraRunner();
   const products = status?.products;
   const phase = products?.phase ?? "idle";
   const compareJob = products?.compareJob ?? null;
@@ -483,7 +497,7 @@ function ProductsPanel({ state }: { state: OpsSyncState }) {
       <section className="admin-card osync-panel is-products" aria-live="polite">
         <div className="osync-panel-head">
           <PackageCheck size={18} aria-hidden="true" />
-          <h2>{phase === "waiting" ? "상품 동기화 · 발주오라 창에서 책갈피를 눌러 주세요" : stalled ? "상품 동기화 · 발주오라 창이 보내기로 이어 가지 못했어요" : "상품 동기화 · DB센터 → 발주오라"}</h2>
+          <h2>{phase === "waiting" ? `상품 동기화 · ${runner ? RUNNER_WAITING_TEXT : "발주오라 창에서 책갈피를 눌러 주세요"}` : stalled ? "상품 동기화 · 발주오라 창이 보내기로 이어 가지 못했어요" : "상품 동기화 · DB센터 → 발주오라"}</h2>
           {activeJob && isActiveJob(activeJob) && <button type="button" className="osync-close" onClick={() => void state.cancel(activeJob.id)} disabled={busy === "cancel"} aria-label="상품 동기화 취소" title="취소"><X size={17} /></button>}
         </div>
         <ProductSteps phase={phase} />
@@ -491,7 +505,7 @@ function ProductsPanel({ state }: { state: OpsSyncState }) {
           <WaitingBlock state={state} job={compareJob} text={<>열린 <b>발주오라 관리자 창</b>에서 즐겨찾기의 <b>두고푸드 동기화</b>를 <b>한 번만</b> 누르면 발주오라 상품을 읽고, 같은 창에서 이어서 DB센터에서 바꾼 상품을 발주오라로 보내요.</>} />
         ) : stalled ? (
           <>
-            <p>발주오라 상품은 다 읽었는데 보내기를 시작하지 못했어요(발주오라 창을 닫았거나 연결이 끊김). <b>이어서 보내기</b>를 누르면 발주오라 창이 다시 열리고, 그 창에서 책갈피를 한 번 더 누르면 보내요.</p>
+            <p>발주오라 상품은 다 읽었는데 보내기를 시작하지 못했어요(발주오라 창을 닫았거나 연결이 끊김). <b>이어서 보내기</b>를 누르면 발주오라 창으로 보내기 작업을 보내요. 오른쪽 아래 동기화 버튼이 켜진 창이면 바로, 새로 열린 창이면 책갈피를 한 번 더 누르면 보내요.</p>
             <button type="button" className="primary-action osync-open" onClick={() => void state.continueProducts()} disabled={Boolean(busy)}><RefreshCw size={15} aria-hidden="true" /> 이어서 보내기</button>
           </>
         ) : (

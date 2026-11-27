@@ -29,6 +29,9 @@ import { BaljuoraJobCode, type ReissuedJobCode } from "./BaljuoraJobCode";
 import { BaljuoraStatModal, type StatKind } from "./BaljuoraStatModals";
 import { BaljuoraReconcileCard } from "./BaljuoraReconcileCard";
 import { clearJobCode, loadJobCode, saveJobCode } from "@/lib/baljuora-job-code";
+import { bookmarkletHref, openBaljuoraWindow, runnerOpenMessage } from "@/lib/baljuora-window";
+import { detectInstallPlatform } from "@/lib/app-install";
+import { BaljuoraRunnerHint, BaljuoraWindowLink, MobileBookmarkletGuide } from "./baljuora-window-ui";
 import "./baljuora-sync-admin.css";
 
 // salesOnCompare·salesMonths(2026-11-23): 발주오라 상품 불러오기(비교) 때 판매·매출처도 함께 불러올지, 기간(이번 달 포함 최근 N개월)
@@ -153,10 +156,6 @@ function salesText(value: unknown) {
   return ` · 판매 ${Number(sales.lines ?? 0).toLocaleString("ko-KR")}줄 · 매출처 ${Number(sales.buyers ?? 0).toLocaleString("ko-KR")}곳${sales.complete === false ? " (주문은 일부만)" : ""}`;
 }
 
-function bookmarkletHref(origin: string) {
-  return `javascript:(function(){var o=${JSON.stringify(origin)};window.__doogoSyncOrigin=o;var s=document.createElement("script");s.src=o+"/baljuora-sync.js?t="+Date.now();s.onerror=function(){alert("두고푸드 동기화 스크립트를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.")};document.body.appendChild(s);})();`;
-}
-
 function BookmarkletLink({ origin }: { origin: string }) {
   const ref = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
@@ -218,6 +217,8 @@ export function BaljuoraSyncAdmin() {
   // 숫자 카드 팝업(연결된 상품·보낼 변경·신규 등록·발주오라에만 있음, 2026-11-27)
   const [stat, setStat] = useState<StatKind | null>(null);
   const origin = typeof window === "undefined" ? "" : window.location.origin;
+  // 휴대폰·태블릿이면 책갈피 안내를 휴대폰 순서부터(PC의 '즐겨찾기 막대로 끌어다 놓기' 버튼은 숨김)
+  const mobileDevice = useMemo(() => detectInstallPlatform().mobile, []);
 
   const load = useCallback(async () => {
     try {
@@ -336,8 +337,9 @@ export function BaljuoraSyncAdmin() {
       const created = await readData<{ job: JobView; code: string; consoleUrl: string }>(await apiFetch("/baljuora/admin/jobs", jsonInit("POST", body)));
       setJob({ view: created.job, code: created.code, consoleUrl: created.consoleUrl });
       saveJobCode({ id: created.job.id, type: created.job.type, code: created.code, consoleUrl: created.consoleUrl, expiresAt: created.job.expiresAt });
-      window.open(created.consoleUrl, "_blank", "noopener");
-      toast.success("발주오라 관리자 창을 열었습니다. 그 창에서 책갈피 '두고푸드 동기화'를 눌러 주세요.");
+      const message = runnerOpenMessage("발주오라 관리자 창을 열었습니다. 그 창에서 책갈피 '두고푸드 동기화'를 눌러 주세요.");
+      openBaljuoraWindow(created.consoleUrl);
+      toast.success(message);
       setSelected(new Set());
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "작업을 만들지 못했습니다.");
@@ -564,25 +566,29 @@ export function BaljuoraSyncAdmin() {
           <small>거래처가 비어 있는 건은 건드리지 않고 "직접 확인할 건"으로 알려 줘요. 발주오라 <b>자동 매칭 관리</b>에서 매칭마다 <b>자동 정산완료</b>를 켜 두면, 그 거래처의 새 계좌내역은 발주오라가 확인 없이 바로 정산완료 처리합니다.</small>
         </div>
         <div className="bj-settle-action">
-          <a className="bj-settle-open" href={`${BALJUORA_CONSOLE_ORIGIN}/${overview?.settings.merchantSlug || BALJUORA_DEFAULT_MERCHANT_SLUG}/dashboard#doogo-settle`} target="_blank" rel="noreferrer"><ExternalLink size={15} aria-hidden="true" /> 발주오라 정산 화면 열기</a>
-          <small>열린 창에서 책갈피를 누르면 입/출금 계좌 조회로 이동해 시작해요.</small>
+          <BaljuoraWindowLink className="bj-settle-open" href={`${BALJUORA_CONSOLE_ORIGIN}/${overview?.settings.merchantSlug || BALJUORA_DEFAULT_MERCHANT_SLUG}/dashboard#doogo-settle`}><ExternalLink size={15} aria-hidden="true" /> 발주오라 정산 화면 열기</BaljuoraWindowLink>
+          <small>열린 창에서 책갈피를 누르면 입/출금 계좌 조회로 이동해 시작해요(오른쪽 아래 동기화 버튼이 켜진 창이면 바로 시작).</small>
         </div>
       </section>
 
       <section className="admin-card bj-howto">
         <div className="bj-howto-copy">
           <h2><Bookmark size={18} aria-hidden="true" /> 처음 한 번: 책갈피 만들기</h2>
-          <p>발주오라는 API가 없고 로그인에 사람 확인이 있어서, <b>로그인해 둔 발주오라 관리자 창</b>에서 책갈피를 눌러 실행합니다. 아래 버튼을 브라우저 즐겨찾기(북마크) 막대로 끌어다 놓으세요.</p>
+          <p>발주오라는 API가 없고 로그인에 사람 확인이 있어서, <b>로그인해 둔 발주오라 관리자 창</b>에서 책갈피를 눌러 실행합니다. {mobileDevice ? <>휴대폰은 아래 <b>휴대폰에서 책갈피 쓰기</b> 순서대로 북마크를 하나 만들어 두세요.</> : "아래 버튼을 브라우저 즐겨찾기(북마크) 막대로 끌어다 놓으세요."}</p>
           <ol>
             <li>DB센터에서 <b>발주오라 상품 불러오기</b> 또는 <b>동기화</b>를 누르면 발주오라 관리자 창이 열립니다.</li>
-            <li>열린 창에서 로그인돼 있는지 확인하고, 즐겨찾기 막대의 <b>두고푸드 동기화</b>를 누릅니다.</li>
+            <li>열린 창에서 로그인돼 있는지 확인하고, {mobileDevice ? "북마크" : "즐겨찾기 막대"}의 <b>두고푸드 동기화</b>를 누릅니다.</li>
             <li>발주오라 창 오른쪽 아래에 진행 상황이 나오고, 이 화면에도 결과가 보입니다.</li>
           </ol>
+          <p className="bj-howto-fab"><b>한 번 누른 발주오라 창에는 오른쪽 아래 '동기화' 버튼이 남아요.</b> 그 창을 닫지 않으면 다음부터는 DB센터 버튼만 눌러도 그 창에서 바로 시작돼요(책갈피를 다시 누르지 않아도 돼요). 버튼을 누르면 작업 코드로 시작하거나 입금·정산 반영을 고를 수 있어요.</p>
         </div>
-        <div className="bj-howto-action">
-          <BookmarkletLink origin={origin} />
-          <small>즐겨찾기 막대가 안 보이면 Ctrl+Shift+B(맥은 ⌘+Shift+B)</small>
-        </div>
+        {!mobileDevice && (
+          <div className="bj-howto-action">
+            <BookmarkletLink origin={origin} />
+            <small>즐겨찾기 막대가 안 보이면 Ctrl+Shift+B(맥은 ⌘+Shift+B)</small>
+          </div>
+        )}
+        <MobileBookmarkletGuide origin={origin} open={mobileDevice} />
       </section>
 
       {/* 숫자 카드를 누르면 그 상품 목록 팝업(2026-11-27 관리자 요청 "누르면 어떤 상품인지 팝업으로, 20개씩 1/2/3 페이지") */}
@@ -615,7 +621,8 @@ export function BaljuoraSyncAdmin() {
                   setJob({ view: result.job, code: result.code, consoleUrl: result.consoleUrl });
                 }}
               />
-              {job?.consoleUrl && <a className="primary-action" href={job.consoleUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={15} /> 발주오라 관리자 창 다시 열기</a>}
+              {job?.consoleUrl && <BaljuoraWindowLink className="primary-action" href={job.consoleUrl}><ExternalLink size={15} /> 발주오라 관리자 창 다시 열기</BaljuoraWindowLink>}
+              <BaljuoraRunnerHint />
             </div>
           )}
           <div className="bj-progress"><div style={{ width: `${progressPercent}%` }} /></div>

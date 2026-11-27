@@ -2221,3 +2221,212 @@ describe("운영 홈 상품 동기화: 읽기가 끝나면 같은 창에서 보�
     expect(document.getElementById("doogo-sync-panel")?.textContent).toContain("보낼 변경이 없어요");
   });
 });
+
+// ─── 발주오라 창에 남는 동기화 버튼(1.12.0, 2026-11-27 관리자 요청 "휴대폰은 책갈피를 누르기 어렵다 — 오른쪽 아래 동기화 아이콘") ───
+describe("발주오라 창에 남는 동기화 버튼(1.12.0)", () => {
+  function residentWindow(options: { hash?: string; hold?: Record<string, Promise<void>> } = {}) {
+    document.body.innerHTML = "";
+    const fake = createFake();
+    const calls: string[] = [];
+    const posted: Record<string, any[]> = {};
+    const target = new EventTarget();
+    const opener = { postMessage: vi.fn() };
+    const win: any = {
+      location: { hostname: "console.baljuora.com", origin: "https://console.baljuora.com", pathname: "/doogobiz24/dashboard", search: "", hash: options.hash ?? "" },
+      document,
+      navigator: {},
+      opener,
+      innerWidth: 390,
+      innerHeight: 760,
+      sessionStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined },
+      history: { state: { tree: "next" }, replaceState: vi.fn(() => { win.location.hash = ""; }) },
+      alert: vi.fn(),
+      prompt: vi.fn(() => null),
+      setInterval: () => 0,
+      clearInterval: () => undefined,
+      addEventListener: target.addEventListener.bind(target),
+      removeEventListener: target.removeEventListener.bind(target),
+      dispatch: (type: string) => target.dispatchEvent(new Event(type)),
+      fetch: async (input: string, init: RequestInit = {}) => {
+        const url = new URL(input);
+        if (url.origin === "https://doogofood.test" && url.pathname.startsWith("/api/baljuora/runner/")) {
+          const [code, action] = url.pathname.slice("/api/baljuora/runner/".length).split("/");
+          calls.push(`${(init.method || "GET").toUpperCase()} ${code}${action ? `/${action}` : ""}`);
+          if (!action) {
+            if (options.hold?.[code]) await options.hold[code];
+            return jsonResponse(200, { ok: true, data: { jobId: `job-${code}`, type: "compare", plan: { type: "compare", groupKeyword: "황금농부", detailIds: [], sales: null } } });
+          }
+          if (action === "results") (posted[code] ??= []).push(JSON.parse(String(init.body)));
+          return jsonResponse(200, { ok: true, data: { ok: true } });
+        }
+        const response = await fake.fetch(input, init);
+        // 진짜 발주오라처럼 새로 받은 로그인 정보도 쓸 수 있게(가짜는 처음 받은 것만 받음) — 같은 창에서 작업을 여러 번 하므로
+        if (url.pathname === "/api/auth/refresh") fake.state.validToken = `t${fake.state.refreshCount}`;
+        return response;
+      },
+      __doogoSyncOrigin: "https://doogofood.test",
+      __doogoSyncApiBase: "https://api.baljuora.com/"
+    };
+    return { win, calls, posted, opener };
+  }
+  const finished = (posted: Record<string, any[]>, code: string) => (posted[code] ?? []).some((body) => body.final === true);
+  const fabOf = () => document.getElementById("doogo-sync-fab") as HTMLButtonElement;
+
+  it("책갈피로 작업을 하면 창 오른쪽 아래에 동기화 버튼이 남고, 패널 '접기' ↔ 버튼으로 오갑니다(DB센터 창에는 켜짐·상태·경로만)", async () => {
+    const { win, posted, opener } = residentWindow({ hash: "#doogo-sync=FIRST23456" });
+    try {
+      await internals.main(win);
+      expect(finished(posted, "FIRST23456")).toBe(true);
+      const fab = fabOf();
+      const panel = document.getElementById("doogo-sync-panel") as HTMLElement;
+      expect(fab).toBeTruthy();
+      expect(panel.textContent).toContain("완료: 발주오라 상품");
+      expect(fab.hidden).toBe(true);
+      const collapse = panel.querySelector("[data-close]") as HTMLButtonElement;
+      expect(collapse.textContent).toBe("접기");
+      collapse.click();
+      expect(panel.style.display).toBe("none");
+      expect(fab.hidden).toBe(false);
+      expect(fab.getAttribute("data-state")).toBe("done");
+      expect(fab.textContent).toContain("동기화 완료");
+      // 주소의 코드만 지우고 발주오라 화면(SPA)의 history.state는 그대로 둡니다.
+      expect(win.history.replaceState).toHaveBeenCalledWith({ tree: "next" }, "", "/doogobiz24/dashboard");
+      // DB센터 창에는 DB센터 주소로만 켜짐·상태·경로를 알리고 작업 코드·토큰은 보내지 않습니다.
+      const messages = opener.postMessage.mock.calls.map(([message, origin]: any[]) => ({ ...message, origin }));
+      expect(messages.map((message: any) => message.state)).toEqual(expect.arrayContaining(["ready", "running", "done"]));
+      expect(messages.every((message: any) => message.origin === "https://doogofood.test" && message.type === "doogo-runner" && message.path === "/doogobiz24/dashboard" && message.version === internals.VERSION)).toBe(true);
+      expect(JSON.stringify(opener.postMessage.mock.calls)).not.toMatch(/token|FIRST23456/i);
+      // 쉬는 중에 버튼을 누르면 할 일 고르기(마지막 작업 결과와 함께)
+      fab.click();
+      const menu = document.getElementById("doogo-sync-panel") as HTMLElement;
+      expect(menu.textContent).toContain("무엇을 할까요?");
+      expect(menu.textContent).toContain("마지막 작업 · 완료: 발주오라 상품");
+      expect(menu.textContent).toContain("이 창에서 바로 시작돼요");
+      expect([...menu.querySelectorAll("[data-action]")].map((button) => button.textContent)).toEqual(["작업 코드로 동기화", "입금·정산 반영"]);
+      expect(fab.hidden).toBe(true);
+      (menu.querySelector("[data-close]") as HTMLButtonElement).click();
+      expect(document.getElementById("doogo-sync-panel")).toBeNull();
+      expect(fab.hidden).toBe(false);
+      expect(fab.textContent).toBe("동기화");
+      // 창을 닫거나 다른 주소로 가면 DB센터에 알립니다.
+      win.dispatch("pagehide");
+      expect(opener.postMessage).toHaveBeenLastCalledWith(expect.objectContaining({ type: "doogo-runner", state: "gone" }), "https://doogofood.test");
+    } finally {
+      win.__doogoSyncResident?.dispose();
+    }
+  });
+
+  it("DB센터가 같은 창으로 보낸 새 작업 코드(#doogo-sync=)는 책갈피 없이 바로 시작하고, 작업 중에 온 코드는 끝난 뒤 이어서 합니다", async () => {
+    let release: () => void = () => undefined;
+    const hold = { SECOND2345: new Promise<void>((resolve) => { release = resolve; }) };
+    const { win, posted, calls } = residentWindow({ hash: "#doogo-sync=FIRST23456", hold });
+    try {
+      await internals.main(win);
+      win.location.hash = "#doogo-sync=SECOND2345";
+      win.dispatch("hashchange");
+      expect(calls).toContain("GET SECOND2345");
+      expect(win.__doogoSyncRunning).toBe(true);
+      expect(fabOf().getAttribute("data-state")).toBe("running");
+      // 작업 중에 온 다음 코드는 기다렸다가
+      win.location.hash = "#doogo-sync=THIRD23456";
+      win.dispatch("hashchange");
+      expect(calls).not.toContain("GET THIRD23456");
+      expect(document.getElementById("doogo-sync-panel")!.textContent).toContain("지금 작업이 끝나면 이어서 시작해요");
+      // 같은 코드가 또 와도 한 번만 실행합니다.
+      win.location.hash = "#doogo-sync=SECOND2345";
+      win.dispatch("hashchange");
+      release();
+      await vi.waitFor(() => expect(finished(posted, "SECOND2345")).toBe(true), { timeout: 3000 });
+      await vi.waitFor(() => expect(finished(posted, "THIRD23456")).toBe(true), { timeout: 3000 });
+      await vi.waitFor(() => expect(win.__doogoSyncRunning).toBe(false), { timeout: 3000 });
+      expect(calls.filter((call) => call === "GET SECOND2345")).toHaveLength(1);
+      expect(calls.filter((call) => call === "GET FIRST23456")).toHaveLength(1);
+      expect(fabOf().getAttribute("data-state")).toBe("done");
+    } finally {
+      win.__doogoSyncResident?.dispose();
+    }
+  });
+
+  it("할 일 고르기 패널이 열려 있을 때 DB센터 작업이 오면 패널을 닫고 그 작업을 시작합니다", async () => {
+    const { win, posted } = residentWindow();
+    try {
+      const pressing = internals.main(win);
+      await Promise.resolve();
+      expect(document.getElementById("doogo-sync-panel")!.textContent).toContain("무엇을 할까요?");
+      win.location.hash = "#doogo-sync=FOURTH2345";
+      win.dispatch("hashchange");
+      await pressing;
+      await vi.waitFor(() => expect(finished(posted, "FOURTH2345")).toBe(true), { timeout: 3000 });
+      expect(win.prompt).not.toHaveBeenCalled();
+    } finally {
+      win.__doogoSyncResident?.dispose();
+    }
+  });
+
+  it("책갈피를 다시 누르면 예전 버튼을 치우고 하나만 켜며, 작업 중에 누르면 진행 패널만 다시 보여 줍니다", async () => {
+    const { win, calls } = residentWindow();
+    const first = internals.installResident(win, "https://doogofood.test");
+    const second = internals.installResident(win, "https://doogofood.test");
+    try {
+      expect(document.querySelectorAll("#doogo-sync-fab")).toHaveLength(1);
+      expect(win.__doogoSyncResident).toBe(second);
+      // 치운 버튼은 더 이상 코드를 받지 않고, 새 버튼만 받습니다(한 번만 실행).
+      first.check();
+      const panel = internals.createPanel(document, { minimize: true });
+      panel.hide();
+      expect(fabOf().hidden).toBe(false);
+      win.__doogoSyncRunning = true;
+      await internals.main(win);
+      expect(win.__doogoSyncResident).toBe(second);
+      expect(panel.hidden).toBe(false);
+      expect(fabOf().hidden).toBe(true);
+      expect(calls).toHaveLength(0);
+    } finally {
+      win.__doogoSyncRunning = false;
+      second.dispose();
+      first.dispose();
+    }
+    expect(document.getElementById("doogo-sync-fab")).toBeNull();
+  });
+
+  it("확장 프로그램이 불러온 경우(__doogoSyncAutoload) 코드가 없으면 버튼만 켜고 고르기 패널을 띄우지 않습니다", async () => {
+    const { win } = residentWindow();
+    win.__doogoSyncAutoload = true;
+    try {
+      await internals.main(win);
+      expect(fabOf()).toBeTruthy();
+      expect(document.getElementById("doogo-sync-panel")).toBeNull();
+    } finally {
+      win.__doogoSyncResident?.dispose();
+    }
+  });
+
+  it("오른쪽 아래에 발주오라의 다른 고정 버튼(상담 버튼 등)이 있으면 그 위로 올려 가리지 않습니다", () => {
+    const { win } = residentWindow();
+    const chat = document.createElement("div");
+    chat.style.position = "fixed";
+    document.body.appendChild(chat);
+    chat.getBoundingClientRect = () => ({ top: 690, bottom: 750, left: 320, right: 380, width: 60, height: 60, x: 320, y: 690, toJSON() { return {}; } }) as DOMRect;
+    const doc = document as any;
+    const original = doc.elementsFromPoint;
+    doc.elementsFromPoint = () => [chat, document.body, document.documentElement];
+    win.getComputedStyle = (element: Element) => window.getComputedStyle(element);
+    let resident: any = null;
+    try {
+      resident = internals.installResident(win, "https://doogofood.test");
+      expect(fabOf().style.bottom).toContain("82px");
+    } finally {
+      resident?.dispose();
+      doc.elementsFromPoint = original;
+    }
+  });
+
+  it("버튼을 켤 수 없는 창(테스트용 가짜 창 등)에서는 예전처럼 작업만 하고 패널은 '닫기'입니다", () => {
+    const resident = internals.installResident({ document, location: { pathname: "/" } }, "https://doogofood.test");
+    expect(resident.active).toBe(false);
+    const panel = internals.createPanel(document, { minimize: true });
+    expect((panel.element.querySelector("[data-close]") as HTMLButtonElement).textContent).toBe("닫기");
+    panel.close();
+    expect(internals.codeKey("abcde-fgh23")).toBe("ABCDEFGH23");
+  });
+});
