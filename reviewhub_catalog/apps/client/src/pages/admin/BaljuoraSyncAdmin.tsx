@@ -26,6 +26,8 @@ import { BaljuoraMasterPanel } from "./BaljuoraMasterPanel";
 import { BaljuoraCategoryTreeCard, type CategoryTreeView } from "./BaljuoraCategoryTreeCard";
 import { BaljuoraAlignSettings, type BaljuoraPolicyOption, type DoogoPolicyOption } from "./BaljuoraAlignSettings";
 import { BaljuoraJobCode, type ReissuedJobCode } from "./BaljuoraJobCode";
+import { BaljuoraStatModal, type StatKind } from "./BaljuoraStatModals";
+import { BaljuoraReconcileCard } from "./BaljuoraReconcileCard";
 import { clearJobCode, loadJobCode, saveJobCode } from "@/lib/baljuora-job-code";
 import "./baljuora-sync-admin.css";
 
@@ -76,9 +78,14 @@ type ChangeItem = {
   newSupplier?: boolean;
   // 신규 등록인데 발주오라에 이름이 같은 상품이 있음(발주오라는 같은 이름 상품을 새로 받지 않음 → '같은 상품으로 연결', 2026-11-27)
   sameName?: SameName;
-  diffs: BaljuoraFieldDiff[];
+  // base = 마지막으로 맞춘 값(기준, '보낼 변경' 상세 팝업에서 어느 쪽이 바뀌었는지 보여 줌)
+  diffs: Array<BaljuoraFieldDiff & { base?: { doogo?: string | number | null; baljuora?: string | number | null } }>;
   syncStatus: string | null;
   lastPushedAt: string | null;
+  baseAt?: string | null;
+  lastPulledAt?: string | null;
+  // 신규 등록 상품이 발주오라에 들어갈 값('신규 등록' 카드 팝업)
+  preview?: { supplyPrice: number; groupPrice: number; consumerPrice: number | null; purchaseCost: number | null };
 };
 type SameName = {
   baljuoraId: string;
@@ -208,6 +215,8 @@ export function BaljuoraSyncAdmin() {
   const [settingsDraft, setSettingsDraft] = useState<Settings | null>(null);
   const [openJob, setOpenJob] = useState<JobView | null>(null);
   const [pullProgress, setPullProgress] = useState<{ done: number; total: number } | null>(null);
+  // 숫자 카드 팝업(연결된 상품·보낼 변경·신규 등록·발주오라에만 있음, 2026-11-27)
+  const [stat, setStat] = useState<StatKind | null>(null);
   const origin = typeof window === "undefined" ? "" : window.location.origin;
 
   const load = useCallback(async () => {
@@ -266,6 +275,13 @@ export function BaljuoraSyncAdmin() {
   const policyName = useCallback((id: string) => overview?.doogoShippingPolicies?.find((policy) => policy.id === id)?.name
     ?? overview?.baljuoraShippingPolicies?.find((policy) => policy.id === id)?.name
     ?? id.slice(0, 8), [overview]);
+  // 숫자 카드 팝업에서 칸 값 보기(변경 칩과 같은 모양)
+  const statHelpers = useMemo(() => ({
+    renderValue: (field: BaljuoraSyncField, value: string | number | null, auto?: boolean) => <DiffValue field={field} value={value} categoryPath={categoryPath} policyName={policyName} auto={auto} />,
+    doogoCategoryName,
+    categoryPath,
+    policyLinked: (doogoPolicyId: string) => Boolean(overview?.settings.shippingPolicyMap?.[doogoPolicyId])
+  }), [categoryPath, policyName, doogoCategoryName, overview]);
 
   const lists = useMemo(() => {
     const items = changes?.items ?? [];
@@ -569,11 +585,12 @@ export function BaljuoraSyncAdmin() {
         </div>
       </section>
 
+      {/* 숫자 카드를 누르면 그 상품 목록 팝업(2026-11-27 관리자 요청 "누르면 어떤 상품인지 팝업으로, 20개씩 1/2/3 페이지") */}
       <div className="bj-stats">
-        <article><span>연결된 상품</span><strong>{(changes?.linkedCount ?? 0).toLocaleString("ko-KR")}</strong><small>DB센터 상품 {(changes?.productCount ?? 0).toLocaleString("ko-KR")}개 중</small></article>
-        <article className={counts.push > 0 ? "is-attention" : ""}><span>보낼 변경</span><strong>{counts.push.toLocaleString("ko-KR")}</strong><small>DB센터에서 바뀐 상품</small></article>
-        <article className={counts.new > 0 ? "is-attention" : ""}><span>신규 등록</span><strong>{compared ? counts.new.toLocaleString("ko-KR") : "-"}</strong><small>발주오라에 없는 노출 상품</small></article>
-        <article><span>발주오라에만 있음</span><strong>{compared ? counts.only.toLocaleString("ko-KR") : "-"}</strong><small>DB센터에 없는 발주오라 상품</small></article>
+        <button type="button" className="bj-stat-card" onClick={() => setStat("linked")} aria-label={`연결된 상품 ${(changes?.linkedCount ?? 0).toLocaleString("ko-KR")}개 목록 보기`}><span>연결된 상품</span><strong>{(changes?.linkedCount ?? 0).toLocaleString("ko-KR")}</strong><small>DB센터 상품 {(changes?.productCount ?? 0).toLocaleString("ko-KR")}개 중</small><em className="bj-stat-more">목록 보기 ›</em></button>
+        <button type="button" className={`bj-stat-card${counts.push > 0 ? " is-attention" : ""}`} onClick={() => setStat("push")} aria-label={`보낼 변경 ${counts.push.toLocaleString("ko-KR")}개 상세 보기`}><span>보낼 변경</span><strong>{counts.push.toLocaleString("ko-KR")}</strong><small>DB센터에서 바뀐 상품</small><em className="bj-stat-more">무엇을 보내는지 ›</em></button>
+        <button type="button" className={`bj-stat-card${counts.new > 0 ? " is-attention" : ""}`} onClick={() => setStat("new")} disabled={!compared} aria-label={`신규 등록 ${compared ? counts.new.toLocaleString("ko-KR") : ""}개 목록 보기`}><span>신규 등록</span><strong>{compared ? counts.new.toLocaleString("ko-KR") : "-"}</strong><small>발주오라에 없는 노출 상품</small>{compared && <em className="bj-stat-more">목록 보기 ›</em>}</button>
+        <button type="button" className="bj-stat-card" onClick={() => setStat("only")} disabled={!compared} aria-label={`발주오라에만 있음 ${compared ? counts.only.toLocaleString("ko-KR") : ""}개 목록 보기`}><span>발주오라에만 있음</span><strong>{compared ? counts.only.toLocaleString("ko-KR") : "-"}</strong><small>DB센터에 없는 발주오라 상품</small>{compared && <em className="bj-stat-more">목록 보기 ›</em>}</button>
         <article><span>마지막 비교 · 동기화</span><strong className="bj-stat-time">{formatDateTime(overview?.lastCompareAt ?? null)}</strong><small>동기화 {formatDateTime(overview?.lastPushAt ?? null)}</small></article>
       </div>
 
@@ -679,6 +696,26 @@ export function BaljuoraSyncAdmin() {
         onSend={pushCategoryTree}
         onChanged={load}
       />
+
+      {/* DB센터 ↔ 발주오라 상품 수 맞춰 보기(2026-11-27 관리자 요청 "발주오라 2,998개인데 DB센터 2,143개 — 왜 안 맞아?") */}
+      <BaljuoraReconcileCard stamp={changes} disabled={Boolean(busy) || jobActive} onChanged={load} />
+
+      {stat && (
+        <BaljuoraStatModal
+          kind={stat}
+          count={stat === "linked" ? changes?.linkedCount ?? 0 : stat === "push" ? counts.push : stat === "new" ? counts.new : counts.only}
+          onClose={() => setStat(null)}
+          onOpenTab={(next) => {
+            chooseTab(next);
+            window.requestAnimationFrame(() => document.querySelector(".bj-list")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+          }}
+          pushItems={lists.push}
+          newItems={includeHidden ? lists.new : lists.newVisible}
+          onlyItems={changes?.baljuoraOnly ?? []}
+          helpers={statHelpers}
+          lastCompareAt={changes?.lastCompareAt ?? overview?.lastCompareAt ?? null}
+        />
+      )}
 
       <section className="admin-card bj-list">
         <div className="bj-tabs" role="tablist" aria-label="변경 종류">

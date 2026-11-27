@@ -1657,7 +1657,7 @@ describe("입금·정산 반영 도우미(입/출금 계좌 조회 화면 버튼
 
 // ─── 판매·매출처 읽기(1.7.0, 2026-11-23 관리자 요청 "1차 개발") ─────────────────
 // 발주오라 주문 목록 화면 공용 코드(GET orders/items, 커서 meta.nextCursor)와 매출처 상세 화면 칸(merchant/sellers)을 흉내 냅니다.
-function createSalesFake(options: { rejectRangeType?: boolean; failOrdersAtCursor?: string } = {}) {
+function createSalesFake(options: { rejectRangeType?: boolean; failOrdersAtCursor?: string; suppliers?: any[] | "fail" } = {}) {
   const sellers: any[] = [
     {
       id: "s-1", merchantId: "m-1", groupId: "grp-1", username: "greenmarket", name: "박담당", phone: "010-1111-2222", email: "green@example.com",
@@ -1694,6 +1694,11 @@ function createSalesFake(options: { rejectRangeType?: boolean; failOrdersAtCurso
     const path = url.pathname.replace(/^\//, "");
     if (method === "GET" && path === "merchant/seller-groups") return jsonResponse(200, { statusCode: 200, data: { items: [GROUP], meta: { nextCursor: null } } });
     if (method === "GET" && path === "merchant/sellers") return jsonResponse(200, { statusCode: 200, data: { items: sellers, meta: { nextCursor: null } } });
+    // 발주오라 매입처 목록(거래처 관리 > 매입처, 1.10.0 주문 동기화)
+    if (method === "GET" && path === "merchant/suppliers") {
+      if (options.suppliers === "fail" || !options.suppliers) return jsonResponse(404, { statusCode: 404, message: "Not Found" });
+      return jsonResponse(200, { statusCode: 200, data: { items: options.suppliers, meta: { page: 1, limit: 100, total: options.suppliers.length, totalPages: 1, hasNext: false } } });
+    }
     if (method === "GET" && path.startsWith("merchant/sellers/")) {
       const detail = sellerDetails[decodeURIComponent(path.slice("merchant/sellers/".length))];
       return detail ? jsonResponse(200, { statusCode: 200, data: detail }) : jsonResponse(404, { statusCode: 404, message: "Not Found" });
@@ -1734,7 +1739,9 @@ describe("판매·매출처 읽기(1.7.0)", () => {
     const fake = createSalesFake();
     const report = createReport();
     const result = await salesRunner(fake).runSales(step, report, { final: true });
-    expect(result).toEqual({ lines: 5, buyers: 2, complete: true, error: null });
+    expect(result).toEqual({ lines: 5, buyers: 2, suppliers: 0, complete: true, error: null });
+    // 매입처는 운영 홈 '주문 동기화'(step.suppliers)일 때만 읽습니다.
+    expect(fake.calls.some((call) => call.url.pathname === "/merchant/suppliers")).toBe(false);
     expect(fake.calls.some((call) => call.method !== "GET" && call.url.origin === "https://api.baljuora.com")).toBe(false);
     // 주문 목록은 주문일 기준 기간으로, 커서를 따라 끝까지
     const orderCalls = fake.calls.filter((call) => call.url.pathname === "/orders/items");
@@ -2052,5 +2059,102 @@ describe("상품 정보 칸 신규 등록(1.9.0)", () => {
     expect(result).toMatchObject({ ok: true, baljuoraId: "bj-n" });
     expect(result.applied.sort()).toEqual(["barcode", "name", "origin", "soldOut", "supplyPrice", "visible"]);
     expect(products["bj-n"]).toMatchObject({ isSoldOut: true, originText: "국내산 경북", barcode: "880999" });
+  });
+});
+
+// ─── 운영 홈 주문 동기화 · 상품 동기화(1.10.0, 2026-11-27) ─────────────────────────
+describe("운영 홈 주문 동기화: 발주오라 매입처 읽기(1.10.0)", () => {
+  const step = { start: "2026-11-01", end: "2026-11-27", buyers: true, knownTax: ["bj-a", "bj-b", "bj-c"], suppliers: true };
+
+  it("매출처 다음에 매입처 목록을 읽어 이름·사업자 정보만 보내고(계좌·비밀번호 없음), 쓰지 않는 매입처는 표시합니다", async () => {
+    const fake = createSalesFake({ suppliers: [
+      { id: "sup-1", companyName: "봄날농원", representativeName: "김농부", businessNumber: "123-45-67890", phone: "010-1234-5678", email: "spring@example.com", address: "경북 청도군", addressDetail: "1번지", status: "ACTIVE", bankAccount: { accountNumber: "111-222" }, password: "secret" },
+      { id: "sup-2", name: "바다수산", isActive: false }
+    ] });
+    const report = createReport();
+    const result = await salesRunner(fake).runSales(step, report, { final: true });
+    expect(result).toMatchObject({ suppliers: 2, complete: true });
+    const sent = report.posted.filter((body) => body.suppliers).flatMap((body) => body.suppliers);
+    expect(sent).toEqual([
+      { id: "sup-1", name: "봄날농원", representativeName: "김농부", businessNumber: "123-45-67890", phone: "010-1234-5678", email: "spring@example.com", address: "경북 청도군 1번지", isActive: true },
+      { id: "sup-2", name: "바다수산", representativeName: null, businessNumber: null, phone: null, email: null, address: null, isActive: false }
+    ]);
+    expect(JSON.stringify(sent)).not.toMatch(/bankAccount|accountNumber|password|secret/);
+    const kinds = report.posted.map((body) => body.buyers ? "buyers" : body.suppliers ? "suppliers" : body.salesLines ? "lines" : body.salesDone ? "done" : "other");
+    expect(kinds).toEqual(["buyers", "suppliers", "lines", "done"]);
+    expect(report.posted[report.posted.length - 1].diagnostics.extra.sales.suppliers).toBe(2);
+  });
+
+  it("매입처 목록을 읽지 못해도 멈추지 않고 까닭을 보낸 뒤 주문을 읽습니다", async () => {
+    const fake = createSalesFake({ suppliers: "fail" });
+    const report = createReport();
+    const result = await salesRunner(fake).runSales(step, report, { final: true });
+    expect(result).toMatchObject({ suppliers: 0, lines: 5, complete: true });
+    expect(report.posted.find((body) => body.supplierError)?.supplierError).toContain("404");
+    expect(report.logs.some((text) => text.includes("매입처 목록을 읽지 못했습니다"))).toBe(true);
+  });
+});
+
+describe("운영 홈 상품 동기화: 읽기가 끝나면 같은 창에서 보내기로 이어 갑니다(1.10.0)", () => {
+  function opsWindow(next: unknown) {
+    const fake = createFake();
+    const posted: Record<string, any[]> = {};
+    const calls: string[] = [];
+    const fetch = async (input: string, init: RequestInit = {}) => {
+      const url = new URL(input);
+      if (url.origin === "https://doogofood.test" && url.pathname.startsWith("/api/baljuora/runner/")) {
+        const [code, action] = url.pathname.slice("/api/baljuora/runner/".length).split("/");
+        calls.push(`${(init.method || "GET").toUpperCase()} ${code}${action ? `/${action}` : ""}`);
+        if (!action) {
+          return jsonResponse(200, { ok: true, data: code === "OPSREAD001"
+            ? { jobId: "job-read", type: "compare", plan: { type: "compare", groupKeyword: "황금농부", detailIds: [], sales: null, ops: "products" } }
+            : { jobId: "job-send", type: "push", plan: { type: "push", groupKeyword: "황금농부", groupId: "grp-1", items: [pushItem({ productId: "p-1", fields: ["supplyPrice"] })], ops: "products", compareJobId: "job-read" } } });
+        }
+        if (action === "progress") return jsonResponse(200, { ok: true, data: { ok: true } });
+        if (action === "results") {
+          (posted[code] ??= []).push(JSON.parse(String(init.body)));
+          return jsonResponse(200, { ok: true, data: { ok: true } });
+        }
+        if (action === "next") return jsonResponse(200, { ok: true, data: next });
+      }
+      return fake.fetch(input, init);
+    };
+    const win: any = {
+      location: { hostname: "console.baljuora.com", origin: "https://console.baljuora.com", pathname: "/doogofood/dashboard", search: "", hash: "#doogo-sync=OPSREAD001" },
+      document,
+      navigator: {},
+      sessionStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined },
+      history: { replaceState: () => undefined },
+      alert: () => undefined,
+      fetch,
+      __doogoSyncOrigin: "https://doogofood.test",
+      __doogoSyncApiBase: "https://api.baljuora.com/"
+    };
+    return { win, fake, posted, calls };
+  }
+
+  it("비교 결과를 보낸 뒤 /next로 받은 보내기 작업 코드로 바로 보냅니다(책갈피를 다시 누르지 않음)", async () => {
+    const { win, fake, posted, calls } = opsWindow({ next: { code: "OPSSEND02", type: "push", total: 1 }, planned: { updates: 1 }, message: null });
+    await internals.main(win);
+    expect(calls.filter((call) => !call.endsWith("/progress"))).toEqual(expect.arrayContaining(["GET OPSREAD001", "POST OPSREAD001/results", "POST OPSREAD001/next", "GET OPSSEND02", "POST OPSSEND02/results"]));
+    expect(calls.indexOf("POST OPSREAD001/next")).toBeLessThan(calls.indexOf("GET OPSSEND02"));
+    // 읽기 결과는 비교 작업에, 보내기 결과는 보내기 작업에
+    expect(posted.OPSREAD001.some((body) => Array.isArray(body.snapshots) && body.snapshots.length > 0)).toBe(true);
+    expect(posted.OPSREAD001.some((body) => body.final === true)).toBe(true);
+    const sent = posted.OPSSEND02.flatMap((body) => Array.isArray(body.items) ? body.items : []);
+    expect(sent).toEqual([expect.objectContaining({ productId: "p-1", ok: true, applied: ["supplyPrice"] })]);
+    expect(posted.OPSSEND02.some((body) => body.final === true)).toBe(true);
+    expect(fake.products["bj-a"].supplyPrice).toBe(27000);
+    expect(document.getElementById("doogo-sync-panel")?.textContent).toContain("성공 1개");
+  });
+
+  it("보낼 변경이 없으면 보내지 않고 그 안내로 끝냅니다", async () => {
+    const { win, fake, posted, calls } = opsWindow({ next: null, planned: { updates: 0 }, message: "보낼 변경이 없어요. DB센터 상품과 발주오라 상품이 같습니다." });
+    await internals.main(win);
+    expect(calls).toContain("POST OPSREAD001/next");
+    expect(calls.some((call) => call.startsWith("GET OPSSEND"))).toBe(false);
+    expect(posted.OPSSEND02).toBeUndefined();
+    expect(fake.calls.some((call) => call.method === "PUT")).toBe(false);
+    expect(document.getElementById("doogo-sync-panel")?.textContent).toContain("보낼 변경이 없어요");
   });
 });

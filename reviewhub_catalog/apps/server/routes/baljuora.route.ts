@@ -15,12 +15,14 @@ import {
   getBaljuoraJob,
   getBaljuoraOverview,
   getBaljuoraProductPrices,
+  getBaljuoraReconcile,
   getRunnerImage,
   ignoreBaljuoraDifferences,
   importBaljuoraSubcategories,
   ingestRunnerResults,
   linkSameNameProducts,
   listBaljuoraChanges,
+  listLinkedProducts,
   listBaljuoraJobs,
   pullFromBaljuora,
   recordRunnerProgress,
@@ -48,6 +50,7 @@ import { getSupplierInvoice, saveSupplierBankAccount } from "../services/supplie
 import { buildSupplierInvoicePdf, buildSupplierInvoiceXlsx } from "../services/supplier-invoice-files";
 import { catalogRevisionMiddleware } from "../services/catalog-version";
 import { applyDailySync, getDailySyncStatus } from "../services/baljuora-daily";
+import { continueProductSyncFromAdmin, getOpsSyncStatus, previewProductSync, runnerNextJob, startOrderSync, startProductSync } from "../services/baljuora-ops-sync";
 
 export const baljuoraRouter = new Hono();
 // 관리자 저장·책갈피 결과가 성공하면 공개 단가표 "바뀜 표시"를 새로 적습니다(services/catalog-version.ts).
@@ -84,6 +87,24 @@ baljuoraRouter.get("/admin/changes", adminRoute, async (c) => {
 });
 
 // 상품 수정 창: 마지막 비교·동기화 때 읽은 발주오라 가격(공급가·황금농부 그룹 공급가·매입원가)
+// 동기화 화면 'DB센터 ↔ 발주오라 상품 수 맞춰 보기'(2026-11-27): 양쪽 전체·판매중·품절·노출 수와 차이 원인(마지막 비교 기준)
+baljuoraRouter.get("/admin/reconcile", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess(await getBaljuoraReconcile()));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 동기화 화면 '연결된 상품' 카드 팝업(2026-11-27): 연결된 상품을 20개씩(검색·다른 칸 있음/같음 거르기)
+baljuoraRouter.get("/admin/linked", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess(await listLinkedProducts({ page: Number(c.req.query("page") || 1), size: Number(c.req.query("size") || 20), q: c.req.query("q") ?? null, filter: c.req.query("filter") ?? null })));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
 baljuoraRouter.get("/admin/products/:productId", adminRoute, async (c) => {
   const productId = c.req.param("productId").trim();
   if (!productId || productId.length > 120) return c.json(apiFailure("INVALID_INPUT", "상품 id를 확인해 주세요."), 400);
@@ -173,6 +194,54 @@ baljuoraRouter.post("/admin/daily/apply", adminRoute, async (c) => {
   }
 });
 
+// 운영 홈 동기화 버튼 2개(2026-11-27): 상태(버튼 밑 마지막 동기화·진행·최근 7일 주문 현황) · 주문 동기화 시작 ·
+// 상품 동기화 미리보기(보낼 것 수)·시작(비교 → 책갈피가 이어서 보내기)·이어서 보내기(책갈피가 이어 가지 못했을 때)
+baljuoraRouter.get("/admin/ops-sync", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess(await getOpsSyncStatus()));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+baljuoraRouter.post("/admin/ops-sync/orders/start", adminRoute, async (c) => {
+  try {
+    const user = c.var.currentUser;
+    return c.json(apiSuccess(await startOrderSync(user?.username || user?.email || null)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+baljuoraRouter.get("/admin/ops-sync/products/preview", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess(await previewProductSync()));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+const ProductSyncOptionsSchema = z.object({ updates: z.boolean(), creates: z.boolean(), hides: z.boolean(), categories: z.boolean() }).partial();
+
+baljuoraRouter.post("/admin/ops-sync/products/start", adminRoute, async (c) => {
+  const parsed = z.object({ options: ProductSyncOptionsSchema.optional() }).safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "보낼 것을 확인해 주세요."), 400);
+  try {
+    const user = c.var.currentUser;
+    return c.json(apiSuccess(await startProductSync(parsed.data.options ?? null, user?.username || user?.email || null)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+baljuoraRouter.post("/admin/ops-sync/products/continue", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess(await continueProductSyncFromAdmin()));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
 baljuoraRouter.get("/admin/jobs", adminRoute, async (c) => {
   try {
     return c.json(apiSuccess({ jobs: await listBaljuoraJobs(Number(c.req.query("limit") || 15)) }));
@@ -213,7 +282,9 @@ baljuoraRouter.post("/admin/pull", adminRoute, async (c) => {
     baljuoraIds: z.array(z.string().trim().min(1).max(80)).max(500).optional(),
     fields: z.array(FieldSchema).max(BALJUORA_SYNC_FIELDS.length).optional(),
     // '가져올 변경' 탭: 발주오라에서 바뀐 칸만. 없으면 '발주오라 기준 맞추기'(다른 칸 전부, fields로 고름)
-    onlyPulled: z.boolean().optional()
+    onlyPulled: z.boolean().optional(),
+    // '상품 수 맞춰 보기'에서 발주오라에만 있는 상품을 한꺼번에 가져올 때: 진열순서 맨 뒤로
+    placeAtEnd: z.boolean().optional()
   }).refine((value) => (value.productIds?.length ?? 0) + (value.baljuoraIds?.length ?? 0) > 0)
     .safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "가져올 상품을 골라 주세요."), 400);
@@ -558,8 +629,22 @@ baljuoraRouter.post("/runner/:code/results", publicRoute, async (c) => {
       salesLines: Array.isArray(body.salesLines) ? body.salesLines : undefined,
       buyers: Array.isArray(body.buyers) ? body.buyers : undefined,
       productTax: body.productTax && typeof body.productTax === "object" && !Array.isArray(body.productTax) ? body.productTax : undefined,
-      salesDone: body.salesDone && typeof body.salesDone === "object" ? body.salesDone as { complete?: unknown; error?: unknown } : undefined
+      salesDone: body.salesDone && typeof body.salesDone === "object" ? body.salesDone as { complete?: unknown; error?: unknown } : undefined,
+      // 발주오라 매입처(1.10.0, 주문 동기화 — 서비스에서 칸을 정리함)와 읽지 못한 까닭
+      suppliers: Array.isArray(body.suppliers) ? body.suppliers : undefined,
+      supplierError: typeof body.supplierError === "string" ? body.supplierError : null
     })));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 운영 홈 상품 동기화(2026-11-27): 비교를 마친 책갈피가 같은 창에서 이어서 실행할 보내기 작업 코드를 받습니다(비교 작업 코드로만, 끝난 지 30분 안).
+baljuoraRouter.post("/runner/:code/next", publicRoute, async (c) => {
+  const code = CodeSchema.safeParse(c.req.param("code"));
+  if (!code.success) return c.json(apiFailure("INVALID_INPUT", "작업 코드를 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess(await runnerNextJob(code.data)));
   } catch (error) {
     return errorResponse(c, error);
   }

@@ -212,7 +212,8 @@ describe("발주오라 동기화 API", () => {
     // 관리자가 DB센터에서 가격·카테고리를 바꾸면 "DB센터에서 바뀜"으로 보입니다.
     await executeSql("UPDATE products SET generalPrice = 27000 WHERE id = 'bj-test-1'");
     changes = await json<Changes>(await fetchWithAuth(app, admin, "/api/baljuora/admin/changes"));
-    expect(changes.data.items.find((item) => item.productId === "bj-test-1")?.diffs).toEqual([{ field: "supplyPrice", doogo: 27000, baljuora: 26000, direction: "push" }]);
+    // base = 마지막으로 맞춘 값(기준): 그때는 양쪽 26,000원 → DB센터만 27,000원으로 바뀜('보낼 변경' 상세 팝업, 2026-11-27)
+    expect(changes.data.items.find((item) => item.productId === "bj-test-1")?.diffs).toEqual([{ field: "supplyPrice", doogo: 27000, baljuora: 26000, direction: "push", base: { doogo: 26000, baljuora: 26000 } }]);
 
     // 동기화 작업: 수정 1개 + 신규 1개(같은 매입처의 연결 상품에서 설정을 복사)
     const push = await json<{ job: { id: string; total: number }; code: string }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "push", productIds: ["bj-test-1", "bj-test-3"] }) }));

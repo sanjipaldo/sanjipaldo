@@ -57,7 +57,7 @@ import {
 } from "@repo/shared/baljuora-sync";
 import { DatabaseError, getDb } from "../_core/db";
 import { baljuoraSalesLines, baljuoraSyncJobs, baljuoraSyncStore, categories, externalProductLinks, products, shippingPolicies, subcategories, type BaljuoraSyncJob } from "../db/schema";
-import { finalizeSalesSync, ingestBuyers, ingestProductTax, ingestSalesLines, isMissingSalesTable, knownTaxProductIds, salesRangeFor } from "./baljuora-sales";
+import { addSuppliersFromSalesLines, finalizeSalesSync, ingestBaljuoraSuppliers, ingestBuyers, ingestProductTax, ingestSalesLines, isMissingSalesTable, knownTaxProductIds, orderSyncFacts, salesRangeFor } from "./baljuora-sales";
 import { asProductInput } from "./catalog-excel";
 import { createCategory, createProduct, createShippingPolicy, createSubcategory, getAdminCatalog, restoreDeletedProduct, updateProduct } from "./catalog";
 import { emptyProductExtras, type ProductExtras } from "@repo/shared/product-extras";
@@ -144,13 +144,20 @@ export type PushPlanItem = {
     extra?: BaljuoraPushExtra;
     expected?: Partial<Record<BaljuoraExtraField, string | number | null>>;
   };
+  // DB센터에서 지운 상품의 발주오라 상품을 미노출·품절로 바꾸기(운영 홈 상품 동기화, 2026-11-27): productId = 지운 DB센터 상품 id.
+  // 연결 기록은 만들지 않고(지운 상품과 잇지 않음) '발주오라에만 있음' 목록의 발주오라 상태만 새 값으로 바꿉니다.
+  hide?: boolean;
 };
 
 // 판매·매출처 읽기(책갈피): start~end(주문일, 한국 날짜) 주문 상품 줄 + 매출처 회원. knownTax = 과세 여부를 이미 아는 발주오라 상품 id.
-export type SalesStep = { start: string; end: string; buyers: boolean; knownTax: string[] };
+// suppliers = 발주오라 매입처 목록도 읽어 DB센터 공급사 관리에 없는 곳을 등록(운영 홈 '주문 동기화'만, 2026-11-27).
+export type SalesStep = { start: string; end: string; buyers: boolean; knownTax: string[]; suppliers?: boolean };
+// 운영 홈 동기화 버튼(2026-11-27): orders = 주문 동기화(발주오라 → DB센터 주문·매출처·매입처), products = 상품 동기화(비교 → DB센터 변경 보내기)
+export type OpsSyncKind = "orders" | "products";
 // daily: 운영 홈 '발주오라 → DB센터 동기화'(아침 동기화, 2026-11-26) — 판매·매출처를 늘 함께 읽고, 끝나면 운영 홈이 발주오라 변경을 DB센터에 반영합니다.
-export type ComparePlan = { type: "compare"; groupKeyword: string; detailIds: string[]; sales?: SalesStep | null; daily?: boolean };
-export type SalesPlan = { type: "sales" } & SalesStep;
+// ops "products": 운영 홈 '상품 동기화' — 비교가 끝나면 책갈피가 같은 창에서 DB센터 변경 보내기 작업으로 이어 갑니다(/runner/:code/next).
+export type ComparePlan = { type: "compare"; groupKeyword: string; detailIds: string[]; sales?: SalesStep | null; daily?: boolean; ops?: "products" };
+export type SalesPlan = { type: "sales"; ops?: "orders" } & SalesStep;
 export type PushPlan = {
   type: "push";
   groupKeyword: string;
@@ -160,6 +167,9 @@ export type PushPlan = {
   categoryTree?: { ops: CategoryTreeOp[]; excludeNames: string[] } | null;
   // 상품 카테고리를 보낼 때 그대로 둘 발주오라 1차 카테고리 이름(브랜드별 아래 카테고리는 지우지 않음)
   categoryExclude?: string[];
+  // 운영 홈 '상품 동기화'가 만든 보내기 작업(compareJobId = 바로 앞 비교 작업)
+  ops?: "products";
+  compareJobId?: string;
 };
 export type BaljuoraPlan = ComparePlan | PushPlan | SalesPlan;
 
@@ -190,6 +200,9 @@ export type RunnerResultInput = {
   buyers?: unknown[];
   productTax?: unknown;
   salesDone?: { complete?: unknown; error?: unknown } | null;
+  // 발주오라 매입처(1.10.0, 주문 동기화): 목록 · 읽지 못했으면 그 까닭
+  suppliers?: unknown[];
+  supplierError?: string | null;
 };
 
 export type CategoryTreeResult = {
@@ -199,15 +212,27 @@ export type CategoryTreeResult = {
   error: string | null;
 };
 
+// 주문 동기화의 발주오라 매입처: read = 매입처 목록에서 읽은 수, added = DB센터 공급사 관리에 새로 등록한 수(names = 그 이름 앞 30개),
+// fromLines = 주문 줄에서 본 매입처 이름 수(목록을 못 읽어도 주문 줄의 매입처는 등록), error = 목록을 읽지 못한 까닭
+export type SupplierSyncResult = { read: number; added: number; names: string[]; fromLines: number; error: string | null };
+
+// 한국 날짜(YYYY-MM-DD)
+function seoulToday() {
+  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+}
+
 type JobResults = {
-  items: Array<RunnerItemResult & { name?: string }>;
+  items: Array<RunnerItemResult & { name?: string; hide?: boolean }>;
   linked: number;
   unmatched: BaljuoraProductSnapshot[];
   received: number;
   bundles?: number;
   categoryTree?: CategoryTreeResult;
-  sales?: { lines: number; buyers: number; taxRead: number; done: boolean; complete: boolean; error: string | null };
+  sales?: { lines: number; buyers: number; taxRead: number; done: boolean; complete: boolean; error: string | null; suppliers?: SupplierSyncResult };
+  // 비교 때 읽은 발주오라 상품 수(묶음 제외): 전체 · 판매중 · 품절 · 노출 · 미노출 · 미노출이면서 품절(2026-11-27)
+  states?: BaljuoraStateCounts;
 };
+export type BaljuoraStateCounts = { total: number; selling: number; soldOut: number; visible: number; hidden: number; hiddenSoldOut: number };
 
 function nowIso() {
   return new Date().toISOString();
@@ -560,9 +585,9 @@ async function loadCategoryTree(settings: BaljuoraSettings) {
 // ─── 작업 만들기 ────────────────────────────────────────────────────────────────
 
 export type CreateJobInput =
-  | { type: "compare"; sales?: boolean; daily?: boolean }
-  | { type: "push"; productIds: string[]; fieldsByProduct?: Record<string, BaljuoraSyncField[]>; categoryTree?: boolean }
-  | { type: "sales"; months?: number };
+  | { type: "compare"; sales?: boolean; daily?: boolean; ops?: "products" }
+  | { type: "push"; productIds: string[]; fieldsByProduct?: Record<string, BaljuoraSyncField[]>; categoryTree?: boolean; skipCategoryTree?: boolean; hideBaljuoraIds?: string[]; ops?: "products"; compareJobId?: string }
+  | { type: "sales"; months?: number; ops?: "orders" };
 
 // 판매·매출처 읽기 범위(이번 달 포함 최근 N개월). 판매 표(036)가 없으면(운영 배포 전) 판매는 빼고 null.
 async function buildSalesStep(months: number): Promise<SalesStep | null> {
@@ -585,20 +610,21 @@ async function salesTablesReady() {
   }
 }
 
-async function buildComparePlan(settings: BaljuoraSettings, withSales: boolean, daily = false): Promise<ComparePlan> {
+async function buildComparePlan(settings: BaljuoraSettings, withSales: boolean, daily = false, ops?: "products"): Promise<ComparePlan> {
   const [links, productRows] = await Promise.all([loadLinks(), getDb().select({ id: products.id }).from(products).where(sql`${products.deletedAt} IS NULL`)]);
   const ids = new Set(links.map((link) => link.externalProductId));
   // 예전에 발주오라 엑셀로 가져온 상품은 DB센터 id가 "baljuora-<발주오라 상품 id>"입니다.
   for (const row of productRows) if (row.id.startsWith("baljuora-")) ids.add(row.id.slice("baljuora-".length));
   const sales = withSales && await salesTablesReady() ? await buildSalesStep(settings.salesMonths) : null;
-  return { type: "compare", groupKeyword: settings.groupKeyword, detailIds: [...ids].slice(0, 6000), sales, ...(daily ? { daily: true } : {}) };
+  return { type: "compare", groupKeyword: settings.groupKeyword, detailIds: [...ids].slice(0, 6000), sales, ...(daily ? { daily: true } : {}), ...(ops ? { ops } : {}) };
 }
 
-async function buildSalesPlan(settings: BaljuoraSettings, months: number | undefined): Promise<SalesPlan> {
+async function buildSalesPlan(settings: BaljuoraSettings, months: number | undefined, ops?: "orders"): Promise<SalesPlan> {
   if (!await salesTablesReady()) throw new DatabaseError("DATABASE_QUERY_FAILED", "DB 업데이트(036 판매·매출처 표)가 아직 적용되지 않았습니다. 운영 배포 후 사용할 수 있어요.", 503);
   const step = await buildSalesStep(months ?? settings.salesMonths);
   if (!step) throw new DatabaseError("DATABASE_QUERY_FAILED", "판매 기간을 만들지 못했습니다.", 500);
-  return { type: "sales", ...step };
+  // 주문 동기화는 발주오라 매입처 목록도 읽어 DB센터 공급사 관리에 없는 곳을 등록합니다.
+  return ops === "orders" ? { type: "sales", ...step, suppliers: true, ops } : { type: "sales", ...step };
 }
 
 // 신규 등록 때 매입처·배송정책을 복사할 발주오라 상품: 같은 매입처(DB센터 매입처명)로 연결된 상품 → 설정 복사용 상품코드.
@@ -618,7 +644,7 @@ function pickTemplate(product: ProductRow, productRows: ProductRow[], linkByProd
   return fallback ? { id: fallback, match: "fallback" } : { id: null, match: null };
 }
 
-export async function buildPushPlan(input: { productIds: string[]; fieldsByProduct?: Record<string, BaljuoraSyncField[]>; categoryTree?: boolean }, base: BaljuoraSettings): Promise<PushPlan> {
+export async function buildPushPlan(input: { productIds: string[]; fieldsByProduct?: Record<string, BaljuoraSyncField[]>; categoryTree?: boolean; skipCategoryTree?: boolean; hideBaljuoraIds?: string[]; ops?: "products"; compareJobId?: string }, base: BaljuoraSettings): Promise<PushPlan> {
   // 카테고리 트리 맞추기: 이름이 같은 카테고리는 새로 만들지 않고 연결만 저장하고, 추가·이름 바꾸기는 상품보다 먼저 보냅니다
   // (DB센터에서 카테고리를 추가·이름을 바꾼 뒤 동기화 버튼을 누르면 발주오라 상품 카테고리도 같이 바뀜).
   const tree = await loadCategoryTree(base);
@@ -719,16 +745,60 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
       }
     });
   }
+  // 운영 홈 '상품 동기화'(2026-11-27 관리자 요청 "DB 제품이 삭제되었어 → 동기화 누르면 다 변경"): DB센터에서 지운 상품과 상품코드가 같은
+  // '발주오라에만 있음' 상품을 발주오라에서 미노출·품절로 바꿉니다(발주오라 상품은 지우지 않음 — 주문 기록이 있고 되돌릴 수 없어서).
+  // 이미 미노출·품절이면 넣지 않습니다. DB센터에서 그 상품을 되살리면 다음 동기화부터 DB센터 값(노출·판매 상태)을 다시 보냅니다.
+  if (input.hideBaljuoraIds && input.hideBaljuoraIds.length > 0) {
+    const wantedHide = new Set(input.hideBaljuoraIds.slice(0, 2000));
+    const [onlyList, deletedRows] = await Promise.all([readStore<BaljuoraProductSnapshot[]>(STORE_ONLY, []), loadDeletedProducts()]);
+    const deletedByCode = deletedByCodeMap(deletedRows);
+    const linkedExternal = activeLinkedExternalIds(productRows, links);
+    for (const snapshot of Array.isArray(onlyList) ? onlyList : []) {
+      if (!wantedHide.has(snapshot.id) || linkedExternal.has(snapshot.id) || !snapshot.code) continue;
+      const deleted = deletedByCode.get(snapshot.code.trim().toUpperCase());
+      if (!deleted) continue;
+      const fields: BaljuoraSyncField[] = [];
+      if (snapshot.isVisible !== false) fields.push("visible");
+      if (snapshot.isSoldOut !== true) fields.push("soldOut");
+      if (fields.length === 0) continue;
+      items.push({
+        productId: deleted.id,
+        action: "update",
+        baljuoraId: snapshot.id,
+        templateId: null,
+        templateMatch: null,
+        code: snapshot.code,
+        name: snapshot.name,
+        supplierName: null,
+        fields,
+        hide: true,
+        values: {
+          name: snapshot.name,
+          supplyPrice: Number(snapshot.supplyPrice ?? 0),
+          groupPrice: Number(snapshot.groupPrice ?? snapshot.supplyPrice ?? 0),
+          consumerPrice: snapshot.consumerPrice ?? null,
+          purchaseCost: snapshot.purchaseCost ?? null,
+          categoryId: null,
+          imageUrl: null,
+          isTaxable: snapshot.isTaxable === true,
+          baljuoraShippingPolicyId: null,
+          extra: { isVisible: false, isSoldOut: true },
+          expected: { visible: 0, soldOut: 1 }
+        }
+      });
+    }
+  }
   // 카테고리 맞추기는 보낼 상품이 있을 때(동기화 버튼) 또는 '발주오라 카테고리에 보내기'로 따로 보낼 때만 넣습니다
   // (보낼 상품이 없는 동기화가 카테고리만 보내는 작업으로 바뀌지 않게).
-  const categoryTree = treeOps && (input.categoryTree || items.length > 0) ? treeOps : null;
+  // skipCategoryTree: 운영 홈 상품 동기화에서 '카테고리'를 빼고 보낼 때
+  const categoryTree = treeOps && !input.skipCategoryTree && (input.categoryTree || items.length > 0) ? treeOps : null;
   if (items.length === 0 && unmappedShippingOnly > 0 && !categoryTree) {
     throw new DatabaseError("DATABASE_QUERY_FAILED", "고른 상품은 배송비 정책만 다른데, 그 DB센터 배송 정책과 연결한 발주오라 매출배송정책이 없어 보낼 수 없습니다. 동기화 설정 > 배송비 정책 맞추기에서 연결한 뒤 다시 보내 주세요.", 400);
   }
   if (input.categoryTree && !categoryTree) {
     throw new DatabaseError("DATABASE_QUERY_FAILED", tree.ready ? "발주오라 상품 카테고리가 DB센터 카테고리와 이미 같습니다(브랜드별 제외)." : "발주오라 카테고리를 아직 읽지 않았습니다. '발주오라 상품 불러오기(비교)'를 먼저 해 주세요.", 400);
   }
-  return { type: "push", groupKeyword: settings.groupKeyword, groupId: group?.id ?? null, items, categoryTree, categoryExclude: settings.categoryTreeExclude };
+  return { type: "push", groupKeyword: settings.groupKeyword, groupId: group?.id ?? null, items, categoryTree, categoryExclude: settings.categoryTreeExclude, ...(input.ops ? { ops: input.ops } : {}), ...(input.compareJobId ? { compareJobId: input.compareJobId } : {}) };
 }
 
 export async function createBaljuoraJob(input: CreateJobInput, createdBy: string | null) {
@@ -737,10 +807,11 @@ export async function createBaljuoraJob(input: CreateJobInput, createdBy: string
     const settings = await getBaljuoraSettings();
     await expireStaleJobs();
     // 아침 동기화(daily)는 판매·주문·매출처를 늘 함께 읽습니다(설정에서 꺼 두었어도).
+    // 운영 홈 '상품 동기화'(ops products)의 비교는 상품만 읽습니다(주문·매출처는 '주문 동기화').
     const plan: BaljuoraPlan = input.type === "compare"
-      ? await buildComparePlan(settings, input.daily ? true : input.sales ?? settings.salesOnCompare, Boolean(input.daily))
+      ? await buildComparePlan(settings, input.ops === "products" ? false : input.daily ? true : input.sales ?? settings.salesOnCompare, Boolean(input.daily), input.ops)
       : input.type === "sales"
-        ? await buildSalesPlan(settings, input.months)
+        ? await buildSalesPlan(settings, input.months, input.ops)
         : await buildPushPlan(input, settings);
     if (plan.type === "push" && plan.items.length === 0 && !plan.categoryTree) {
       throw new DatabaseError("DATABASE_QUERY_FAILED", "보낼 변경이 없습니다. 이미 발주오라와 같거나, 고른 상품에 바뀐 칸이 없습니다.", 400);
@@ -761,7 +832,15 @@ export async function createBaljuoraJob(input: CreateJobInput, createdBy: string
       createdAt: nowIso(),
       expiresAt: new Date(Date.now() + BALJUORA_JOB_TTL_MINUTES * 60_000).toISOString()
     }).returning();
-    return { job: jobView(rows[0]), code, consoleUrl: consoleUrlFor(settings.merchantSlug, code) };
+    // 보내기 작업이면 무엇을 보내는지 수(운영 홈 상품 동기화 요약): 신규 등록 · 수정 · 지운 상품 미노출 · 카테고리 맞추기
+    const counts = plan.type === "push" ? {
+      items: plan.items.length,
+      creates: plan.items.filter((item) => item.action === "create").length,
+      hides: plan.items.filter((item) => item.hide).length,
+      updates: plan.items.filter((item) => item.action === "update" && !item.hide).length,
+      categories: plan.categoryTree?.ops.length ?? 0
+    } : null;
+    return { job: jobView(rows[0]), code, consoleUrl: consoleUrlFor(settings.merchantSlug, code), counts };
   });
 }
 
@@ -814,6 +893,14 @@ export async function listBaljuoraJobs(limit = 15) {
   });
 }
 
+// 운영 홈 상품 동기화(2026-11-27): 카테고리 트리 맞추기에서 지금 보낼 것(추가·이름 바꾸기)과 보내지 못하는 까닭
+export async function loadCategoryTreeSummary() {
+  return guard(async () => {
+    const tree = await loadCategoryTree(await getBaljuoraSettings());
+    return { ready: tree.ready, ops: tree.plan.ops, notes: tree.plan.notes };
+  });
+}
+
 // ─── 책갈피 스크립트(발주오라 창)용 ──────────────────────────────────────────────
 
 // 책갈피 요청마다 부르므로 작은 칸만 읽습니다(plan은 jobPlan, 결과를 받을 때만 results·diagnostics를 함께).
@@ -860,6 +947,14 @@ export async function startRunnerJob(code: string) {
         .where(eq(baljuoraSyncJobs.id, row.id));
     }
     return { jobId: row.id, type: row.type, expiresAt: row.expiresAt, plan };
+  });
+}
+
+// 운영 홈 상품 동기화(2026-11-27): 책갈피가 비교를 마친 뒤 같은 작업 코드로 다음 작업(DB센터 변경 보내기)을 받을 때 씁니다(끝난 작업도 읽음).
+export async function runnerJobByCode(code: string) {
+  return guard(async () => {
+    const row = await findJobByCode(code);
+    return { row, plan: await jobPlan(row.id) };
   });
 }
 
@@ -1031,12 +1126,20 @@ async function ingestCompareBatch(snapshots: BaljuoraProductSnapshot[], results:
   const usedCodes = new Set<string>();
   const now = nowIso();
   const upserts: Array<typeof externalProductLinks.$inferInsert> = [];
+  const states = results.states ?? { total: 0, selling: 0, soldOut: 0, visible: 0, hidden: 0, hiddenSoldOut: 0 };
   for (const snapshot of snapshots) {
     results.received += 1;
     if (snapshot.kind === "bundle") {
       results.bundles = (results.bundles ?? 0) + 1;
       continue;
     }
+    // 발주오라 상품 리스트와 같은 기준으로 셉니다(판매중·품절 · 노출·미노출 · 미노출이면서 품절) — 'DB센터 ↔ 발주오라 상품 수 맞춰 보기'
+    states.total += 1;
+    if (snapshot.isSoldOut === true) states.soldOut += 1;
+    else if (snapshot.isSoldOut === false) states.selling += 1;
+    if (snapshot.isVisible === true) states.visible += 1;
+    else if (snapshot.isVisible === false) states.hidden += 1;
+    if (snapshot.isVisible === false && snapshot.isSoldOut === true) states.hiddenSoldOut += 1;
     const product = (snapshot.code ? byCode.get(snapshot.code.toUpperCase()) : undefined) ?? byId.get(`baljuora-${snapshot.id}`);
     if (!product || usedProducts.has(product.id)) {
       results.unmatched.push(snapshot);
@@ -1077,6 +1180,7 @@ async function ingestCompareBatch(snapshots: BaljuoraProductSnapshot[], results:
   await removeConflictingLinks(upserts.map((link) => ({ externalProductId: link.externalProductId, externalProductCode: link.externalProductCode, productId: link.productId })));
   await upsertLinks(upserts);
   results.linked += upserts.length;
+  results.states = states;
 }
 
 // 책갈피가 보낸 카테고리 트리 맞추기 결과: 발주오라에 새로 만든 카테고리 id를 DB센터 카테고리·2차 카테고리 연결에 적고,
@@ -1124,6 +1228,8 @@ async function ingestPushItems(plan: PushPlan, items: RunnerItemResult[], result
   const linkByProduct = new Map(links.map((link) => [link.productId, link]));
   const now = nowIso();
   const upserts: Array<typeof externalProductLinks.$inferInsert> = [];
+  // 미노출·품절로 바꾼 '발주오라에만 있음' 상품(발주오라 상품 id → 다시 읽은 상태)
+  const hidden = new Map<string, { isVisible: boolean | null; isSoldOut: boolean | null }>();
   for (const item of items) {
     const planned = planById.get(item.productId);
     if (!planned) continue;
@@ -1137,10 +1243,38 @@ async function ingestPushItems(plan: PushPlan, items: RunnerItemResult[], result
       applied: Array.isArray(item.applied) ? item.applied.filter((field) => BALJUORA_SYNC_FIELDS.includes(field)) : [],
       skipped: Array.isArray(item.skipped) ? item.skipped.filter((entry) => entry && BALJUORA_SYNC_FIELDS.includes(entry.field)).map((entry) => ({ field: entry.field, reason: collapseName(String(entry.reason)).slice(0, 300) })).slice(0, 10) : [],
       error: item.error ? collapseName(String(item.error)).slice(0, 600) : null,
-      name: planned.name
+      name: planned.name,
+      ...(planned.hide ? { hide: true } : {})
     };
     results.items = results.items.filter((existing) => existing.productId !== record.productId);
     results.items.push(record);
+    if (planned.hide) {
+      // 지운 상품의 발주오라 상품 미노출·품절(연결 기록은 만들지 않음): 다시 읽은 발주오라 상태로 확인하고 '발주오라에만 있음' 목록의 상태를 바꿉니다.
+      const after = sanitizeSnapshot(item.snapshot);
+      if (after) {
+        const saved = baljuoraComparable(after);
+        const expected = planned.values.expected ?? {};
+        for (const field of [...record.applied]) {
+          if (!isExtraField(field)) continue;
+          const want = expected[field];
+          const got = saved[field];
+          if (want === undefined || got === undefined || want === got) continue;
+          record.applied = record.applied.filter((entry) => entry !== field);
+          record.skipped.push({ field, reason: `발주오라 ${field === "visible" ? "도매몰 노출" : "판매 상태(품절)"}가 바뀌지 않았습니다(저장 뒤 다시 읽은 값 기준).` });
+        }
+        if (record.applied.length === 0) {
+          record.ok = false;
+          record.error = record.error ?? (record.skipped.map((entry) => entry.reason).join(" / ").slice(0, 600) || "발주오라 상태가 바뀌지 않았습니다.");
+        }
+      }
+      if (record.ok && record.baljuoraId) {
+        hidden.set(record.baljuoraId, {
+          isVisible: after ? after.isVisible : record.applied.includes("visible") ? false : null,
+          isSoldOut: after ? after.isSoldOut : record.applied.includes("soldOut") ? true : null
+        });
+      }
+      continue;
+    }
     const link = linkByProduct.get(item.productId);
     if (!record.ok || !record.baljuoraId || !product) {
       if (link) await db.update(externalProductLinks).set({ syncStatus: "failed", updatedAt: now }).where(eq(externalProductLinks.id, link.id));
@@ -1212,6 +1346,15 @@ async function ingestPushItems(plan: PushPlan, items: RunnerItemResult[], result
   }
   await removeConflictingLinks(upserts.map((link) => ({ externalProductId: link.externalProductId, externalProductCode: link.externalProductCode, productId: link.productId })));
   await upsertLinks(upserts);
+  if (hidden.size > 0) {
+    const onlyList = await readStore<BaljuoraProductSnapshot[]>(STORE_ONLY, []);
+    if (Array.isArray(onlyList)) {
+      await writeStore(STORE_ONLY, onlyList.map((snapshot) => {
+        const state = hidden.get(snapshot.id);
+        return state ? { ...snapshot, isVisible: state.isVisible ?? snapshot.isVisible, isSoldOut: state.isSoldOut ?? snapshot.isSoldOut } : snapshot;
+      }));
+    }
+  }
 }
 
 function runSummaryLog(plan: BaljuoraPlan, results: JobResults, diagnostics: Record<string, unknown>, startedAt: string | null, status: string | null) {
@@ -1297,6 +1440,19 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
       const sales = results.sales ?? { lines: 0, buyers: 0, taxRead: 0, done: false, complete: false, error: null };
       if (input.productTax !== undefined) sales.taxRead += await ingestProductTax(input.productTax);
       if (Array.isArray(input.buyers) && input.buyers.length > 0) sales.buyers += await ingestBuyers(input.buyers);
+      // 주문 동기화: 발주오라 매입처 목록 → DB센터 공급사 관리에 없는 곳만 새로 등록(있는 공급사는 바꾸지 않음)
+      const supplierMemo = `발주오라 매입처에서 가져옴(주문 동기화 ${seoulToday()})`;
+      if (salesStep.suppliers) {
+        const supplierState: SupplierSyncResult = sales.suppliers ?? { read: 0, added: 0, names: [], fromLines: 0, error: null };
+        if (Array.isArray(input.suppliers) && input.suppliers.length > 0) {
+          const got = await ingestBaljuoraSuppliers(input.suppliers, supplierMemo);
+          supplierState.read += got.read;
+          supplierState.added += got.added.length;
+          supplierState.names = [...supplierState.names, ...got.added].slice(0, 30);
+        }
+        if (typeof input.supplierError === "string" && input.supplierError.trim()) supplierState.error = collapseName(input.supplierError).slice(0, 300);
+        sales.suppliers = supplierState;
+      }
       if (Array.isArray(input.salesLines) && input.salesLines.length > 0) sales.lines += await ingestSalesLines(row.id, input.salesLines);
       const finishing = Boolean(input.salesDone) || (Boolean(input.final) && (sales.lines > 0 || sales.buyers > 0));
       if (finishing && !sales.done) {
@@ -1304,6 +1460,13 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
         sales.complete = Boolean(input.salesDone && input.salesDone.complete === true);
         const reason = input.salesDone && typeof input.salesDone.error === "string" ? input.salesDone.error : !input.salesDone && input.error ? String(input.error) : null;
         sales.error = reason ? collapseName(reason).slice(0, 400) : null;
+        // 매입처 목록을 못 읽었어도 이번에 읽은 주문 줄의 매입처는 빠지지 않게 등록합니다.
+        if (salesStep.suppliers && sales.suppliers) {
+          const fromLines = await addSuppliersFromSalesLines(row.id, supplierMemo);
+          sales.suppliers.fromLines = fromLines.names;
+          sales.suppliers.added += fromLines.added.length;
+          sales.suppliers.names = [...sales.suppliers.names, ...fromLines.added].slice(0, 30);
+        }
         await finalizeSalesSync({ jobId: row.id, start: salesStep.start, end: salesStep.end, complete: sales.complete, lines: sales.lines, buyers: sales.buyers, error: sales.error });
       }
       results.sales = sales;
@@ -1322,20 +1485,26 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
       update.status = fatal && (plan.type === "compare" ? results.received === 0 : plan.type === "sales" ? !results.sales || (results.sales.lines === 0 && results.sales.buyers === 0) : results.items.length === 0 && !(results.categoryTree?.applied.length)) ? "failed" : "done";
       if (plan.type === "compare") {
         await writeStore(STORE_ONLY, results.unmatched.filter((snapshot) => snapshot.kind !== "bundle").slice(0, 5000));
-        update.summary = JSON.stringify({ received: results.received, linked: results.linked, baljuoraOnly: results.unmatched.filter((snapshot) => snapshot.kind !== "bundle").length, bundles: results.bundles ?? 0, sales: salesSummary, error: fatal });
+        update.summary = JSON.stringify({ received: results.received, linked: results.linked, baljuoraOnly: results.unmatched.filter((snapshot) => snapshot.kind !== "bundle").length, bundles: results.bundles ?? 0, states: results.states ?? null, sales: salesSummary, error: fatal });
         // 아침 동기화(운영 홈 버튼)면 DB센터 반영은 운영 홈이 이어서 한다고 알려 줍니다(책갈피 창·운영 홈 진행 칸에 보임).
         const dailyText = plan.daily && !fatal ? " DB센터 운영 홈에서 발주오라 변경을 반영해요." : "";
-        update.progress = JSON.stringify({ done: results.received, total: results.received, message: fatal ? `중단: ${fatal}` : `발주오라 상품 ${results.received.toLocaleString("ko-KR")}개를 읽고 ${results.linked.toLocaleString("ko-KR")}개를 연결했습니다.${salesText}${dailyText}` });
+        // 운영 홈 상품 동기화면 책갈피가 같은 창에서 DB센터 변경 보내기로 이어 갑니다.
+        const opsText = plan.ops === "products" && !fatal ? " 이어서 DB센터 변경을 발주오라로 보내요." : "";
+        update.progress = JSON.stringify({ done: results.received, total: results.received, message: fatal ? `중단: ${fatal}` : `발주오라 상품 ${results.received.toLocaleString("ko-KR")}개를 읽고 ${results.linked.toLocaleString("ko-KR")}개를 연결했습니다.${salesText}${dailyText}${opsText}` });
       } else if (plan.type === "sales") {
-        update.summary = JSON.stringify({ ...(salesSummary ?? { lines: 0, buyers: 0, complete: false, error: null }), start: plan.start, end: plan.end, error: fatal ?? salesSummary?.error ?? null });
+        // 주문 동기화: 이번에 처음 들어온 매출처·주문 줄(작업 시작 뒤 처음 저장된 것)과 새로 등록한 매입처를 요약에 남깁니다.
+        const facts = plan.ops === "orders" ? await orderSyncFacts(row.startedAt ?? row.createdAt) : null;
+        const suppliersSummary = results.sales?.suppliers ?? null;
+        update.summary = JSON.stringify({ ...(salesSummary ?? { lines: 0, buyers: 0, complete: false, error: null }), start: plan.start, end: plan.end, error: fatal ?? salesSummary?.error ?? null, ...(plan.ops ? { ops: plan.ops } : {}), ...(facts ?? {}), ...(suppliersSummary ? { suppliers: suppliersSummary } : {}) });
         const lines = results.sales?.lines ?? 0;
-        update.progress = JSON.stringify({ done: lines, total: lines, message: fatal ? `중단: ${fatal}` : `완료: ${plan.start} ~ ${plan.end}${salesText}` });
+        const supplierText = suppliersSummary && suppliersSummary.added > 0 ? ` · 새 매입처 ${suppliersSummary.added.toLocaleString("ko-KR")}곳 공급사 관리에 등록` : "";
+        update.progress = JSON.stringify({ done: lines, total: lines, message: fatal ? `중단: ${fatal}` : `완료: ${plan.start} ~ ${plan.end}${salesText}${supplierText}` });
       } else {
         const succeeded = results.items.filter((item) => item.ok).length;
         const failed = results.items.filter((item) => !item.ok).length;
         const tree = results.categoryTree;
         const treeSummary = tree ? { applied: tree.applied.length, skipped: tree.skipped.length } : null;
-        update.summary = JSON.stringify({ total: plan.items.length, succeeded, failed, created: results.items.filter((item) => item.ok && item.action === "create").length, updated: results.items.filter((item) => item.ok && item.action === "update").length, categoryTree: treeSummary, error: fatal });
+        update.summary = JSON.stringify({ total: plan.items.length, succeeded, failed, created: results.items.filter((item) => item.ok && item.action === "create").length, updated: results.items.filter((item) => item.ok && item.action === "update" && !item.hide).length, hidden: results.items.filter((item) => item.ok && item.hide).length, categoryTree: treeSummary, error: fatal, ...(plan.ops ? { ops: plan.ops, compareJobId: plan.compareJobId ?? null } : {}) });
         const treeText = tree ? ` · 카테고리 반영 ${tree.applied.length}건${tree.skipped.length ? ` · 못 한 것 ${tree.skipped.length}건` : ""}` : "";
         update.progress = JSON.stringify({ done: results.items.length, total: plan.items.length, message: fatal ? `중단: ${fatal}` : `완료: 성공 ${succeeded}개 · 실패 ${failed}개${treeText}` });
       }
@@ -1408,10 +1577,30 @@ export type BaljuoraChangeItem = {
   newSupplier?: boolean;
   // 신규 등록인데 발주오라에 이름이 같은 상품이 있음(발주오라는 같은 이름 상품을 새로 받지 않음 → '같은 상품으로 연결')
   sameName?: BaljuoraSameName;
-  diffs: BaljuoraFieldDiff[];
+  diffs: BaljuoraChangeDiff[];
   syncStatus: string | null;
   lastPushedAt: string | null;
+  // 마지막으로 맞춘 때(기준을 저장한 때)와 마지막으로 발주오라 값을 읽은 때 — '보낼 변경' 상세 팝업(2026-11-27)
+  baseAt?: string | null;
+  lastPulledAt?: string | null;
+  // 신규 등록 상품이 발주오라에 들어갈 값(공급가 ← 일반공급가 · 그룹 공급가 ← 수강생 단가 · 소비자가 ← 지정 판매가 · 매입원가 ← 원가) — '신규 등록' 카드 팝업
+  preview?: { supplyPrice: number; groupPrice: number; consumerPrice: number | null; purchaseCost: number | null };
 };
+
+// 칸 차이 + 마지막으로 맞춘 값(기준). 관리자가 "왜 DB센터에서 바뀐 것으로 봤는지"를 직접 확인할 수 있게 함께 보냅니다
+// (2026-11-27 관리자 요청 "보낼 변경 19개가 오류일 수도 있으니 DB <> 발주오라 무엇이 바뀌었는지 상세 내역도"). 기록이 없는 쪽은 뺍니다.
+// 카테고리 기준의 doogo 값은 DB센터 카테고리 id(지금 값 diff.doogo는 연결된 발주오라 카테고리 id)입니다.
+export type BaljuoraChangeDiff = BaljuoraFieldDiff & { base?: { doogo?: string | number | null; baljuora?: string | number | null } };
+
+function withBaseline(diffs: BaljuoraFieldDiff[], baseline: BaljuoraBaseline | null): BaljuoraChangeDiff[] {
+  if (!baseline) return diffs;
+  return diffs.map((diff) => {
+    const base: { doogo?: string | number | null; baljuora?: string | number | null } = {};
+    if (baseline.doogo[diff.field] !== undefined) base.doogo = baseline.doogo[diff.field];
+    if (baseline.baljuora[diff.field] !== undefined) base.baljuora = baseline.baljuora[diff.field];
+    return Object.keys(base).length > 0 ? { ...diff, base } : diff;
+  });
+}
 
 // ─── 같은 이름 상품 · DB센터에서 지운 상품(2026-11-27 직원 신고) ──────────────────
 // ① '신규 등록' 3건(마우리엔젯 로얄제리 등)을 보내면 매번 "발주오라에 이름이 같은 상품이 이미 있어 새로 등록하지 않았습니다".
@@ -1547,20 +1736,21 @@ export async function listBaljuoraChanges() {
       if (!link || !state) {
         const supplierName = product.supplierName?.trim();
         const same = findSameName(product);
-        items.push({ productId: product.id, kind: "new", code: values.code, name: values.name, imageUrl: values.imageUrl, categoryId: product.categoryId, isVisible: product.isVisible, baljuoraId: null, supplierName: product.supplierName, newSupplier: Boolean(supplierName && !linkedSuppliers.has(supplierName)), ...(same ? { sameName: publicSameName(same) } : {}), diffs: [], syncStatus: link ? "stale" : null, lastPushedAt: null });
+        items.push({ productId: product.id, kind: "new", code: values.code, name: values.name, imageUrl: values.imageUrl, categoryId: product.categoryId, isVisible: product.isVisible, baljuoraId: null, supplierName: product.supplierName, newSupplier: Boolean(supplierName && !linkedSuppliers.has(supplierName)), ...(same ? { sameName: publicSameName(same) } : {}), diffs: [], syncStatus: link ? "stale" : null, lastPushedAt: null, preview: { supplyPrice: values.supplyPrice, groupPrice: values.groupPrice, consumerPrice: values.consumerPrice, purchaseCost: values.purchaseCost } });
         continue;
       }
       linkedCount += 1;
       if (state.snapshot.groupPrice !== undefined) groupPriceRead += 1;
       const diffs = diffBaljuoraProduct(values, state, baljuoraCategories);
       if (diffs.length === 0 && link.syncStatus !== "failed") continue;
-      items.push({ productId: product.id, kind: "update", code: values.code, name: values.name, imageUrl: values.imageUrl, categoryId: product.categoryId, isVisible: product.isVisible, baljuoraId: link.externalProductId, supplierName: product.supplierName, diffs, syncStatus: link.syncStatus, lastPushedAt: link.lastPushedAt });
+      items.push({ productId: product.id, kind: "update", code: values.code, name: values.name, imageUrl: values.imageUrl, categoryId: product.categoryId, isVisible: product.isVisible, baljuoraId: link.externalProductId, supplierName: product.supplierName, diffs: withBaseline(diffs, state.baseline), syncStatus: link.syncStatus, lastPushedAt: link.lastPushedAt, baseAt: state.baseline?.at ?? null, lastPulledAt: link.lastPulledAt ?? null });
     }
     const unmappedCategories = doogoCategories.filter((category) => category.isActive && !settings.categoryMap[category.id]).map((category) => ({ id: category.id, name: category.name }));
     const deletedByCode = deletedByCodeMap(deletedRows);
     const newByName = new Map<string, BaljuoraChangeItem>();
     for (const item of items) if (item.kind === "new" && !newByName.has(sameNameKey(item.name))) newByName.set(sameNameKey(item.name), item);
-    const baljuoraOnly: BaljuoraOnlyItem[] = onlyArray.filter((snapshot) => !linkByProductCode(links, snapshot)).map((snapshot) => {
+    const activeExternal = activeLinkedExternalIds(productRows, links);
+    const baljuoraOnly: BaljuoraOnlyItem[] = onlyArray.filter((snapshot) => !activeExternal.has(snapshot.id)).map((snapshot) => {
       const deleted = snapshot.code ? deletedByCode.get(snapshot.code.trim().toUpperCase()) : undefined;
       const sameNew = newByName.get(sameNameKey(snapshot.name));
       return {
@@ -1581,6 +1771,104 @@ export async function listBaljuoraChanges() {
       // 상품 정보 칸 표(037)가 있는지. false면 원산지·택배사·판매 상태 밖의 상품 정보 칸은 비교하지 않습니다(운영 배포 전).
       extrasReady: context.extras !== null
     };
+  });
+}
+
+// 발주오라 동기화 화면 '연결된 상품' 숫자 카드 팝업(2026-11-27 관리자 요청 "연결된 상품 2142를 누르면 팝업으로, 20개씩, 1/2/3 페이지"):
+// 연결된 DB센터 상품(지운 상품 제외 — 카드 숫자와 같은 기준)과 마지막으로 읽은 발주오라 값·다른 칸 수를 쪽마다 돌려줍니다(발주오라를 다시 읽지 않음).
+export type LinkedProductRow = {
+  productId: string;
+  name: string;
+  code: string | null;
+  imageUrl: string | null;
+  categoryName: string | null;
+  supplierName: string | null;
+  isVisible: boolean;
+  // DB센터 판매 상태(품절 또는 직접 정한 시즌종료면 true)
+  isSoldOut: boolean;
+  generalPrice: number;
+  studentPrice: number;
+  baljuora: {
+    id: string;
+    code: string | null;
+    name: string;
+    imageUrl: string | null;
+    supplyPrice: number | null;
+    // undefined였던 기록(1.2.0 이전 비교)은 null + groupPriceKnown false
+    groupPrice: number | null;
+    groupPriceKnown: boolean;
+    isVisible: boolean | null;
+    isSoldOut: boolean | null;
+  };
+  diffCount: number;
+  diffFields: BaljuoraSyncField[];
+  syncStatus: string | null;
+  lastPulledAt: string | null;
+  lastPushedAt: string | null;
+};
+
+export async function listLinkedProducts(input: { page?: number; size?: number; q?: string | null; filter?: string | null }) {
+  return guard(async () => {
+    const size = Math.min(100, Math.max(5, Math.round(Number(input.size) || 20)));
+    const filter = input.filter === "diff" || input.filter === "same" ? input.filter : "all";
+    const keyword = collapseName(input.q ?? "").toLowerCase().replace(/\s+/g, "");
+    const [productRows, links, settings, { doogoCategories, baljuoraCategories }, context] = await Promise.all([
+      loadProductRows(),
+      loadLinks(),
+      getBaljuoraSettings(),
+      loadCategoryContext(),
+      loadSyncContext()
+    ]);
+    const linkByProduct = new Map(links.map((link) => [link.productId, link]));
+    const categoryName = new Map(doogoCategories.map((category) => [category.id, category.name]));
+    const all: LinkedProductRow[] = [];
+    for (const product of productRows) {
+      const link = linkByProduct.get(product.id);
+      const state = link ? linkState(link) : null;
+      if (!link || !state) continue;
+      const values = syncValues(product, settings, context);
+      const diffs = diffBaljuoraProduct(values, state, baljuoraCategories);
+      const snapshot = state.snapshot;
+      all.push({
+        productId: product.id,
+        name: product.name,
+        code: product.productCode?.trim() || null,
+        imageUrl: product.imageUrl,
+        categoryName: categoryName.get(product.categoryId) ?? null,
+        supplierName: product.supplierName?.trim() || null,
+        isVisible: product.isVisible,
+        isSoldOut: product.isSoldOut || product.isSeasonEnded,
+        generalPrice: product.generalPrice,
+        studentPrice: product.aPrice,
+        baljuora: {
+          id: link.externalProductId,
+          code: snapshot.code ?? (link.externalProductCode.startsWith("id:") ? null : link.externalProductCode),
+          name: snapshot.name,
+          imageUrl: snapshot.imageUrls[0] ?? null,
+          supplyPrice: toPrice(snapshot.supplyPrice),
+          groupPrice: snapshot.groupPrice === undefined ? null : toPrice(snapshot.groupPrice),
+          groupPriceKnown: snapshot.groupPrice !== undefined,
+          isVisible: snapshot.isVisible,
+          isSoldOut: snapshot.isSoldOut
+        },
+        diffCount: diffs.length,
+        diffFields: diffs.map((diff) => diff.field).slice(0, 8),
+        syncStatus: link.syncStatus,
+        lastPulledAt: link.lastPulledAt ?? null,
+        lastPushedAt: link.lastPushedAt ?? null
+      });
+    }
+    const counts = { all: all.length, diff: all.filter((row) => row.diffCount > 0).length, same: all.filter((row) => row.diffCount === 0).length };
+    const squash = (text: string | null | undefined) => String(text ?? "").toLowerCase().replace(/\s+/g, "");
+    const matched = all.filter((row) => {
+      if (filter === "diff" && row.diffCount === 0) return false;
+      if (filter === "same" && row.diffCount > 0) return false;
+      if (!keyword) return true;
+      return [row.name, row.code, row.baljuora.code, row.baljuora.name, row.supplierName].some((text) => squash(text).includes(keyword));
+    }).sort((first, second) => first.name.localeCompare(second.name, "ko"));
+    const pages = Math.max(1, Math.ceil(matched.length / size));
+    const page = Math.min(pages, Math.max(1, Math.round(Number(input.page) || 1)));
+    return { total: matched.length, page, size, pages, filter, counts, items: matched.slice((page - 1) * size, page * size) };
   });
 }
 
@@ -1748,8 +2036,145 @@ export async function getBaljuoraProductPrices(productId: string): Promise<Balju
   });
 }
 
-function linkByProductCode(links: LinkRow[], snapshot: BaljuoraProductSnapshot) {
-  return links.some((link) => link.externalProductId === snapshot.id);
+// ─── DB센터 ↔ 발주오라 상품 수 맞춰 보기(2026-11-27 관리자 요청 "발주오라 2,998개(판매중 1,779 · 품절 1,219 · 미노출+품절 1,160)인데
+// DB센터는 2,143개 — 왜 일치하지 않는지 확인하고, 동기화로 똑같이 맞출 수 있나?") ─────────────────────────────────────────────────
+// 마지막 비교 기준으로 양쪽 수와 차이 원인을 나눠 돌려줍니다(발주오라를 다시 읽지 않음):
+//   전체 차이 = 발주오라에만 있는 상품(DB센터에서 지운 상품 · DB센터에 없던 상품) − DB센터에만 있는 상품(신규 등록 대상)
+//   품절·노출 차이 = 발주오라에만 있는 상품의 상태 + 연결된 상품 중 상태가 다른 상품
+// 맞추는 버튼은 화면이 기존 가져오기(POST /admin/pull)를 25개씩 부릅니다: 발주오라에만 있는 상품 → DB센터에 숨김으로(지운 상품은 되살림),
+// 품절이 다른 연결 상품 → 발주오라 판매 상태로. 발주오라는 바꾸지 않습니다.
+export type BaljuoraReconcile = {
+  compared: boolean;
+  lastCompareAt: string | null;
+  // 발주오라 수: 마지막 비교에서 셈(exact) 또는 연결 기록 + 발주오라에만 있는 상품으로 계산(estimated, 이번 배포 전 비교)
+  baljuora: (BaljuoraStateCounts & { source: "compare" | "estimated" }) | null;
+  doogo: { total: number; selling: number; soldOut: number; seasonEnded: number; visible: number; hidden: number; hiddenSoldOut: number; deleted: number };
+  linked: number;
+  doogoOnly: { total: number; visible: number; hidden: number };
+  baljuoraOnly: { total: number; deleted: number; deletedLinked: number; never: number; selling: number; soldOut: number; visible: number; hidden: number; hiddenSoldOut: number; sameName: number; importIds: string[] };
+  soldOut: { doogoSellingBaljuoraSoldOut: number; doogoSoldOutBaljuoraSelling: number; productIds: string[] };
+  visible: { doogoHiddenBaljuoraVisible: number; doogoVisibleBaljuoraHidden: number };
+};
+
+export async function getBaljuoraReconcile(): Promise<BaljuoraReconcile> {
+  return guard(async () => {
+    const db = getDb();
+    const [productRows, links, onlyList, deletedRows, lastCompareRows] = await Promise.all([
+      loadProductRows(),
+      loadLinks(),
+      readStore<BaljuoraProductSnapshot[]>(STORE_ONLY, []),
+      loadDeletedProducts(),
+      db.select({ startedAt: baljuoraSyncJobs.startedAt, finishedAt: baljuoraSyncJobs.finishedAt, summary: baljuoraSyncJobs.summary }).from(baljuoraSyncJobs)
+        .where(and(eq(baljuoraSyncJobs.type, "compare"), eq(baljuoraSyncJobs.status, "done"))).orderBy(desc(baljuoraSyncJobs.finishedAt)).limit(1)
+    ]);
+    const lastCompare = lastCompareRows[0] ?? null;
+    const onlyArray = (Array.isArray(onlyList) ? onlyList : []).filter((snapshot) => snapshot.kind !== "bundle");
+    const linkByProduct = new Map(links.map((link) => [link.productId, link]));
+    const activeExternal = activeLinkedExternalIds(productRows, links);
+    const activeIds = new Set(productRows.map((row) => row.id));
+    const deletedIds = new Set(deletedRows.map((row) => row.id));
+    const deletedByCode = deletedByCodeMap(deletedRows);
+    const deletedLinkedExternal = new Set(links.filter((link) => !activeIds.has(link.productId) && deletedIds.has(link.productId)).map((link) => link.externalProductId));
+
+    const doogo = { total: productRows.length, selling: 0, soldOut: 0, seasonEnded: 0, visible: 0, hidden: 0, hiddenSoldOut: 0, deleted: deletedRows.length };
+    const doogoOnly = { total: 0, visible: 0, hidden: 0 };
+    const soldOutIds: string[] = [];
+    const soldOut = { doogoSellingBaljuoraSoldOut: 0, doogoSoldOutBaljuoraSelling: 0 };
+    const visible = { doogoHiddenBaljuoraVisible: 0, doogoVisibleBaljuoraHidden: 0 };
+    const linkedStates: BaljuoraStateCounts = { total: 0, selling: 0, soldOut: 0, visible: 0, hidden: 0, hiddenSoldOut: 0 };
+    let linked = 0;
+    for (const product of productRows) {
+      // 발주오라로 보내는 판매 상태와 같은 기준: 품절 또는 직접 정한 시즌종료면 품절
+      const doogoSoldOut = product.isSoldOut || product.isSeasonEnded;
+      if (product.isSoldOut) doogo.soldOut += 1;
+      else if (product.isSeasonEnded) doogo.seasonEnded += 1;
+      else doogo.selling += 1;
+      if (product.isVisible) doogo.visible += 1;
+      else {
+        doogo.hidden += 1;
+        if (doogoSoldOut) doogo.hiddenSoldOut += 1;
+      }
+      const link = linkByProduct.get(product.id);
+      const state = link ? linkState(link) : null;
+      if (!link || !state) {
+        doogoOnly.total += 1;
+        if (product.isVisible) doogoOnly.visible += 1;
+        else doogoOnly.hidden += 1;
+        continue;
+      }
+      linked += 1;
+      const snapshot = state.snapshot;
+      linkedStates.total += 1;
+      if (snapshot.isSoldOut === true) linkedStates.soldOut += 1;
+      else if (snapshot.isSoldOut === false) linkedStates.selling += 1;
+      if (snapshot.isVisible === true) linkedStates.visible += 1;
+      else if (snapshot.isVisible === false) linkedStates.hidden += 1;
+      if (snapshot.isVisible === false && snapshot.isSoldOut === true) linkedStates.hiddenSoldOut += 1;
+      if (snapshot.isSoldOut === true && !doogoSoldOut) {
+        soldOut.doogoSellingBaljuoraSoldOut += 1;
+        soldOutIds.push(product.id);
+      } else if (snapshot.isSoldOut === false && doogoSoldOut) {
+        soldOut.doogoSoldOutBaljuoraSelling += 1;
+        soldOutIds.push(product.id);
+      }
+      if (snapshot.isVisible === true && !product.isVisible) visible.doogoHiddenBaljuoraVisible += 1;
+      else if (snapshot.isVisible === false && product.isVisible) visible.doogoVisibleBaljuoraHidden += 1;
+    }
+
+    // 발주오라에만 있는 상품('발주오라에만 있음' 목록과 같은 기준)
+    const newNames = new Set(productRows.filter((row) => {
+      const link = linkByProduct.get(row.id);
+      return !link || !linkState(link);
+    }).map((row) => sameNameKey(row.name)));
+    const only = onlyArray.filter((snapshot) => !activeExternal.has(snapshot.id));
+    const baljuoraOnly = { total: only.length, deleted: 0, deletedLinked: 0, never: 0, selling: 0, soldOut: 0, visible: 0, hidden: 0, hiddenSoldOut: 0, sameName: 0, importIds: [] as string[] };
+    for (const snapshot of only) {
+      const byCode = snapshot.code ? deletedByCode.get(snapshot.code.trim().toUpperCase()) : undefined;
+      if (byCode) baljuoraOnly.deleted += 1;
+      else if (deletedLinkedExternal.has(snapshot.id)) baljuoraOnly.deletedLinked += 1;
+      else baljuoraOnly.never += 1;
+      if (snapshot.isSoldOut === true) baljuoraOnly.soldOut += 1;
+      else if (snapshot.isSoldOut === false) baljuoraOnly.selling += 1;
+      if (snapshot.isVisible === true) baljuoraOnly.visible += 1;
+      else if (snapshot.isVisible === false) baljuoraOnly.hidden += 1;
+      if (snapshot.isVisible === false && snapshot.isSoldOut === true) baljuoraOnly.hiddenSoldOut += 1;
+      // DB센터에 이름이 같은 신규 등록 상품이 있으면 가져오지 않습니다(같은 상품이 두 개 생기지 않게 — 신규 등록 탭에서 연결)
+      if (newNames.has(sameNameKey(snapshot.name))) baljuoraOnly.sameName += 1;
+      else baljuoraOnly.importIds.push(snapshot.id);
+    }
+
+    const summary = parseJson<{ states?: BaljuoraStateCounts | null } | null>(lastCompare?.summary, null);
+    const exact = summary?.states && typeof summary.states.total === "number" ? summary.states : null;
+    const baljuora = !lastCompare ? null : exact ? { ...exact, source: "compare" as const } : {
+      total: linkedStates.total + baljuoraOnly.total,
+      selling: linkedStates.selling + baljuoraOnly.selling,
+      soldOut: linkedStates.soldOut + baljuoraOnly.soldOut,
+      visible: linkedStates.visible + baljuoraOnly.visible,
+      hidden: linkedStates.hidden + baljuoraOnly.hidden,
+      hiddenSoldOut: linkedStates.hiddenSoldOut + baljuoraOnly.hiddenSoldOut,
+      source: "estimated" as const
+    };
+    return {
+      compared: Boolean(lastCompare),
+      lastCompareAt: lastCompare?.finishedAt ?? null,
+      baljuora,
+      doogo,
+      linked,
+      doogoOnly,
+      baljuoraOnly,
+      soldOut: { ...soldOut, productIds: soldOutIds },
+      visible
+    };
+  });
+}
+
+// 지금 DB센터 상품(지운 상품 제외)과 이어진 발주오라 상품 id. '발주오라에만 있음'은 마지막 비교에서 이어지지 않은 발주오라 상품 중 이 id가 아닌 것입니다.
+// 2026-11-27 운영 확인(관리자 신고 "발주오라 2,998개 · DB센터 2,143개인데 왜 안 맞아?"): 비교는 발주오라 상품 2,998개를 모두 읽었는데(운영 기록 received 2998)
+// 화면에는 연결 2,140 + 발주오라에만 8 = 2,148개만 보였습니다. DB센터에서 상품을 지워도 연결 기록은 남는데(상품 삭제는 연결을 지우지 않음), 예전에는
+// 연결 기록이 하나라도 있으면 '발주오라에만 있음'에서 뺐기 때문에 지운 상품과 이어져 있던 발주오라 상품(대부분 발주오라에서 미노출·품절)이 어디에도 세지 않았습니다.
+function activeLinkedExternalIds(productRows: Array<{ id: string }>, links: LinkRow[]) {
+  const activeIds = new Set(productRows.map((row) => row.id));
+  return new Set(links.filter((link) => activeIds.has(link.productId) && linkState(link) !== null).map((link) => link.externalProductId));
 }
 
 export async function getBaljuoraOverview() {
@@ -1902,7 +2327,8 @@ function extrasPatchFromSnapshot(snapshot: BaljuoraProductSnapshot, fields: Balj
 // 발주오라 → DB센터: 고른 상품에서 지금 발주오라와 다른 칸만 발주오라 값으로 바꿉니다(같은 칸은 그대로).
 // onlyPulled: '가져올 변경' 탭처럼 발주오라에서 바뀐 칸(pull·both)만. 없으면 '발주오라 기준 맞추기'처럼 다른 칸 전부(fields로 고름).
 // skipConflicts: 양쪽에서 바뀐 칸(both)은 건드리지 않습니다(아침 동기화가 저절로 반영할 때 — 관리자가 동기화 화면에서 고름).
-export async function pullFromBaljuora(input: { productIds?: string[]; fields?: BaljuoraSyncField[]; baljuoraIds?: string[]; onlyPulled?: boolean; skipConflicts?: boolean }, changedBy: string) {
+// placeAtEnd: 발주오라에만 있는 상품을 진열순서 맨 뒤로 가져옴('상품 수 맞춰 보기'에서 한꺼번에 가져올 때 — 오래된 숨김 상품이 상품 리스트 맨 앞을 채우지 않게)
+export async function pullFromBaljuora(input: { productIds?: string[]; fields?: BaljuoraSyncField[]; baljuoraIds?: string[]; onlyPulled?: boolean; skipConflicts?: boolean; placeAtEnd?: boolean }, changedBy: string) {
   return guard(async () => {
     const settings = await getBaljuoraSettings();
     const [{ doogoCategories, baljuoraCategories }, onlyList, catalog] = await Promise.all([
@@ -2106,6 +2532,10 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
             createdAt: now,
             updatedAt: now
           });
+          if (input.placeAtEnd) {
+            const bottom = await getDb().select({ value: sql<number>`coalesce(max(${products.displayOrder}), 0)` }).from(products).where(sql`${products.deletedAt} IS NULL`);
+            await getDb().update(products).set({ displayOrder: Number(bottom[0]?.value ?? 0) + 10 }).where(eq(products.id, created.id));
+          }
           result.created += 1;
           if (deleted) result.restored += 1;
         } catch (error) {

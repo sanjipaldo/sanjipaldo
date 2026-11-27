@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.9.2";
+  var VERSION = "1.10.0";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   // 상품명은 상품 정보 저장(PUT products/:id/info), 카테고리는 상품 수정(PUT products/:id)으로 따로 보냅니다(1.9.1, 아래 applyCategory).
@@ -411,6 +411,28 @@
       username: pickString(record, ["username"]),
       lastLoginAt: pickString(record, ["lastLoginAt"]),
       joinedAt: pickString(record, ["createdAt"])
+    };
+  }
+
+  // 발주오라 매입처(거래처 관리 > 매입처, GET merchant/suppliers — 1.10.0 운영 홈 '주문 동기화'): DB센터 공급사 관리에 없는 매입처를
+  // 새로 등록하려고 이름·사업자 정보만 보냅니다(계좌·비밀번호·서류 파일은 보내지 않음). 쓰지 않는 매입처는 isActive false.
+  function normalizeSupplier(record) {
+    if (!isObject(record)) return null;
+    var id = pickString(record, ["id"]);
+    var name = pickString(record, ["companyName", "name", "supplierName"]);
+    if (!id || !name) return null;
+    var status = pickString(record, ["status"]);
+    var active = typeof record.isActive === "boolean" ? record.isActive : status ? !/^(inactive|deleted|suspended|stopped|disabled|withdrawn)$/i.test(status) : null;
+    var address = [pickString(record, ["address"]), pickString(record, ["addressDetail"])].filter(Boolean).join(" ");
+    return {
+      id: id,
+      name: name,
+      representativeName: pickString(record, ["representativeName", "ceoName"]),
+      businessNumber: pickString(record, ["businessNumber", "businessRegistrationNumber"]),
+      phone: pickString(record, ["phone", "phoneNumber", "tel"]),
+      email: pickString(record, ["email"]),
+      address: address || null,
+      isActive: active
     };
   }
 
@@ -1535,7 +1557,7 @@
     async function runSales(step, report, options) {
       var opts = options || {};
       if (!opts.taxMap) watchThrottle(report, { done: 0, total: 0, label: "판매·매출처 읽기" });
-      var result = { lines: 0, buyers: 0, complete: false, error: null };
+      var result = { lines: 0, buyers: 0, suppliers: 0, complete: false, error: null };
       var known = {};
       (step.knownTax || []).forEach(function (id) { known[id] = true; });
       var productTax = Object.assign({}, opts.taxMap || {});
@@ -1583,6 +1605,32 @@
         } catch (error) {
           state.errors.push({ path: "GET merchant/sellers", status: error.status || 0, messages: messagesOf(error).slice(0, 3) });
           report.log("매출처를 읽지 못했습니다: " + describeError(error), true);
+        }
+      }
+      // 발주오라 매입처(1.10.0, 운영 홈 '주문 동기화'만): 목록을 못 읽어도 멈추지 않고 그 까닭을 보냅니다(DB센터는 주문 줄의 매입처로 대신 맞춤).
+      if (step.suppliers) {
+        report.progress(0, 0, "발주오라 매입처 목록을 읽는 중…");
+        var supplierRows = null;
+        var supplierError = null;
+        try {
+          var rawSuppliers = await listAll("merchant/suppliers", {}, {
+            limit: 100,
+            maxPages: 100,
+            onStructure: function (shape) { state.structure.supplierList = shape; },
+            onPage: function (count) { report.progress(count, 0, "매입처 " + count + "곳 읽음"); }
+          });
+          supplierRows = rawSuppliers.map(normalizeSupplier).filter(Boolean);
+        } catch (error) {
+          state.errors.push({ path: "GET merchant/suppliers", status: error.status || 0, messages: messagesOf(error).slice(0, 3) });
+          supplierError = describeError(error);
+          report.log("매입처 목록을 읽지 못했습니다(주문에 나온 매입처로 맞춰요): " + supplierError, true);
+        }
+        if (supplierRows) {
+          for (var supplierStart = 0; supplierStart < supplierRows.length; supplierStart += 500) await sendResults(report, { final: false, suppliers: supplierRows.slice(supplierStart, supplierStart + 500) });
+          result.suppliers = supplierRows.length;
+          report.log("매입처 " + supplierRows.length + "곳을 보냈습니다.");
+        } else {
+          await sendResults(report, { final: false, supplierError: supplierError || "매입처 목록을 읽지 못했습니다." });
         }
       }
       report.progress(0, 0, "발주오라 주문(" + step.start + " ~ " + step.end + ")을 읽는 중…");
@@ -1636,7 +1684,7 @@
       await sendResults(report, {
         final: isFinal,
         salesDone: { complete: result.complete, error: result.error },
-        diagnostics: isFinal ? diagnostics({ sales: { start: step.start, end: step.end, lines: result.lines, buyers: result.buyers, taxRead: unknown.length, complete: result.complete } }) : undefined
+        diagnostics: isFinal ? diagnostics({ sales: { start: step.start, end: step.end, lines: result.lines, buyers: result.buyers, suppliers: result.suppliers, taxRead: unknown.length, complete: result.complete } }) : undefined
       });
       return result;
     }
@@ -2950,22 +2998,61 @@
       log: function (text, isError) { panel.log(text, isError); },
       results: function (body) { return postJson("/results", body); }
     };
+    // DB센터 일시 오류(연결 끊김·5xx)면 1·3초 뒤 두 번 더 묻습니다(운영 홈 상품 동기화의 이어 가기).
+    async function postJsonRetry(path, body) {
+      var waits = [1000, 3000];
+      for (var attempt = 0; ; attempt += 1) {
+        try {
+          return await postJson(path, body);
+        } catch (error) {
+          var transient = !error || !error.status || error.status >= 500;
+          if (!transient || attempt >= waits.length) throw error;
+          await new Promise(function (resolve) { setTimeout(resolve, waits[attempt]); });
+        }
+      }
+    }
     var runner = null;
     try {
       var job = await postJson("");
-      panel.log("작업을 받았습니다: " + (job.type === "compare" ? "발주오라 상품 불러오기(비교)" + (job.plan.sales ? " + 판매·매출처" : "") : job.type === "sales" ? "판매·매출처 불러오기(" + job.plan.start + " ~ " + job.plan.end + ")" : "DB센터 변경 " + job.plan.items.length + "개 보내기"));
+      var jobLabel = job.type === "compare"
+        ? (job.plan.ops === "products" ? "상품 동기화(발주오라 상품 읽기 → DB센터 변경 보내기)" : "발주오라 상품 불러오기(비교)" + (job.plan.sales ? " + 판매·매출처" : ""))
+        : job.type === "sales"
+          ? (job.plan.ops === "orders" ? "주문 동기화(주문·매출처·매입처 " + job.plan.start + " ~ " + job.plan.end + ")" : "판매·매출처 불러오기(" + job.plan.start + " ~ " + job.plan.end + ")")
+          : "DB센터 변경 " + job.plan.items.length + "개 보내기";
+      panel.log("작업을 받았습니다: " + jobLabel);
       var loadedScripts = [];
       try { loadedScripts = Array.prototype.map.call(win.document.scripts, function (script) { return script.src; }).filter(Boolean); } catch { /* 무시 */ }
-      runner = createRunner({ fetch: win.fetch.bind(win), locks: win.navigator && win.navigator.locks, consoleOrigin: win.location.origin, pagePath: win.location.pathname, loadedScripts: loadedScripts, apiBase: win.__doogoSyncApiBase || API_BASE, doogoOrigin: doogoOrigin, convertImage: makeImageConverter(win) });
+      var runnerEnv = { fetch: win.fetch.bind(win), locks: win.navigator && win.navigator.locks, consoleOrigin: win.location.origin, pagePath: win.location.pathname, loadedScripts: loadedScripts, apiBase: win.__doogoSyncApiBase || API_BASE, doogoOrigin: doogoOrigin, convertImage: makeImageConverter(win) };
+      runner = createRunner(runnerEnv);
       panel.status("발주오라 로그인 확인 중…");
       runner.state.token = await runner.refreshToken();
       if (job.type === "compare") {
         var compared = await runner.runCompare(job.plan, report);
-        panel.status("완료: 발주오라 상품 " + compared.received + "개" + (compared.sales ? " · 판매 " + compared.sales.lines + "줄 · 매출처 " + compared.sales.buyers + "곳" : "") + "을 읽었습니다. DB센터 화면에서 확인하세요.");
-        panel.progress(1, 1);
+        if (job.plan.ops === "products") {
+          // 운영 홈 상품 동기화(1.10.0): 방금 읽은 발주오라 값으로 DB센터가 보낼 것을 정하면 같은 창에서 바로 보냅니다(책갈피를 다시 누르지 않음).
+          panel.log("발주오라 상품 " + compared.received + "개를 읽었습니다. DB센터에서 보낼 변경을 정하는 중…");
+          panel.status("DB센터에서 보낼 변경을 정하는 중…");
+          var next = await postJsonRetry("/next", {});
+          if (!next || !next.next) {
+            panel.status("완료: " + ((next && next.message) || "보낼 변경이 없어요.") + " DB센터 운영 홈에서 확인하세요.");
+            panel.progress(1, 1);
+          } else {
+            code = next.next.code;
+            var pushJob = await postJson("");
+            panel.log("이어서 보내기: DB센터 변경 " + pushJob.plan.items.length + "개" + (pushJob.plan.categoryTree ? " + 카테고리 맞추기" : ""));
+            var pushRunner = createRunner(runnerEnv);
+            pushRunner.state.token = runner.state.token;
+            runner = pushRunner;
+            var chained = await runner.runPush(pushJob.plan, report, code);
+            panel.status("완료: 성공 " + chained.ok + "개 · 실패 " + chained.failed + "개. DB센터 운영 홈에서 결과를 확인하세요.");
+          }
+        } else {
+          panel.status("완료: 발주오라 상품 " + compared.received + "개" + (compared.sales ? " · 판매 " + compared.sales.lines + "줄 · 매출처 " + compared.sales.buyers + "곳" : "") + "을 읽었습니다. DB센터 화면에서 확인하세요.");
+          panel.progress(1, 1);
+        }
       } else if (job.type === "sales") {
         var sold = await runner.runSales(job.plan, report, { final: true });
-        panel.status("완료: 판매 " + sold.lines + "줄 · 매출처 " + sold.buyers + "곳을 읽었습니다" + (sold.complete ? "." : "(주문은 일부만).") + " DB센터 판매 현황에서 확인하세요.");
+        panel.status("완료: 판매 " + sold.lines + "줄 · 매출처 " + sold.buyers + "곳" + (job.plan.suppliers ? " · 매입처 " + sold.suppliers + "곳" : "") + "을 읽었습니다" + (sold.complete ? "." : "(주문은 일부만).") + (job.plan.ops === "orders" ? " DB센터 운영 홈에서 확인하세요." : " DB센터 판매 현황에서 확인하세요."));
         panel.progress(1, 1);
       } else {
         var pushed = await runner.runPush(job.plan, report, code);
@@ -3018,6 +3105,7 @@
     buildProductSuppliers: buildProductSuppliers,
     normalizeOrderItem: normalizeOrderItem,
     normalizeSeller: normalizeSeller,
+    normalizeSupplier: normalizeSupplier,
     sellerNeedsDetail: sellerNeedsDetail,
     chunkPathsOf: chunkPathsOf,
     codeSnippets: codeSnippets,

@@ -1,0 +1,105 @@
+/* 운영 홈 > 주문 동기화 · 상품 동기화 버튼·진행 칸·미리보기(2026-11-27) */
+.ahb-side { display: grid; justify-items: end; gap: 10px; }
+.osync { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: flex-end; gap: 10px 12px; }
+.osync-item { display: grid; justify-items: end; gap: 5px; min-width: 0; }
+.osync-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 50px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; font: inherit; cursor: pointer; transition: transform .12s, box-shadow .12s, background .12s; }
+.osync-button.is-orders { color: #0e0f0c; background: #9fe870; box-shadow: 0 6px 16px rgba(65, 120, 30, .18); }
+.osync-button.is-products { color: #fff; background: #163300; box-shadow: 0 6px 16px rgba(22, 51, 0, .22); }
+.osync-button.is-products svg { color: #9fe870; }
+.osync-button:hover:not(:disabled) { transform: translateY(-1px); }
+.osync-button:focus-visible { outline: 3px solid #0e0f0c; outline-offset: 2px; }
+.osync-button:disabled { cursor: default; opacity: .78; transform: none; }
+.osync-button.is-working.is-orders { background: #d9f5c4; }
+.osync-button.is-working.is-products { background: #3b5a24; }
+.osync-label { display: grid; justify-items: start; gap: 1px; line-height: 1.15; text-align: left; }
+.osync-label b { font-size: 15px; font-weight: 850; letter-spacing: -.01em; }
+.osync-label small { font-size: 11px; font-weight: 700; opacity: .78; }
+.osync-spin { animation: osync-spin 1s linear infinite; }
+@keyframes osync-spin { to { transform: rotate(360deg); } }
+.osync-last { max-width: 260px; margin: 0; color: #454745; font-size: 12.5px; font-weight: 700; line-height: 1.4; text-align: right; }
+.osync-last small { color: #6a6c6a; font-size: 12px; font-weight: 600; }
+.osync-last.is-warn, .osync-last.is-warn small { color: #b45309; }
+
+.osync-panel { display: grid; gap: 10px; margin-top: 14px; padding: 16px 18px; border: 1px solid #cfdff3; background: #f5f9fe; }
+.osync-panel.is-products { border-color: #c9d8bd; background: #f6f9f3; }
+.osync-panel.is-error { border-color: #f3d2a8; background: #fff8ef; }
+.osync-panel.is-done { border-color: #cfe5c0; background: #f4fbef; }
+.osync-panel-head { display: flex; align-items: center; gap: 8px; }
+.osync-panel-head h2 { flex: 1 1 auto; margin: 0; color: #0e0f0c; font-size: 15px; font-weight: 800; line-height: 1.4; }
+.osync-panel.is-done .osync-panel-head > svg:first-child { color: #2f5711; }
+.osync-panel.is-error .osync-panel-head > svg:first-child { color: #b45309; }
+.osync-panel p { margin: 0; color: #454745; font-size: 13px; font-weight: 600; line-height: 1.6; }
+.osync-panel p.osync-sub { color: #5d665f; font-size: 12.5px; }
+.osync-panel p.osync-warn { color: #b45309; font-weight: 700; }
+.osync-panel p.osync-follow { color: #8a4b00; }
+.osync-panel p.osync-follow a, .osync-panel p.osync-links a { color: #0b5d3f; font-weight: 800; }
+.osync-close { display: inline-grid; flex: 0 0 auto; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 999px; color: #454745; background: transparent; cursor: pointer; }
+.osync-close:hover { background: rgba(0, 0, 0, .05); }
+.osync-bar { height: 8px; overflow: hidden; border-radius: 999px; background: #e3eaf3; }
+.osync-bar > div { height: 100%; border-radius: inherit; background: #4f9d2a; transition: width .4s ease; }
+.osync-open { justify-self: start; text-decoration: none; }
+.osync-steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.osync-steps li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 6px; border-radius: 999px; color: #6a6c6a; background: #eef2ec; font-size: 12.5px; font-weight: 800; }
+.osync-steps li span { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 999px; color: #fff; background: #aab3a6; font-size: 11px; }
+.osync-steps li.is-current { color: #163300; background: #dff3cf; }
+.osync-steps li.is-current span { background: #163300; }
+.osync-steps li.is-done { color: #2f5711; }
+.osync-steps li.is-done span { background: #4f9d2a; }
+.osync-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.osync-facts.is-products { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.osync-facts li { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid #e1ebd8; border-radius: 12px; background: #fff; }
+.osync-facts li.is-fail { border-color: #f3c7c7; background: #fff6f6; }
+.osync-facts span { color: #6a6c6a; font-size: 11.5px; font-weight: 800; }
+.osync-facts b { color: #0e0f0c; font-size: 18px; font-weight: 850; font-variant-numeric: tabular-nums; }
+.osync-facts em { color: #454745; font-size: 12px; font-style: normal; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+.osync-status { display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: #fff; }
+.osync-status-title { color: #26302a; font-size: 12.5px; font-weight: 800; }
+.osync-status-title small { color: #7a837c; font-weight: 600; }
+.osync-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.osync-chip { display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 10px; border-radius: 999px; color: #6a6c6a; background: #f1f4ef; font-size: 12px; font-weight: 700; }
+.osync-chip b { color: #8a918a; font-size: 13px; font-weight: 850; font-variant-numeric: tabular-nums; }
+.osync-chip.has-value b { color: #163300; }
+.osync-chip.is-total { color: #163300; background: #e3f5d4; }
+.osync-chip.is-total b { color: #163300; }
+.osync-chip.is-cancel { color: #b42318; background: #fdecec; }
+.osync-chip.is-cancel b { color: #b42318; }
+.osync-failures { display: grid; gap: 3px; margin: 0; padding-left: 18px; color: #b42318; font-size: 12px; line-height: 1.5; }
+
+/* 상품 동기화 미리보기(고르기) */
+.osync-note { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; color: #8a4b00; background: #fff6e5; font-size: 13px; font-weight: 700; line-height: 1.6; }
+.osync-choices { display: grid; gap: 8px; }
+.osync-choice { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 12px 14px; border: 1px solid #e1e7dd; border-radius: 14px; background: #fff; cursor: pointer; }
+.osync-choice.is-on { border-color: #9fd6b9; background: #f6fbf2; }
+.osync-choice input { width: 18px; height: 18px; margin-top: 2px; accent-color: #163300; }
+.osync-choice-body { display: grid; gap: 3px; min-width: 0; }
+.osync-choice-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.osync-choice-title b { color: #0e0f0c; font-size: 14.5px; font-weight: 850; }
+.osync-choice-title em { color: #159565; font-size: 14px; font-style: normal; font-weight: 850; font-variant-numeric: tabular-nums; }
+.osync-choice-text { color: #454745; font-size: 12.5px; font-weight: 600; line-height: 1.55; }
+.osync-fields, .osync-samples { color: #5d665f; font-size: 12px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.osync-fields.is-warn { color: #8a4b00; }
+.osync-leftovers { display: grid; gap: 6px; margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: #f7f8f6; }
+.osync-leftovers b { color: #26302a; font-size: 13px; font-weight: 850; }
+.osync-leftovers ul { display: grid; gap: 2px; margin: 0; padding-left: 18px; color: #454745; font-size: 12.5px; font-weight: 600; line-height: 1.55; }
+.osync-leftovers p { margin: 0; color: #5d665f; font-size: 12.5px; font-weight: 600; line-height: 1.55; }
+.osync-leftovers a { color: #0b5d3f; font-weight: 800; }
+
+@media (max-width: 1050px) {
+  .osync-facts { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .ahb-side { width: 100%; justify-items: stretch; }
+  .osync { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .osync-item { justify-items: stretch; }
+  .osync-button { width: 100%; min-height: 54px; padding: 0 10px; gap: 7px; }
+  .osync-label b { font-size: 14px; }
+  .osync-label small { font-size: 10.5px; }
+  .osync-last { max-width: none; font-size: 11.5px; text-align: center; }
+  .osync-last small { font-size: 11px; }
+  .osync-panel { padding: 14px; }
+  .osync-open { justify-self: stretch; justify-content: center; }
+}
+@media (max-width: 359px) {
+  .osync-button { padding: 0 8px; }
+  .osync-button > svg { display: none; }
+}

@@ -67,6 +67,54 @@ export type BaljuoraBuyerInput = {
   joinedAt: string | null;
 };
 
+/**
+ * 책갈피가 보내는 발주오라 매입처(거래처 관리 > 매입처, GET merchant/suppliers — 발주오라 화면 코드 getMerchantSuppliers 확인, 2026-11-27).
+ * 운영 홈 '주문 동기화'가 DB센터 공급사 관리에 없는 매입처를 새로 등록할 때 씁니다. 계좌·비밀번호·서류 파일은 보내지 않습니다.
+ */
+export type BaljuoraSupplierInput = {
+  id: string;
+  name: string;
+  representativeName: string | null;
+  businessNumber: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  // 발주오라에서 쓰는 매입처인지(모르면 null — 쓰는 것으로 봄)
+  isActive: boolean | null;
+};
+export const MAX_SUPPLIERS_PER_POST = 2000;
+
+/** 매입처 이름 비교: 띄어쓰기·기호·(주)·㈜·주식회사·(유)·유한회사는 무시합니다(책갈피 supplierNameKey와 같은 규칙). */
+export function supplierNameKey(value: string | null | undefined) {
+  return String(value ?? "").toLowerCase().replace(/\(주\)|㈜|주식회사|\(유\)|유한회사/g, "").replace(/[^0-9a-z가-힣]/g, "");
+}
+
+/**
+ * 발주오라 주문 상품 줄 상태(발주오라 주문 관리 탭과 같은 이름·순서, 화면 코드의 주문 상태 값 확인 2026-11-27).
+ * 취소는 상태(cancelled)이거나 남은 수량이 0인 줄(전부 취소·반품)로 따로 셉니다. 삭제(deleted)는 세지 않습니다.
+ */
+export const ORDER_STATUS_ORDER = ["pending", "accepted", "purchased", "preparing", "shipping", "delivered"] as const;
+export type OrderStatusKey = (typeof ORDER_STATUS_ORDER)[number];
+export const ORDER_STATUS_LABELS: Record<OrderStatusKey | "cancelled" | "other", string> = {
+  pending: "주문대기",
+  accepted: "주문접수",
+  purchased: "발주완료",
+  preparing: "배송준비중",
+  shipping: "배송중",
+  delivered: "배송완료",
+  cancelled: "취소",
+  other: "기타"
+};
+
+/** 주문 상품 줄 하나가 어느 칸으로 세어지는지(삭제는 null) */
+export function orderStatusBucket(status: string | null | undefined, quantity: number, netQuantity: number): OrderStatusKey | "cancelled" | "other" | null {
+  const value = String(status ?? "").trim().toLowerCase();
+  if (value === "deleted") return null;
+  if (value === "cancelled" || value === "canceled") return "cancelled";
+  if (quantity > 0 && netQuantity <= 0) return "cancelled";
+  return (ORDER_STATUS_ORDER as readonly string[]).includes(value) ? value as OrderStatusKey : "other";
+}
+
 /** DB센터에서 고칠 수 있는 세금계산서용 매출처 칸 */
 export const BUYER_OVERRIDE_FIELDS = ["companyName", "representativeName", "businessNumber", "businessType", "businessCategory", "email", "address", "addressDetail"] as const;
 export type BuyerOverrideField = (typeof BUYER_OVERRIDE_FIELDS)[number];

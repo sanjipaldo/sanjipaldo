@@ -19,7 +19,7 @@ import {
   BuyerRankList, CategoryRankList, DailySalesChart, ProfitBreakdownCards, SalesKpiCards, SupplierRankList, TodayTopList, TopProductsTable,
   salesRangeFor, type SalesSummary
 } from "./sales-widgets";
-import { DailySyncButton, DailySyncPanel, useDailySync } from "./DailySync";
+import { OpsSyncButtons, OpsSyncPanel, useOpsSync } from "./OpsSync";
 import "./sales-admin.css";
 import "./admin-home-board.css";
 
@@ -309,8 +309,8 @@ export function AdminHomeBoard({ overview, onRefresh }: { overview: AdminHomeDat
   }, []);
 
   useEffect(() => { if (needsSales) void loadSales(); }, [needsSales, loadSales]);
-  // 발주오라 → DB센터 동기화(아침 동기화): 끝나면 판매·매출처·상품 숫자를 새로 불러옵니다.
-  const daily = useDailySync(() => {
+  // 주문 동기화·상품 동기화(2026-11-27, 예전 아침 동기화 자리): 끝나면 판매·매출처·상품 숫자를 새로 불러옵니다.
+  const ops = useOpsSync(() => {
     void loadSales();
     void loadMembers();
     onRefresh?.();
@@ -464,7 +464,7 @@ export function AdminHomeBoard({ overview, onRefresh }: { overview: AdminHomeDat
           <p>판매·매출처·공급사·상품과 요청을 한 화면에서 봅니다. 칸에 마우스를 올리면 옮기거나 뺄 수 있어요.</p>
         </div>
         <div className="ahb-side">
-          <DailySyncButton state={daily} />
+          <OpsSyncButtons state={ops} />
           <div className="ahb-actions">
             <div className="sa-period ahb-period" role="group" aria-label="판매 기간">
               {PERIODS.map((item) => <button key={item.key} type="button" className={period === item.key ? "is-active" : ""} aria-pressed={period === item.key} onClick={() => changePeriod(item.key)}>{item.label}</button>)}
@@ -476,7 +476,7 @@ export function AdminHomeBoard({ overview, onRefresh }: { overview: AdminHomeDat
         </div>
       </div>
 
-      <DailySyncPanel state={daily} />
+      <OpsSyncPanel state={ops} />
 
       {editing && (
         <div className="ahb-editbar" role="status">

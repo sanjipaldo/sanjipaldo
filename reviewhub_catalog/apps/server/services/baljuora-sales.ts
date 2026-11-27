@@ -18,6 +18,9 @@ import {
   HOMETAX_LAYOUT,
   HOMETAX_MAX_ROWS,
   HOMETAX_SHEET_NAME,
+  MAX_SUPPLIERS_PER_POST,
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_ORDER,
   SALES_EXCLUDED_STATUSES,
   buildHometaxInvoices,
   hometaxBuyerProblems,
@@ -25,10 +28,13 @@ import {
   hometaxSupplierProblems,
   lastDayOfMonth,
   normalizeBusinessNumber,
+  orderStatusBucket,
   seoulDateOf,
+  supplierNameKey,
   truncateHometax,
   type BaljuoraBuyerInput,
   type BaljuoraSalesLineInput,
+  type BaljuoraSupplierInput,
   type BuyerOverrides,
   type HometaxBuyer,
   type HometaxInvoice,
@@ -79,6 +85,7 @@ import {
   products,
   supplierSales,
   supplierSettlements,
+  suppliers,
   type BaljuoraBuyer
 } from "../db/schema";
 
@@ -417,6 +424,160 @@ export async function knownTaxProductIds() {
     if (typeof state?.snapshot?.isTaxable === "boolean") ids.add(link.externalProductId);
   }
   return [...ids].slice(0, 20_000);
+}
+
+// ─── 주문 동기화(운영 홈, 2026-11-27): 발주오라 매입처 → DB센터 공급사 관리 · 새 매출처·새 주문 · 최근 7일 주문 현황 ─────
+
+export function sanitizeBaljuoraSupplier(raw: unknown): BaljuoraSupplierInput | null {
+  if (!raw || typeof raw !== "object") return null;
+  const record = raw as Record<string, unknown>;
+  const id = cleanText(record.id, 80);
+  const name = cleanText(record.name, 80);
+  if (!id || !name) return null;
+  return {
+    id,
+    name,
+    representativeName: cleanText(record.representativeName, 60),
+    businessNumber: cleanText(record.businessNumber, 30),
+    phone: cleanText(record.phone, 40),
+    email: cleanText(record.email, 120),
+    address: cleanText(record.address, 240),
+    isActive: typeof record.isActive === "boolean" ? record.isActive : null
+  };
+}
+
+type SupplierSeed = { name: string; businessNumber?: string | null; representative?: string | null; phone?: string | null; email?: string | null; address?: string | null };
+
+// DB센터 공급사 관리에 이름이 같은 공급사(띄어쓰기·(주) 등 무시, 사용 중지 공급사 포함)가 없을 때만 새로 등록합니다.
+// 이미 있는 공급사는 바꾸지 않습니다(DB센터에서 고친 값을 덮어쓰지 않음). 새로 등록한 이름을 돌려줍니다.
+async function addMissingSuppliers(seeds: SupplierSeed[], memo: string) {
+  if (seeds.length === 0) return [] as string[];
+  const db = getDb();
+  const existing = await db.select({ name: suppliers.name }).from(suppliers);
+  const keys = new Set(existing.map((row) => supplierNameKey(row.name)).filter(Boolean));
+  const now = nowIso();
+  const added: string[] = [];
+  for (const seed of seeds) {
+    const name = collapseText(seed.name).slice(0, 80);
+    const key = supplierNameKey(name);
+    if (!name || !key || keys.has(key)) continue;
+    keys.add(key);
+    const rows = await db.insert(suppliers).values({
+      id: randomUUID(),
+      name,
+      businessNumber: formatSupplierBusinessNumber(seed.businessNumber),
+      representative: seed.representative ?? null,
+      phone: seed.phone ?? null,
+      email: seed.email ?? null,
+      address: seed.address ?? null,
+      memo,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
+    }).onConflictDoNothing().returning({ id: suppliers.id });
+    if (rows[0]) added.push(name);
+  }
+  return added;
+}
+
+// 공급사 관리의 사업자등록번호 모양("123-45-67890", 공급사 필수 정보와 같음). 숫자 10자리가 아니면 받은 그대로 둡니다.
+function formatSupplierBusinessNumber(value: string | null | undefined) {
+  const text = collapseText(value);
+  if (!text) return null;
+  const digits = text.replace(/\D/g, "");
+  return digits.length === 10 ? `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}` : text.slice(0, 30);
+}
+
+function collapseText(value: string | null | undefined) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+/** 책갈피가 보낸 발주오라 매입처 중 DB센터 공급사 관리에 없는 곳(발주오라에서 쓰는 곳만)을 새로 등록합니다. */
+export async function ingestBaljuoraSuppliers(rawSuppliers: unknown[], memo: string) {
+  const list = rawSuppliers.slice(0, MAX_SUPPLIERS_PER_POST).map(sanitizeBaljuoraSupplier).filter((item): item is BaljuoraSupplierInput => item !== null);
+  const active = list.filter((item) => item.isActive !== false);
+  const added = await addMissingSuppliers(active.map((item) => ({
+    name: item.name,
+    businessNumber: item.businessNumber,
+    representative: item.representativeName,
+    phone: item.phone,
+    email: item.email,
+    address: item.address
+  })), memo);
+  return { read: list.length, added };
+}
+
+/** 이번 작업에서 읽은 주문 줄의 발주오라 매입처 이름 중 DB센터 공급사 관리에 없는 곳을 등록합니다(매입처 목록을 못 읽었을 때도 빠지지 않게). */
+export async function addSuppliersFromSalesLines(jobId: string, memo: string) {
+  return guarded(async () => {
+    const rows = await getDb().selectDistinct({ name: baljuoraSalesLines.baljuoraSupplierName }).from(baljuoraSalesLines)
+      .where(and(eq(baljuoraSalesLines.syncJobId, jobId), sql`coalesce(trim(${baljuoraSalesLines.baljuoraSupplierName}), '') <> ''`));
+    const names = rows.map((row) => collapseText(row.name)).filter(Boolean);
+    const added = await addMissingSuppliers(names.map((name) => ({ name })), memo);
+    return { names: names.length, added };
+  });
+}
+
+// SQLite CURRENT_TIMESTAMP 모양("YYYY-MM-DD HH:MM:SS", UTC)
+function sqliteTime(iso: string) {
+  const time = Date.parse(iso);
+  return Number.isFinite(time) ? new Date(time).toISOString().slice(0, 19).replace("T", " ") : iso;
+}
+
+/** since(작업 시작) 뒤 처음 들어온 매출처·주문 줄 수(매출처는 처음 동기화한 때, 주문 줄은 처음 저장한 때로 셈) */
+export async function orderSyncFacts(sinceIso: string) {
+  return guarded(async () => {
+    const db = getDb();
+    const [buyerCount, buyerNames, lineCount] = await Promise.all([
+      db.select({ count: sql<number>`count(*)` }).from(baljuoraBuyers).where(gte(baljuoraBuyers.firstSyncedAt, sinceIso)),
+      db.select({ name: baljuoraBuyers.companyName }).from(baljuoraBuyers).where(gte(baljuoraBuyers.firstSyncedAt, sinceIso)).orderBy(asc(baljuoraBuyers.companyName)).limit(8),
+      db.select({
+        lines: sql<number>`count(*)`,
+        orders: sql<number>`count(distinct coalesce(${baljuoraSalesLines.orderId}, ${baljuoraSalesLines.id}))`
+      }).from(baljuoraSalesLines).where(gte(baljuoraSalesLines.createdAt, sqliteTime(sinceIso)))
+    ]);
+    return {
+      newBuyers: Number(buyerCount[0]?.count ?? 0),
+      newBuyerNames: buyerNames.map((row) => row.name),
+      newLines: Number(lineCount[0]?.lines ?? 0),
+      newOrders: Number(lineCount[0]?.orders ?? 0)
+    };
+  });
+}
+
+export type RecentOrderStatus = {
+  from: string;
+  to: string;
+  // 취소를 뺀 주문 상품 줄 수(발주오라 대시보드 '전체주문'처럼)
+  total: number;
+  orders: number;
+  cancelled: number;
+  byStatus: Array<{ status: string; label: string; lines: number }>;
+};
+
+/** 최근 N일(오늘 포함, 주문일 한국 날짜) 주문 상품 줄을 발주오라 주문 관리 탭처럼 상태별로 셉니다. */
+export async function recentOrderStatus(days = 7, today = seoulDateKey()): Promise<RecentOrderStatus> {
+  return guarded(async () => {
+    const from = addDays(today, -(Math.max(1, days) - 1));
+    const rows = await getDb().select({
+      status: baljuoraSalesLines.status,
+      quantity: baljuoraSalesLines.quantity,
+      netQuantity: baljuoraSalesLines.netQuantity,
+      orderId: baljuoraSalesLines.orderId,
+      id: baljuoraSalesLines.id
+    }).from(baljuoraSalesLines).where(and(gte(baljuoraSalesLines.saleDate, from), lte(baljuoraSalesLines.saleDate, today)));
+    const counts = new Map<string, number>();
+    const orders = new Set<string>();
+    for (const row of rows) {
+      const bucket = orderStatusBucket(row.status, Number(row.quantity ?? 0), Number(row.netQuantity ?? 0));
+      if (!bucket) continue;
+      counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
+      if (bucket !== "cancelled") orders.add(row.orderId ?? row.id);
+    }
+    const keys = [...ORDER_STATUS_ORDER, ...(counts.get("other") ? ["other" as const] : [])];
+    const byStatus = keys.map((status) => ({ status, label: ORDER_STATUS_LABELS[status], lines: counts.get(status) ?? 0 }));
+    return { from, to: today, total: byStatus.reduce((sum, item) => sum + item.lines, 0), orders: orders.size, cancelled: counts.get("cancelled") ?? 0, byStatus };
+  });
 }
 
 export type SalesSyncState = {
