@@ -105,6 +105,28 @@ describe("발주오라 동기화 API", () => {
     expect(expired.status).toBe(409);
   });
 
+  it("진행 중인 작업 코드는 책갈피가 진행·결과를 보낼 때마다 만료를 30분 뒤로 미룹니다(2026-11-27: 429로 쉬어 가는 긴 작업)", async () => {
+    const admin = await adminToken();
+    const job = await startCompare(admin);
+    const expiresOf = async () => String((await executeSql("SELECT expiresAt FROM baljuora_sync_jobs WHERE id = ?", [job.job.id])).rows[0]?.expiresAt);
+    // 기다리는 작업(아직 시작 안 함)은 만들 때 정한 만료 그대로
+    const created = await expiresOf();
+    expect(Date.parse(created) - Date.now()).toBeGreaterThan(29 * 60_000);
+    expect((await app.fetch(new Request(`http://localhost/api/baljuora/runner/${job.code}`))).status).toBe(200); // 시작 → running
+    // 25분이 지나 5분 남은 것처럼 만들고 진행을 보내면 다시 30분 뒤로
+    const soon = new Date(Date.now() + 5 * 60_000).toISOString();
+    await executeSql("UPDATE baljuora_sync_jobs SET expiresAt = ? WHERE id = ?", [soon, job.job.id]);
+    expect((await post(`/api/baljuora/runner/${job.code}/progress`, { done: 10, total: 2000, message: "발주오라가 '요청이 너무 많다'고 해 2초 쉬었다가 이어서 보내요" })).status).toBe(200);
+    const extended = await expiresOf();
+    expect(Date.parse(extended) - Date.now()).toBeGreaterThan(29 * 60_000);
+    // 남은 시간이 절반(15분) 넘게 있으면 다시 적지 않음
+    expect((await post(`/api/baljuora/runner/${job.code}/progress`, { done: 11, total: 2000, message: "수정 12 / 2000" })).status).toBe(200);
+    expect(await expiresOf()).toBe(extended);
+    // 소식이 끊겨 만료가 지난 진행 중 작업은 쓸 수 없음
+    await executeSql("UPDATE baljuora_sync_jobs SET expiresAt = ? WHERE id = ?", ["2000-01-01T00:00:00.000Z", job.job.id]);
+    expect((await post(`/api/baljuora/runner/${job.code}/progress`, { done: 12, total: 2000, message: "늦은 소식" })).status).toBe(409);
+  });
+
   it("작업 코드 다시 받기(2026-11-25): 기다리는 작업에 새 코드를 주고 예전 코드는 막으며, 시작한 작업·로그인 없는 요청은 거절합니다", async () => {
     const admin = await adminToken();
     const job = await startCompare(admin);
@@ -186,6 +208,8 @@ describe("발주오라 동기화 API", () => {
     expect(create?.templateId).toBe("bj-a");
     expect(create).toMatchObject({ templateMatch: "supplier", supplierName: "봄날농원" });
     expect(create?.values).toMatchObject({ supplyPrice: 12000, groupPrice: 11000, categoryId: "bj-cat-farm", isTaxable: false });
+    // 연결된 발주오라 카테고리 전체(책갈피 1.9.1이 '이미 같은 카테고리'·저장 확인에 씀)
+    expect(create?.values.categoryIds).toEqual(["bj-cat-farm"]);
 
     // 다른 상품 결과는 받지 않습니다(작업에 든 상품만).
     await post(`/api/baljuora/runner/${push.data.code}/results`, {

@@ -131,6 +131,9 @@ export type PushPlanItem = {
     consumerPrice: number | null;
     purchaseCost: number | null;
     categoryId: string | null;
+    // 이 DB센터 카테고리와 연결된 발주오라 카테고리 전체(보낼 곳 + '발주오라 → DB센터' 연결, 2026-11-27 책갈피 1.9.1):
+    // 발주오라 상품이 이미 이 중 하나(또는 그 아래)에 있으면 카테고리를 보내지 않고, 저장 확인도 같은 규칙으로 합니다.
+    categoryIds?: string[];
     imageUrl: string | null;
     isTaxable: boolean;
     // 연결한 발주오라 매출배송정책 id(DB센터 상품의 배송 정책과 같은 정책, 없으면 null)
@@ -621,6 +624,7 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
         consumerPrice: values.consumerPrice,
         purchaseCost: values.purchaseCost,
         categoryId: values.baljuoraCategoryId,
+        categoryIds: values.baljuoraCategoryIds,
         imageUrl: values.imageUrl,
         // 과세 여부: DB센터에서 정한 값, 없으면 카테고리 자동값(건강식품 과세)
         isTaxable: typeof values.extraPush.isTaxable === "boolean" ? values.extraPush.isTaxable : isHealthCategoryName(categoryName.get(product.categoryId)),
@@ -732,6 +736,15 @@ async function findJobByCode(code: string) {
   if (["waiting", "running"].includes(row.status) && row.expiresAt < nowIso()) {
     await getDb().update(baljuoraSyncJobs).set({ status: "expired", finishedAt: nowIso() }).where(eq(baljuoraSyncJobs.id, row.id));
     throw new DatabaseError("DATABASE_QUERY_FAILED", `작업 코드가 만료되었습니다(${BALJUORA_JOB_TTL_MINUTES}분). DB센터에서 다시 시작해 주세요.`, 409);
+  }
+  // 진행 중인 작업은 책갈피가 진행·결과를 보낼 때마다 만료를 다시 30분 뒤로 미룹니다(2026-11-27: 상품이 많으면 발주오라 요청 제한(429) 때문에
+  // 쉬어 가며 보내 30분을 넘길 수 있음). 창을 닫아 소식이 끊기면 마지막 소식 30분 뒤 만료됩니다. 남은 시간이 절반 아래일 때만 적습니다.
+  if (row.status === "running") {
+    const extended = new Date(Date.now() + BALJUORA_JOB_TTL_MINUTES * 60_000).toISOString();
+    if (Date.parse(row.expiresAt) - Date.now() < (BALJUORA_JOB_TTL_MINUTES * 60_000) / 2) {
+      await getDb().update(baljuoraSyncJobs).set({ expiresAt: extended }).where(eq(baljuoraSyncJobs.id, row.id));
+      return { ...row, expiresAt: extended };
+    }
   }
   return row;
 }

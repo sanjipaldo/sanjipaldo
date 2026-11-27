@@ -11,10 +11,11 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.9.0";
+  var VERSION = "1.9.1";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
-  var INFO_FIELDS = ["name", "category"];
+  // 상품명은 상품 정보 저장(PUT products/:id/info), 카테고리는 상품 수정(PUT products/:id)으로 따로 보냅니다(1.9.1, 아래 applyCategory).
+  var INFO_FIELDS = ["name"];
   // 발주오라 상품 이미지 올리기(2026-11-23 발주오라 상품 등록·수정 화면 코드 확인):
   // POST files/presign {kind:"product-image", fileName, contentType, size, source:"product-form"} → 받은 uploadUrl 로 PUT(받은 headers 그대로)
   // → 받은 file.value 를 imageUrls 에 넣어 PUT products/:id. 발주오라 화면은 상품 이미지를 JPG·PNG, 1MB 이하, 최대 5장만 받습니다.
@@ -25,13 +26,20 @@
   // 발주오라 상품 수정 화면과 같은 방식으로 상세를 읽습니다(2026-11-23 화면 코드 확인: getProductsById(id, { include: [...] }),
   // 발주오라 API 도구는 배열을 쉼표로 이어 보냄). prices = 매출처별 개별공급가(황금농부 그룹 공급가 포함), productSuppliers = 매입처·매입원가.
   var DETAIL_INCLUDE = "categories,productSuppliers,shippingPolicy,prices,visibility";
-  var LIST_INCLUDE = "productSuppliers,prices";
+  // 상품 목록 include(1.9.1, 2026-11-27 운영 절임배추): 발주오라 목록은 include에 categories가 없으면 상품마다 categoryIds·categories를
+  // 빈 칸([])으로 줍니다(같은 상품 상세는 include=categories로 카테고리가 옴). 그래서 목록도 카테고리를 함께 읽고, 거절(400)되면 예전 include → include 없이.
+  var LIST_INCLUDES = ["productSuppliers,prices,categories", "productSuppliers,prices"];
   // 상품 정보 칸(1.9.0, 2026-11-26 관리자 요청 "발주오라 상품관리자 페이지와 빠지는 거 없이 양방향으로"): 판매 상태(품절·도매몰 노출)·과세 여부·
   // 원산지·관리코드·바코드·내용량·발주상품명·발주단위·배송 단위·발주마감·인증·간략설명·출고지·제조연월일·소비기한·택배사·해외배송.
   // 발주오라 칸 이름은 발주오라 화면 코드(공개 js)·엑셀 칸 목록에서 확인했습니다. 보내기는 발주오라 상품 수정 화면처럼 PUT products/:id 에
   // 바뀐 칸만 보내고, 저장 뒤 다시 읽어 DB센터가 확인합니다(발주오라가 모르는 칸을 버려도 '반영됨'으로 보이지 않게).
   var EXTRA_FIELDS = ["soldOut", "visible", "taxable", "origin", "managementCode", "barcode", "content", "purchaseName", "purchaseQuantity", "shippingUnit", "purchaseDeadline", "certification", "summary", "shippingLocation", "manufacturingDate", "expirationDate", "courier", "tradeType"];
   var STATUS_KEYS = { soldOut: "isSoldOut", visible: "isVisible" };
+  // 발주오라 요청 속도(1.9.1, 2026-11-27 운영: 상품 1,957개를 한 번에 보내자 대부분 "발주오라 응답 429 … 요청이 너무 많습니다. 잠시 후 다시
+  // 시도해주세요."로 실패). 요청 사이에 간격을 두고, 429를 받으면 점점 길게 쉬었다가 같은 요청을 다시 보내며 간격도 늘립니다(계속 성공하면 조금씩 줄임).
+  var REQUEST_GAP_MIN_MS = 150;
+  var REQUEST_GAP_MAX_MS = 3000;
+  var THROTTLE_WAITS_MS = [2000, 4000, 8000, 15000, 30000, 30000, 30000, 30000];
   // 신규 등록: DB센터에 값이 없으면 복사한 상품 값을 쓰지 않을 칸(상품마다 다른 칸). 택배사·출고지·발주마감·배송 단위·해외배송은 매입처마다 같아 그대로 둡니다.
   var PRODUCT_SPECIFIC_KEYS = ["managementCode", "barcode", "originText", "description", "manufacturingDate", "expirationDate", "contentAmount", "contentUnit", "contentCount", "contentAmountBasis", "purchaseProductName", "purchaseName", "purchaseQuantity", "taxonomyItemId"];
 
@@ -941,6 +949,32 @@
     };
   }
 
+  // 상품 카테고리 ids 가운데 하나라도 받을 카테고리(accept)이거나 그 아래 카테고리면 맞습니다(서버 categoryMatches와 같은 규칙,
+  // 예: 연결 카테고리 "🥕 농산"이면 발주오라 "🥕 농산 > 배추류" 상품도 맞음). flat = flattenCategories 결과(parentId).
+  function categoryCovers(categoryIds, accept, flat) {
+    if (!Array.isArray(categoryIds) || !Array.isArray(accept) || accept.length === 0) return false;
+    var parentOf = {};
+    (flat || []).forEach(function (category) { parentOf[category.id] = category.parentId; });
+    return categoryIds.some(function (id) {
+      var current = id;
+      for (var depth = 0; current && depth < 10; depth += 1) {
+        if (accept.indexOf(current) >= 0) return true;
+        current = parentOf[current];
+      }
+      return false;
+    });
+  }
+
+  // 오류 문구용 카테고리 이름(경로). 트리에 없으면 id 앞 8자, 비었으면 "없음".
+  function categoryLabel(ids, flat) {
+    var list = (Array.isArray(ids) ? ids : [ids]).filter(function (id) { return typeof id === "string" && id; });
+    if (list.length === 0) return "없음";
+    return list.map(function (id) {
+      var found = (flat || []).find(function (category) { return category.id === id; });
+      return found ? found.path : id.slice(0, 8);
+    }).join(", ");
+  }
+
   function expectedValue(field, values) {
     if (field === "shippingPolicy") return values.baljuoraShippingPolicyId === undefined ? undefined : values.baljuoraShippingPolicyId;
     if (field === "supplyPrice") return values.supplyPrice;
@@ -966,8 +1000,12 @@
           return;
         }
       } else if (field === "category") {
-        if (snapshot.categoryIds !== undefined && item.values.categoryId && snapshot.categoryIds.indexOf(item.values.categoryId) < 0) {
-          result.skipped.push({ field: field, reason: "발주오라에 저장된 카테고리가 다릅니다." });
+        // checks.category = { accept: 받을 카테고리(보낸 카테고리 + DB센터 카테고리와 연결된 발주오라 카테고리), flat: 발주오라 카테고리 트리 }
+        var categoryCheck = checks && checks.category;
+        var accept = categoryCheck ? categoryCheck.accept : item.values.categoryId ? [item.values.categoryId] : [];
+        var flat = categoryCheck ? categoryCheck.flat : [];
+        if (snapshot.categoryIds !== undefined && accept.length > 0 && !categoryCovers(snapshot.categoryIds, accept, flat)) {
+          result.skipped.push({ field: field, reason: "발주오라에 저장된 카테고리가 다릅니다(보낸 카테고리: " + categoryLabel(accept[0], flat) + " · 저장 뒤 다시 읽은 카테고리: " + categoryLabel(snapshot.categoryIds, flat) + "). 발주오라 상품 수정 화면에서 카테고리를 확인해 주세요." });
           return;
         }
       } else if (field === "groupPrice" && (actual === undefined || (actual === null && (expected === snapshot.supplyPrice || expected === item.values.supplyPrice)))) {
@@ -984,7 +1022,32 @@
   // ─── 실행 ─────────────────────────────────────────────────────────────────
 
   function createRunner(env) {
-    var state = { token: null, structure: {}, endpoints: {}, errors: [] };
+    // gapMs·nextAt: 요청 간격 조절, writes: 지금까지 보낸 저장 요청 수(상품마다 바꾼 것이 없으면 다시 읽지 않음), throttled: 429로 쉰 횟수
+    var state = { token: null, structure: {}, endpoints: {}, errors: [], gapMs: REQUEST_GAP_MIN_MS, nextAt: 0, writes: 0, throttled: 0, onThrottle: null };
+    var testHooks = scope.__DOOGO_SYNC_TEST__ || null;
+    var sleep = env.sleep || (testHooks && testHooks.sleep) || function (ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); };
+    var clock = env.now || (testHooks && testHooks.now) || function () { return Date.now(); };
+
+    // 429로 쉬는 동안 패널·DB센터 진행 칸에 알립니다(current = { done, total, label }, 기록 줄은 1분에 한 번만).
+    function watchThrottle(report, current) {
+      var lastLogAt = -Infinity;
+      state.onThrottle = function (waitMs, attempt) {
+        report.progress(current.done, current.total, "발주오라가 '요청이 너무 많다'고 해 " + Math.round(waitMs / 1000) + "초 쉬었다가 이어서 보내요(" + attempt + "번째)" + (current.label ? " · " + current.label : "") + "…");
+        var now = clock();
+        if (now - lastLogAt > 60000) {
+          lastLogAt = now;
+          report.log("⏸ 발주오라 요청 제한(429): 잠시 쉬었다가 이어서 보냅니다. 창을 닫지 말고 기다려 주세요.", false);
+        }
+      };
+    }
+
+    // 요청 사이 간격(state.gapMs)을 지킵니다. 동시에 여러 요청(상세 5개씩)을 보내도 차례로 간격을 둡니다.
+    async function pace() {
+      var now = clock();
+      var at = Math.max(now, state.nextAt);
+      state.nextAt = at + state.gapMs;
+      if (at > now) await sleep(at - now);
+    }
 
     function note(path, status) {
       state.endpoints[path] = status;
@@ -1016,11 +1079,33 @@
         headers["Content-Type"] = "application/json";
         payload = JSON.stringify(body);
       }
+      await pace();
+      if (method !== "GET") state.writes += 1;
       var response = await env.fetch(url.toString(), { method: method, headers: headers, body: payload });
       note(method + " " + path.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, ":id"), response.status);
       if (response.status === 401 && !opts.retried) {
         state.token = await refreshToken();
         return api(method, path, body, Object.assign({}, opts, { retried: true }));
+      }
+      // 429 요청이 너무 많음: 간격을 늘리고 점점 길게 쉬었다가 같은 요청을 다시 보냅니다(최대 8번, 약 2분 50초).
+      if (response.status === 429) {
+        var attempt = opts.throttleAttempt || 0;
+        if (attempt < THROTTLE_WAITS_MS.length) {
+          state.throttled += 1;
+          state.gapMs = Math.min(REQUEST_GAP_MAX_MS, Math.max(state.gapMs * 2, 400));
+          var waitMs = THROTTLE_WAITS_MS[attempt];
+          // 발주오라가 기다릴 시간(Retry-After, 초)을 알려 주고 읽을 수 있으면 그만큼(최대 1분) 기다립니다.
+          var retryAfter = Number(response.headers.get("retry-after"));
+          if (isFinite(retryAfter) && retryAfter > 0) waitMs = Math.min(60000, Math.max(waitMs, retryAfter * 1000));
+          if (typeof state.onThrottle === "function") {
+            try { state.onThrottle(waitMs, attempt + 1); } catch { /* 표시는 실패해도 계속 */ }
+          }
+          await sleep(waitMs);
+          state.nextAt = clock() + state.gapMs;
+          return api(method, path, body, Object.assign({}, opts, { throttleAttempt: attempt + 1 }));
+        }
+      } else if (response.ok && state.gapMs > REQUEST_GAP_MIN_MS) {
+        state.gapMs = Math.max(REQUEST_GAP_MIN_MS, Math.round(state.gapMs * 0.97));
       }
       var type = response.headers.get("content-type") || "";
       var data = type.indexOf("json") >= 0 ? await response.json().catch(function () { return null; }) : await response.text().catch(function () { return ""; });
@@ -1135,11 +1220,16 @@
       var limit = 100;
       for (var page = 1; page <= 400; page += 1) {
         var payload;
+        // state.listInclude: LIST_INCLUDES 순서(0 = 카테고리 포함) → 거절되면 다음 → false(include 없이)
+        var includeIndex = typeof state.listInclude === "number" ? state.listInclude : 0;
+        var include = state.listInclude === false ? null : LIST_INCLUDES[includeIndex] || null;
         try {
-          payload = unwrap(await api("GET", "products", undefined, { params: state.listInclude === false ? { page: page, limit: limit } : { page: page, limit: limit, include: LIST_INCLUDE } }));
+          payload = unwrap(await api("GET", "products", undefined, { params: include ? { page: page, limit: limit, include: include } : { page: page, limit: limit } }));
+          state.listIncludeUsed = include;
         } catch (error) {
-          if (page === 1 && error.status === 400 && state.listInclude !== false) {
-            state.listInclude = false;
+          if (page === 1 && error.status === 400 && include) {
+            state.listInclude = includeIndex + 1 < LIST_INCLUDES.length ? includeIndex + 1 : false;
+            state.errors.push({ path: "GET products?include=" + include, status: 400, messages: messagesOf(error).slice(0, 3) });
             page -= 1;
             continue;
           }
@@ -1231,7 +1321,8 @@
       }
     }
 
-    async function discoverProductForm(sampleId) {
+    // anchors: 함께 찾을 단어(1.9.1: 카테고리 저장이 어긋나면 "categoryIds" 앞뒤 화면 코드를 먼저 남김)
+    async function discoverProductForm(sampleId, anchors) {
       if (state.discovery || !env.consoleOrigin || !env.pagePath) return;
       var out = state.discovery = { pages: [], allChunks: [], formChunks: [], snippets: [] };
       try {
@@ -1264,7 +1355,7 @@
             var code = await file.text();
             if (code.indexOf("개별공급가") < 0 && code.indexOf("매출처별") < 0) continue;
             out.formChunks.push(chunkPath);
-            var pieces = codeSnippets(code, ["개별공급가", "prices", "visibility", "productSuppliers", "mutate", "onSubmit", "supplyPrice"], 900, 4);
+            var pieces = codeSnippets(code, (Array.isArray(anchors) ? anchors : []).concat(["개별공급가", "prices", "visibility", "productSuppliers", "mutate", "onSubmit", "supplyPrice"]), 900, 4);
             for (var pieceIndex = 0; pieceIndex < pieces.length && budget > 0; pieceIndex += 1) {
               var piece = pieces[pieceIndex];
               budget -= piece.text.length;
@@ -1356,6 +1447,7 @@
     // options.final = false 면 마지막 보고를 끝으로 하지 않음(비교 작업 안에서 쓸 때는 true로 끝냄). options.taxMap = 이번 비교에서 읽은 과세 여부.
     async function runSales(step, report, options) {
       var opts = options || {};
+      if (!opts.taxMap) watchThrottle(report, { done: 0, total: 0, label: "판매·매출처 읽기" });
       var result = { lines: 0, buyers: 0, complete: false, error: null };
       var known = {};
       (step.knownTax || []).forEach(function (id) { known[id] = true; });
@@ -1463,6 +1555,7 @@
     }
 
     async function runCompare(plan, report) {
+      watchThrottle(report, { done: 0, total: 0, label: "발주오라 상품 읽기" });
       report.progress(0, 0, "발주오라 매출처 그룹·카테고리를 읽는 중…");
       var group = await findGroup(plan.groupKeyword);
       var categories = await loadCategories();
@@ -1471,6 +1564,11 @@
       var raw = await listAllProducts(function (count, total) { report.progress(count, total || count, "발주오라 상품 목록 " + count + (total ? " / " + total : "") + "개 읽음"); });
       var snapshots = raw.map(function (record) { return normalizeProduct(record, context); }).filter(Boolean);
       var products = snapshots.filter(function (snapshot) { return snapshot.kind === "product"; });
+      // 카테고리(1.9.1, 2026-11-27 운영 절임배추): 발주오라 목록은 카테고리를 include하지 않으면 모든 상품의 categoryIds가 빈 칸([])입니다.
+      // 1.2.0~1.9.0은 그 빈 칸을 '카테고리 없음'으로 믿어 모든 상품이 "카테고리 없음 > 🥕 농산"처럼 달라 보였습니다(맞추기 카드 '카테고리 2,129').
+      // 목록에서 카테고리를 읽지 못했으면(카테고리 include 거절 또는 모든 상품이 빈 칸) 목록 값은 '읽지 못함'으로 두고 연결된 상품 상세에서 읽습니다.
+      var listCategories = Boolean(state.listIncludeUsed && state.listIncludeUsed.indexOf("categories") >= 0) && products.some(function (snapshot) { return Array.isArray(snapshot.categoryIds) && snapshot.categoryIds.length > 0; });
+      if (!listCategories) products.forEach(function (snapshot) { delete snapshot.categoryIds; });
       // 상품 정보 칸(원산지·관리코드 등, 1.9.0)이 목록에 없으면 연결된 상품의 상세를 읽습니다.
       var needsDetail = products.some(function (snapshot) { return snapshot.categoryIds === undefined || snapshot.groupPrice === undefined || snapshot.shippingPolicyId === undefined || !snapshot.code || snapshot.extra === undefined || snapshot.extra.originText === undefined; });
       var policiesFromDetails = {};
@@ -1521,7 +1619,7 @@
           categories: first ? categories : undefined,
           shippingPolicies: first && shippingPolicies.length > 0 ? shippingPolicies : undefined,
           group: first ? group : undefined,
-          diagnostics: last ? diagnostics({ group: group, categories: categories.length, products: products.length, bundles: snapshots.length - products.length }) : undefined
+          diagnostics: last ? diagnostics({ group: group, categories: categories.length, products: products.length, bundles: snapshots.length - products.length, listInclude: state.listIncludeUsed || null, productCategories: listCategories ? "list" : "detail", withCategory: snapshots.filter(function (snapshot) { return Array.isArray(snapshot.categoryIds) && snapshot.categoryIds.length > 0; }).length }) : undefined
         });
         report.progress(Math.min(index + batchSize, snapshots.length), snapshots.length, "DB센터로 결과를 보내는 중…");
         if (last) break;
@@ -1828,6 +1926,54 @@
       });
     }
 
+    // 상품 카테고리(1.9.1, 2026-11-27 운영 절임배추 "발주오라에 저장된 카테고리가 다릅니다"): 1.3.0~1.9.0은 카테고리를 상품 정보 저장
+    // (PUT products/:id/info)에 넣었는데, 발주오라는 그 칸을 오류 없이 버려(응답 200, 다시 읽어도 카테고리 그대로) 카테고리가 바뀌지 않았습니다.
+    // 발주오라 상품 수정 화면 코드(2026-11-23 확인: 수정 본문에 categoryIds = 고른 카테고리 전체, 바뀐 칸만 PUT products/:id)와 같게 보냅니다.
+    // - 지금 발주오라 카테고리가 이미 받을 카테고리(연결 카테고리 또는 그 아래)면 보내지 않고 '반영됨'(비교 기록이 틀려도 세부 카테고리를 뭉개지 않음)
+    // - 상품에 붙은 브랜드별(제외한 카테고리) 아래 카테고리는 그대로 둡니다
+    // - 상품 수정이 카테고리 칸을 받지 않으면("property categoryIds should not exist") 예전처럼 상품 정보 저장으로 한 번 보냅니다
+    async function applyCategory(id, detail, item, result, context, checks) {
+      var created = context && context.createdCategories && item.values.doogoCategoryId ? context.createdCategories["c:" + item.values.doogoCategoryId] : null;
+      if (!item.values.categoryId && created) item.values.categoryId = created;
+      var target = item.values.categoryId;
+      if (!target) {
+        result.skipped.push({ field: "category", reason: "DB센터 카테고리와 연결한 발주오라 카테고리가 없습니다(동기화 설정 > 카테고리 연결)." });
+        return;
+      }
+      var flat = (context && context.categoryFlat) || [];
+      var accept = [target].concat((Array.isArray(item.values.categoryIds) ? item.values.categoryIds : []).filter(function (categoryId) { return typeof categoryId === "string" && categoryId && categoryId !== target; }));
+      checks.category = { accept: accept, flat: flat };
+      // 상세를 include 없이 읽었으면(include 거절) 카테고리 칸이 비어 올 수 있어, 브랜드 카테고리를 지우지 않게 보내지 않습니다.
+      var live = state.includeOk === false ? undefined : extractCategoryIds(detail);
+      if (live === undefined) {
+        result.skipped.push({ field: "category", reason: "발주오라 상품의 지금 카테고리를 읽지 못해 보내지 않았습니다(다른 카테고리가 지워지지 않게). 발주오라 상품 수정 화면에서 바꿔 주세요." });
+        return;
+      }
+      if (categoryCovers(live, accept, flat)) {
+        result.applied.push("category");
+        return;
+      }
+      var categoryKey = categoryKeyOf(detail);
+      var body = {};
+      if (categoryKey === "categoryIds") {
+        var keep = live.filter(function (categoryId) { return categoryId !== target && context && context.preserveCategoryIds && context.preserveCategoryIds[categoryId]; });
+        body.categoryIds = [target].concat(keep);
+      } else {
+        body[categoryKey] = target;
+      }
+      try {
+        await sendAdaptive("PUT", "products/" + encodeURIComponent(id), body, null, {});
+      } catch (error) {
+        if (error && error.status === 401) throw error;
+        if (!(error && error.status === 400 && !(categoryKey in body))) throw error;
+      }
+      if (categoryKey in body) {
+        result.applied.push("category");
+        return;
+      }
+      await applyInfo(id, detail, item, ["category"], result, context);
+    }
+
     // 상품 정보 칸(1.9.0): 발주오라 상품 수정 화면처럼 PUT products/:id 에 바뀐 칸만 보냅니다. 이미 같은 칸은 보내지 않고 '반영됨'.
     // 한꺼번에 보내다 거절되면 칸마다 따로 보내 어느 칸이 문제인지 찾고, 판매 상태(품절·도매몰 노출)를 받지 않으면 PUT products/:id/status 로 보냅니다.
     // 저장된 값 확인은 DB센터가 저장 뒤 다시 읽은 상품으로 합니다.
@@ -1932,6 +2078,7 @@
 
     async function pushItem(item, plan, context, code) {
       var result = { productId: item.productId, action: item.action, ok: false, baljuoraId: item.baljuoraId, code: item.code, applied: [], skipped: [], snapshot: null, error: null };
+      var writesBefore = state.writes;
       try {
         var id = item.baljuoraId;
         var detail;
@@ -1977,6 +2124,10 @@
           try { await applyInfo(id, detail, item, infoFields, result, context); } catch (error) { if (error && error.status === 401) throw error; markFailed(infoFields, error); }
         }
         var checks = {};
+        // 카테고리는 상품명 저장(…/info, 지금 카테고리를 함께 보냄) 뒤에 상품 수정(PUT products/:id)으로 보냅니다.
+        if (fields.indexOf("category") >= 0) {
+          try { await applyCategory(id, detail, item, result, context, checks); } catch (error) { if (error && error.status === 401) throw error; markFailed(["category"], error); }
+        }
         if (fields.indexOf("image") >= 0) {
           try { await applyImage(id, detail, item, result, code, checks); } catch (error) { if (error && error.status === 401) throw error; markFailed(["image"], error); }
         }
@@ -1987,14 +2138,16 @@
         if (extraFields.length) {
           try { await applyExtras(id, detail, item, extraFields, result); } catch (error) { if (error && error.status === 401) throw error; markFailed(extraFields, error); }
         }
-        var after = normalizeProduct(await getDetail(id), context);
+        // 이번 상품에 저장 요청을 하나도 보내지 않았으면(모든 칸이 이미 같음) 방금 읽은 상세를 그대로 써서 발주오라 요청을 줄입니다.
+        var after = normalizeProduct(state.writes === writesBefore && isObject(detail) ? detail : await getDetail(id), context);
         if (after) {
           verifyApplied(result, item, after, checks);
           result.snapshot = after;
           result.code = after.code || result.code;
         }
-        // 수강생 단가(황금농부 그룹 공급가)를 저장하지 못했으면 다음 고칠 때 쓸 수 있게 발주오라 저장 코드를 찾아 둡니다.
+        // 수강생 단가(황금농부 그룹 공급가)·카테고리를 저장하지 못했으면 다음 고칠 때 쓸 수 있게 발주오라 저장 코드를 찾아 둡니다.
         if (result.skipped.some(function (entry) { return entry.field === "groupPrice"; })) await discoverProductForm(id);
+        else if (item.action === "update" && result.skipped.some(function (entry) { return entry.field === "category"; })) await discoverProductForm(id, ["categoryIds", "categories"]);
         result.ok = result.applied.length > 0 || item.action === "create";
         if (!result.ok && !result.error) result.error = result.skipped.map(function (entry) { return entry.reason; }).join(" / ") || "바뀐 칸이 없습니다.";
       } catch (error) {
@@ -2004,6 +2157,8 @@
     }
 
     async function runPush(plan, report, code) {
+      var current = { done: 0, total: plan.items.length, label: "" };
+      watchThrottle(report, current);
       report.progress(0, plan.items.length, "발주오라 매출처 그룹을 확인하는 중…");
       var group = plan.groupId ? { id: plan.groupId, name: plan.groupKeyword } : null;
       if (plan.items.some(function (item) { return item.fields.indexOf("groupPrice") >= 0; }) && !group) group = await findGroup(plan.groupKeyword);
@@ -2024,6 +2179,8 @@
       if (plan.items.some(function (item) { return item.fields.indexOf("category") >= 0; })) {
         if (!categoriesNow) categoriesNow = await loadCategories();
         context.preserveCategoryIds = excludedTreeIds(categoriesNow || [], plan.categoryExclude || ["브랜드별"]);
+        // 지금 카테고리가 연결 카테고리의 아래 카테고리인지 보고(보내지 않음), 오류 문구에 카테고리 이름을 쓰려고 트리를 둡니다.
+        context.categoryFlat = categoriesNow || [];
       }
       if (plan.items.some(function (item) { return item.action === "create"; })) {
         report.progress(0, plan.items.length, "같은 상품코드·같은 매입처 상품이 발주오라에 있는지 확인하는 중…");
@@ -2044,6 +2201,8 @@
       var summary = { ok: 0, failed: 0 };
       for (var index = 0; index < plan.items.length; index += 1) {
         var item = plan.items[index];
+        current.done = index;
+        current.label = (index + 1) + " / " + plan.items.length + " " + item.name;
         report.progress(index, plan.items.length, (item.action === "create" ? "신규 등록 " : "수정 ") + (index + 1) + " / " + plan.items.length + " · " + item.name);
         var result = await pushItem(item, plan, context, code);
         if (result.ok) summary.ok += 1; else summary.failed += 1;
@@ -2061,7 +2220,8 @@
 
     function diagnostics(extra) {
       var discovery = state.discovery || state.categoryDiscovery ? Object.assign({}, state.discovery || {}, state.categoryDiscovery ? { categoryPage: state.categoryDiscovery } : {}) : undefined;
-      return { version: VERSION, at: new Date().toISOString(), structure: state.structure, endpoints: state.endpoints, errors: state.errors.slice(0, 30), extra: extra || {}, discovery: discovery };
+      // throttled: 429(요청이 너무 많음)로 쉰 횟수, gapMs: 마지막 요청 간격 — 서버 로그로 발주오라 요청 제한을 확인합니다.
+      return { version: VERSION, at: new Date().toISOString(), structure: state.structure, endpoints: state.endpoints, errors: state.errors.slice(0, 30), extra: extra || {}, discovery: discovery, throttled: state.throttled, gapMs: state.gapMs };
     }
 
     return { api: api, refreshToken: refreshToken, runCompare: runCompare, runPush: runPush, runSales: runSales, listAll: listAll, pushItem: pushItem, diagnostics: diagnostics, state: state };
@@ -2665,6 +2825,8 @@
     extraBodyFor: extraBodyFor,
     sameExtraValue: sameExtraValue,
     verifyApplied: verifyApplied,
+    categoryCovers: categoryCovers,
+    categoryLabel: categoryLabel,
     createRunner: createRunner,
     readCode: readCode,
     codeFromLocation: codeFromLocation,
