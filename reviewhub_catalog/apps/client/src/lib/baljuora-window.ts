@@ -84,11 +84,12 @@ export function handleRunnerMessage(event: Pick<MessageEvent, "origin" | "data">
 
 const onMessage = (event: MessageEvent) => { handleRunnerMessage(event); };
 
-// 관리자 화면이 열려 있는 동안 발주오라 창의 알림을 듣습니다(관리자 틀 CatalogAdmin에서 한 번).
+// 관리자 화면이 열려 있는 동안 발주오라 창의 알림(·책갈피 시험)을 듣습니다(관리자 틀 CatalogAdmin에서 한 번).
 export function listenBaljuoraRunner() {
   if (listening || typeof window === "undefined") return;
   listening = true;
   window.addEventListener("message", onMessage);
+  window.addEventListener(BOOKMARKLET_TEST_EVENT, onBookmarkletTest);
 }
 
 // 책갈피가 켜진 발주오라 창(12시간 안에 알림을 받은 창) 정보 — 없으면 null
@@ -150,15 +151,111 @@ export function runnerOpenMessage(fallback: string) {
 }
 
 // 책갈피(북마클릿) 주소: 발주오라 관리자 창에 DB센터의 동기화 스크립트를 불러옵니다(누를 때마다 새로 받음 ?t=).
-export function bookmarkletHref(origin: string) {
-  return `javascript:(function(){var o=${JSON.stringify(origin)};window.__doogoSyncOrigin=o;var s=document.createElement("script");s.src=o+"/baljuora-sync.js?t="+Date.now();s.onerror=function(){alert("두고푸드 동기화 스크립트를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.")};document.body.appendChild(s);})();`;
+// 삼성 인터넷(2026-11-28 관리자 신고 "삼성 인터넷에서는 발주오라 창에 동기화 버튼이 안 생긴다")은
+//  ① 북마크 주소에 띄어쓰기가 있으면 저장하지 않고 2048자까지만 받으며
+//  ② 북마크 목록에서 누르면 실행하지 않고, 주소창에 북마크 이름을 쳐서 별(★)이 붙은 줄을 눌러야 실행하는데
+//  ③ 그때도 주소가 끝에 //% 로 끝나지 않으면 실행 대신 검색해 버리는 경우가 있습니다
+// (갤럭시에서 확인한 공개 프로젝트 relaxedbrownie/eruda-tools 의 삼성 브라우저용 짧은 북마클릿과 같은 방식).
+// 그래서 한글은 \uXXXX, 띄어쓰기·따옴표·중괄호 등은 %XX로 바꿔 영문·숫자·기호만 남기고 끝에 //% 를 붙입니다(PC 브라우저도 같은 주소로 동작).
+const BOOKMARKLET_SAFE = /^[A-Za-z0-9!$&'()*+,\-./:;=?@[\]_~]$/;
+export const BOOKMARKLET_MAX_LENGTH = 2048;
+
+function asciiJs(text: string) {
+  return text.replace(/[^\x20-\x7e]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
 }
 
-// 테스트용: 기억한 창 정보를 지웁니다.
+function encodeBookmarklet(code: string) {
+  return Array.from(code).map((char) => (BOOKMARKLET_SAFE.test(char) ? char : encodeURIComponent(char))).join("");
+}
+
+export function bookmarkletHref(origin: string) {
+  const failed = asciiJs("두고푸드 동기화 스크립트를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.");
+  const code = `!function(){var o=${JSON.stringify(origin)};window.__doogoSyncOrigin=o;var s=document.createElement("script");s.src=o+"/baljuora-sync.js?t="+Date.now();s.onerror=function(){alert("${failed}")};(document.head||document.documentElement).appendChild(s)}();`;
+  return `javascript:${encodeBookmarklet(code)}//%`;
+}
+
+// ─── 책갈피 시험하기(책갈피 1.12.1) ─────────────────────────────────────────────
+// 휴대폰에서 북마크를 만든 뒤 DB센터 화면에서 먼저 눌러 보면, 책갈피 스크립트가 발주오라 대신 이 화면에 이 이벤트를 보내고
+// DB센터는 "책갈피가 잘 작동해요"를 보여 줍니다(이 기기에 마지막 확인 시각을 기억).
+export const BOOKMARKLET_TEST_EVENT = "doogo-bookmarklet-test";
+const BOOKMARKLET_OK_KEY = "doogo:bookmarklet-ok";
+export type BookmarkletCheck = { version: string; at: number };
+const checkSubscribers = new Set<() => void>();
+const testCallbacks = new Set<(check: BookmarkletCheck) => void>();
+let lastCheck: BookmarkletCheck | null | undefined;
+
+function readCheck(): BookmarkletCheck | null {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(BOOKMARKLET_OK_KEY) ?? "null");
+    return parsed && typeof parsed.at === "number" ? { version: String(parsed.version ?? "").slice(0, 20), at: parsed.at } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function bookmarkletCheck(): BookmarkletCheck | null {
+  if (lastCheck === undefined) lastCheck = typeof window === "undefined" ? null : readCheck();
+  return lastCheck;
+}
+
+const onBookmarkletTest = (event: Event) => {
+  // 같은 화면에서 실행된 책갈피 스크립트만 보냅니다(다른 사이트는 이 창에 이벤트를 보낼 수 없음).
+  event.preventDefault();
+  const detail = (event as CustomEvent<{ version?: unknown }>).detail;
+  lastCheck = { version: typeof detail?.version === "string" ? detail.version.slice(0, 20) : "", at: Date.now() };
+  try {
+    window.localStorage.setItem(BOOKMARKLET_OK_KEY, JSON.stringify(lastCheck));
+  } catch {
+    // 저장이 막힌 브라우저: 이 화면에서만 보입니다.
+  }
+  checkSubscribers.forEach((notify) => notify());
+  testCallbacks.forEach((callback) => callback(lastCheck as BookmarkletCheck));
+};
+
+// 책갈피 시험이 성공하면 부를 함수(관리자 틀이 알림을 띄움). 돌려준 함수로 해제.
+export function whenBookmarkletTested(callback: (check: BookmarkletCheck) => void) {
+  testCallbacks.add(callback);
+  return () => { testCallbacks.delete(callback); };
+}
+
+function subscribeCheck(notify: () => void) {
+  checkSubscribers.add(notify);
+  return () => { checkSubscribers.delete(notify); };
+}
+
+export function useBookmarkletCheck() {
+  return useSyncExternalStore(subscribeCheck, () => bookmarkletCheck(), () => null);
+}
+
+// ─── 휴대폰에서 발주오라 창을 열기 전 '할 일' 안내 ────────────────────────────────
+// 휴대폰은 창이 열리면 바로 그 창으로 넘어가 DB센터 안내를 볼 수 없어서, 책갈피가 켜진 창이 없으면 열기 전에 할 일을 보여 줍니다.
+const OPEN_GUIDE_HIDDEN_KEY = "doogo:baljuora-open-guide-hidden";
+
+export function openGuideHidden() {
+  try {
+    return window.localStorage.getItem(OPEN_GUIDE_HIDDEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setOpenGuideHidden(hidden: boolean) {
+  try {
+    if (hidden) window.localStorage.setItem(OPEN_GUIDE_HIDDEN_KEY, "1");
+    else window.localStorage.removeItem(OPEN_GUIDE_HIDDEN_KEY);
+  } catch {
+    // 저장이 막힌 브라우저: 다음에도 안내가 나옵니다.
+  }
+}
+
+// 테스트용: 기억한 창 정보·책갈피 시험 기록을 지웁니다.
 export function resetBaljuoraRunnerForTest() {
   current = undefined;
+  lastCheck = undefined;
   try {
     window.sessionStorage.removeItem(STORE_KEY);
+    window.localStorage.removeItem(BOOKMARKLET_OK_KEY);
+    window.localStorage.removeItem(OPEN_GUIDE_HIDDEN_KEY);
   } catch {
     // 무시
   }

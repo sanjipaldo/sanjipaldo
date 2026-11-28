@@ -2430,3 +2430,54 @@ describe("발주오라 창에 남는 동기화 버튼(1.12.0)", () => {
     expect(internals.codeKey("abcde-fgh23")).toBe("ABCDEFGH23");
   });
 });
+
+describe("책갈피 시험(1.12.1)", () => {
+  // DB센터 화면(책갈피가 불러온 주소와 같은 곳)을 흉내 낸 창
+  function doogoWindow(options: { hostname?: string; origin?: string; listen?: boolean } = {}) {
+    const origin = options.origin ?? "https://doogofood.test";
+    const target = new EventTarget();
+    const seen: unknown[] = [];
+    if (options.listen) target.addEventListener("doogo-bookmarklet-test", (event) => { seen.push((event as CustomEvent).detail); event.preventDefault(); });
+    const win: any = {
+      __doogoSyncOrigin: "https://doogofood.test",
+      location: { hostname: options.hostname ?? "doogofood.test", origin, pathname: "/admin/sync", search: "", hash: "" },
+      document,
+      alert: vi.fn(),
+      CustomEvent,
+      dispatchEvent: target.dispatchEvent.bind(target),
+      addEventListener: target.addEventListener.bind(target),
+      removeEventListener: target.removeEventListener.bind(target)
+    };
+    return { win, seen };
+  }
+
+  it("DB센터 화면에서 누르면 발주오라 작업 대신 '책갈피 시험' 알림을 보내고, DB센터가 받으면 경고창을 띄우지 않습니다", async () => {
+    document.body.innerHTML = "";
+    const { win, seen } = doogoWindow({ listen: true });
+    await internals.main(win);
+    expect(seen).toEqual([{ version: expect.stringMatching(/^1\.12\.\d+$/) }]);
+    expect(win.alert).not.toHaveBeenCalled();
+    expect(document.getElementById("doogo-sync-fab")).toBeNull();
+    expect(win.__doogoSyncResident).toBeUndefined();
+  });
+
+  it("DB센터가 알림을 받지 못하면(관리자 화면이 아님) 경고창으로 '잘 실행돼요'와 다음 할 일을 알려 줍니다", async () => {
+    const { win } = doogoWindow();
+    await internals.main(win);
+    expect(win.alert).toHaveBeenCalledWith(expect.stringContaining("책갈피가 잘 실행돼요"));
+    expect(win.alert.mock.calls[0][0]).toContain("console.baljuora.com");
+    // 알림을 보낼 수 없는 창(오래된 브라우저)도 경고창으로
+    const { win: old } = doogoWindow();
+    old.CustomEvent = undefined;
+    expect(internals.bookmarkletTest(old, "https://doogofood.test")).toBe(true);
+    expect(old.alert).toHaveBeenCalledWith(expect.stringContaining("책갈피가 잘 실행돼요"));
+  });
+
+  it("DB센터도 발주오라도 아닌 화면에서는 예전처럼 '발주오라 관리자 화면에서 눌러 주세요'", async () => {
+    const { win, seen } = doogoWindow({ hostname: "example.com", origin: "https://example.com", listen: true });
+    await internals.main(win);
+    expect(seen).toEqual([]);
+    expect(win.alert).toHaveBeenCalledWith("발주오라 관리자 화면(console.baljuora.com)에서 책갈피를 눌러 주세요.");
+    expect(internals.bookmarkletTest(win, "")).toBe(false);
+  });
+});

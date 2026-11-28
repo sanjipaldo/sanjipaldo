@@ -79,7 +79,7 @@ import { PARTNER_CONTRACT_LABELS, PARTNER_CONTRACT_TYPES, PARTNER_STAGES, PARTNE
 import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_GUIDE_SETTING_KEY, SUPPLIER_TERM_LABELS, SUPPLIER_VIDEO_GROUPS, hasSupplierDemo, parseSupplierGuide, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideTerms, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
 import { SELLER_GUIDE_SETTING_KEY, SELLER_VIDEO_GROUPS, hasSellerDemo, parseSellerGuide, type SellerGuideSettings } from "@repo/shared/seller-guide";
 import { baljuoraNumbers, sortByBaljuoraOrder } from "@/lib/baljuora-number";
-import { listenBaljuoraRunner } from "@/lib/baljuora-window";
+import { listenBaljuoraRunner, whenBookmarkletTested } from "@/lib/baljuora-window";
 import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 import type { AdminCatalogData, AdminHomeData, Category, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
@@ -737,6 +737,10 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
 
   // 책갈피를 누른 발주오라 창이 보내는 "켜져 있음 · 지금 경로" 알림을 관리자 화면 어디서든 받아 둡니다(책갈피 1.12.0).
   useEffect(() => { listenBaljuoraRunner(); }, []);
+  // DB센터 화면에서 책갈피를 시험 삼아 실행하면(휴대폰 주소창 ★ 줄) 경고창 대신 이 알림으로 알려 줍니다(책갈피 1.12.1).
+  useEffect(() => whenBookmarkletTested(() => {
+    toast.success("책갈피가 잘 작동해요! 이제 DB센터 버튼으로 열린 발주오라 관리자 창에서 똑같이 실행해 주세요.", { duration: 8000 });
+  }), []);
 
   // Keep the page underneath the drawer from moving while the mobile menu is
   // open. The drawer itself remains the scroll container so every menu item

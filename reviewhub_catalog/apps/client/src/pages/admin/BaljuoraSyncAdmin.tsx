@@ -29,9 +29,9 @@ import { BaljuoraJobCode, type ReissuedJobCode } from "./BaljuoraJobCode";
 import { BaljuoraStatModal, type StatKind } from "./BaljuoraStatModals";
 import { BaljuoraReconcileCard } from "./BaljuoraReconcileCard";
 import { clearJobCode, loadJobCode, saveJobCode } from "@/lib/baljuora-job-code";
-import { bookmarkletHref, openBaljuoraWindow, runnerOpenMessage } from "@/lib/baljuora-window";
+import { bookmarkletHref, runnerOpenMessage } from "@/lib/baljuora-window";
 import { detectInstallPlatform } from "@/lib/app-install";
-import { BaljuoraRunnerHint, BaljuoraWindowLink, MobileBookmarkletGuide } from "./baljuora-window-ui";
+import { BaljuoraRunnerHint, BaljuoraWindowLink, MobileBookmarkletGuide, useBaljuoraOpener } from "./baljuora-window-ui";
 import "./baljuora-sync-admin.css";
 
 // salesOnCompare·salesMonths(2026-11-23): 발주오라 상품 불러오기(비교) 때 판매·매출처도 함께 불러올지, 기간(이번 달 포함 최근 N개월)
@@ -219,6 +219,8 @@ export function BaljuoraSyncAdmin() {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   // 휴대폰·태블릿이면 책갈피 안내를 휴대폰 순서부터(PC의 '즐겨찾기 막대로 끌어다 놓기' 버튼은 숨김)
   const mobileDevice = useMemo(() => detectInstallPlatform().mobile, []);
+  // 휴대폰이고 책갈피가 켜진 발주오라 창이 없으면 '발주오라 창에서 할 일'을 먼저 보여 주고 그 창의 버튼으로 엽니다(2026-11-28).
+  const opener = useBaljuoraOpener();
 
   const load = useCallback(async () => {
     try {
@@ -338,8 +340,7 @@ export function BaljuoraSyncAdmin() {
       setJob({ view: created.job, code: created.code, consoleUrl: created.consoleUrl });
       saveJobCode({ id: created.job.id, type: created.job.type, code: created.code, consoleUrl: created.consoleUrl, expiresAt: created.job.expiresAt });
       const message = runnerOpenMessage("발주오라 관리자 창을 열었습니다. 그 창에서 책갈피 '두고푸드 동기화'를 눌러 주세요.");
-      openBaljuoraWindow(created.consoleUrl);
-      toast.success(message);
+      if (opener.open(created.consoleUrl)) toast.success(message);
       setSelected(new Set());
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "작업을 만들지 못했습니다.");
@@ -544,6 +545,7 @@ export function BaljuoraSyncAdmin() {
 
   return (
     <div className="bj-sync">
+      {opener.sheet}
       <div className="admin-page-heading">
         <div>
           <span>BALJUORA SYNC</span>

@@ -12,9 +12,9 @@ import { toast } from "sonner";
 import { BALJUORA_FIELD_SHORT_LABELS, type BaljuoraSyncField } from "@repo/shared/baljuora-sync";
 import { apiFetch } from "@/lib/api";
 import { clearJobCode, loadJobCode, saveJobCode } from "@/lib/baljuora-job-code";
-import { openBaljuoraWindow, runnerOpenMessage, useBaljuoraRunner } from "@/lib/baljuora-window";
+import { runnerOpenMessage, useBaljuoraRunner } from "@/lib/baljuora-window";
 import { AdminSheetModal } from "./admin-sheet-modal";
-import { BaljuoraRunnerHint, BaljuoraWindowLink } from "./baljuora-window-ui";
+import { BaljuoraRunnerHint, BaljuoraWindowLink, useBaljuoraOpener } from "./baljuora-window-ui";
 import { BaljuoraJobCode, type ReissuedJobCode } from "./BaljuoraJobCode";
 import "./ops-sync.css";
 
@@ -200,20 +200,22 @@ export function useOpsSync(onFinished?: () => void) {
     return () => window.clearInterval(timer);
   }, [ordersActive, productsActive, slow, load]);
 
+  // 1.12.0: 늘 같은 발주오라 창으로(책갈피를 한 번 누른 창이면 오른쪽 아래 동기화 버튼이 받아 바로 시작).
+  // 휴대폰이고 버튼이 켜진 창이 없으면 '발주오라 창에서 할 일' 창을 먼저 보여 주고 그 창의 버튼으로 엽니다(2026-11-28, 삼성 인터넷).
+  const opener = useBaljuoraOpener();
+  const openWindow = opener.open;
   const remember = useCallback((created: Created) => {
     saveJobCode({ id: created.job.id, type: created.job.type, code: created.code, consoleUrl: created.consoleUrl, expiresAt: created.job.expiresAt });
     setCodes((current) => ({ ...current, [created.job.id]: { code: created.code, consoleUrl: created.consoleUrl } }));
-    // 1.12.0: 늘 같은 발주오라 창으로(책갈피를 한 번 누른 창이면 오른쪽 아래 동기화 버튼이 받아 바로 시작)
-    openBaljuoraWindow(created.consoleUrl);
-  }, []);
+    return openWindow(created.consoleUrl);
+  }, [openWindow]);
 
   const startOrders = useCallback(async () => {
     setBusy("orders");
     setFinishedOrders(null);
     try {
       const message = runnerOpenMessage("발주오라 관리자 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 한 번 눌러 주세요.");
-      remember(await readData<Created>(await apiFetch("/baljuora/admin/ops-sync/orders/start", jsonInit("POST", {}))));
-      toast.success(message);
+      if (remember(await readData<Created>(await apiFetch("/baljuora/admin/ops-sync/orders/start", jsonInit("POST", {}))))) toast.success(message);
       await load();
     } catch (failure) {
       toast.error(failure instanceof Error ? failure.message : "주문 동기화를 시작하지 못했어요.");
@@ -238,9 +240,9 @@ export function useOpsSync(onFinished?: () => void) {
     setFinishedProducts(null);
     try {
       const message = runnerOpenMessage("발주오라 관리자 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 한 번만 누르면 읽고 이어서 보내요.");
-      remember(await readData<Created>(await apiFetch("/baljuora/admin/ops-sync/products/start", jsonInit("POST", { options }))));
+      const opened = remember(await readData<Created>(await apiFetch("/baljuora/admin/ops-sync/products/start", jsonInit("POST", { options }))));
       setPreview(null);
-      toast.success(message);
+      if (opened) toast.success(message);
       await load();
     } catch (failure) {
       toast.error(failure instanceof Error ? failure.message : "상품 동기화를 시작하지 못했어요.");
@@ -256,8 +258,7 @@ export function useOpsSync(onFinished?: () => void) {
       if (result.nothing) toast.success("보낼 변경이 없어요. DB센터와 발주오라 상품이 같아요.");
       else {
         const message = runnerOpenMessage("보내기 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 한 번 더 눌러 주세요.");
-        remember(result);
-        toast.success(message);
+        if (remember(result)) toast.success(message);
       }
       await load();
     } catch (failure) {
@@ -303,6 +304,8 @@ export function useOpsSync(onFinished?: () => void) {
     continueProducts,
     cancel,
     reissued,
+    // 휴대폰 '발주오라 창에서 할 일' 창(필요할 때만, 운영 홈 버튼 옆에 그림)
+    openerSheet: opener.sheet,
     closePreview: () => setPreview(null),
     closeOrders: () => setFinishedOrders(null),
     closeProducts: () => setFinishedProducts(null),
@@ -366,6 +369,7 @@ export function OpsSyncButtons({ state }: { state: OpsSyncState }) {
           {productsLast && !productsActive && <small> · {relativeTime(productsLast)}</small>}
         </p>
       </div>
+      {state.openerSheet}
     </div>
   );
 }

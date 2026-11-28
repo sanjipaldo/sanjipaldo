@@ -8,11 +8,12 @@
  *  2) 이 창의 로그인으로 발주오라 관리자 화면과 같은 방식(api.baljuora.com)으로 상품을 읽거나(비교) 고칩니다(보내기).
  *  3) 결과와 진단 정보(발주오라 응답의 칸 이름·형식, 오류 문구)를 DB센터로 돌려줍니다. 발주오라 로그인 토큰은 보내지 않습니다.
  *  4) (1.12.0) 한 번 누른 창에는 오른쪽 아래 '동기화' 버튼이 남고, DB센터가 같은 창으로 보낸 다음 작업(#doogo-sync=코드)을 바로 시작합니다.
+ *  5) (1.12.1) DB센터 화면에서 누르면 책갈피가 잘 실행되는지 시험만 합니다(휴대폰 북마크 확인용).
  */
 (function () {
   "use strict";
 
-  var VERSION = "1.12.0";
+  var VERSION = "1.12.1";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   // 상품명은 상품 정보 저장(PUT products/:id/info), 카테고리는 상품 수정(PUT products/:id)으로 따로 보냅니다(1.9.1, 아래 applyCategory).
@@ -3362,11 +3363,30 @@
     }
   }
 
+  // 책갈피 시험(1.12.1, 2026-11-28 관리자 신고 "삼성 인터넷에서는 발주오라 창에 동기화 버튼이 안 생긴다"):
+  // 휴대폰은 북마크 목록에서 누르면 실행되지 않거나(삼성 인터넷·크롬은 주소창에서 별(★) 붙은 줄을 눌러야 함) 주소가 잘못 저장되는 일이 있어,
+  // 북마크를 만든 뒤 DB센터 화면에서 먼저 눌러 보게 합니다. DB센터 화면이 이 이벤트를 받으면 "책갈피가 잘 작동해요"를 보여 줍니다.
+  function bookmarkletTest(win, doogoOrigin) {
+    var origin = "";
+    try { origin = String(win.location.origin || ""); } catch { origin = ""; }
+    if (!doogoOrigin || origin !== doogoOrigin) return false;
+    var handled = false;
+    try {
+      if (typeof win.CustomEvent === "function" && typeof win.dispatchEvent === "function") {
+        handled = !win.dispatchEvent(new win.CustomEvent("doogo-bookmarklet-test", { cancelable: true, detail: { version: VERSION } }));
+      }
+    } catch { handled = false; }
+    if (!handled) win.alert("책갈피가 잘 실행돼요. 이제 DB센터 버튼으로 열린 발주오라 관리자 창(console.baljuora.com)에서 똑같이 실행해 주세요.");
+    return true;
+  }
+
   async function main(win) {
     var doogoOrigin = win.__doogoSyncOrigin || (function () {
       try { return new URL(win.document.currentScript && win.document.currentScript.src).origin; } catch { return ""; }
     })();
     if (!/console\.baljuora\.com$/.test(win.location.hostname) && !win.__doogoSyncAllowAnyHost) {
+      // 1.12.1: DB센터 화면에서 누르면 '책갈피 시험'(휴대폰에서 북마크를 만든 뒤 잘 실행되는지 DB센터가 알려 줌)
+      if (bookmarkletTest(win, doogoOrigin)) return;
       win.alert("발주오라 관리자 화면(console.baljuora.com)에서 책갈피를 눌러 주세요.");
       return;
     }
@@ -3569,6 +3589,7 @@
     runSettlement: runSettlement,
     createPanel: createPanel,
     installResident: installResident,
+    bookmarkletTest: bookmarkletTest,
     runSyncJob: runSyncJob,
     chooseMode: chooseMode,
     codeKey: codeKey,

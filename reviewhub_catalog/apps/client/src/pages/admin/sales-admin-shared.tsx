@@ -5,9 +5,9 @@ import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, RefreshCw, X } from
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { clearJobCode, latestJobCode, saveJobCode } from "@/lib/baljuora-job-code";
-import { openBaljuoraWindow, runnerOpenMessage } from "@/lib/baljuora-window";
+import { runnerOpenMessage } from "@/lib/baljuora-window";
 import { BaljuoraJobCode, type ReissuedJobCode } from "./BaljuoraJobCode";
-import { BaljuoraRunnerHint, BaljuoraWindowLink } from "./baljuora-window-ui";
+import { BaljuoraRunnerHint, BaljuoraWindowLink, useBaljuoraOpener } from "./baljuora-window-ui";
 
 export async function readData<T>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => ({ ok: false }))) as { ok: boolean; data: T; error?: { message?: string } };
@@ -94,6 +94,8 @@ export function SalesSyncCard({ sync, onDone, compact = false }: { sync: SalesSy
   const [busy, setBusy] = useState(false);
   const [job, setJob] = useState<{ view: JobView; code: string; consoleUrl: string } | null>(null);
   const active = job ? job.view.status === "waiting" || job.view.status === "running" : false;
+  // 휴대폰이고 책갈피가 켜진 발주오라 창이 없으면 '발주오라 창에서 할 일'을 먼저 보여 줍니다(2026-11-28).
+  const opener = useBaljuoraOpener();
 
   // 이 기기에서 만든 판매 불러오기 작업이 아직 진행 중이면 화면을 새로 열어도 작업 코드와 진행 상황을 다시 보여 줍니다.
   useEffect(() => {
@@ -120,8 +122,7 @@ export function SalesSyncCard({ sync, onDone, compact = false }: { sync: SalesSy
       setJob({ view: created.job, code: created.code, consoleUrl: created.consoleUrl });
       saveJobCode({ id: created.job.id, type: "sales", code: created.code, consoleUrl: created.consoleUrl, expiresAt: created.job.expiresAt ?? null });
       const message = runnerOpenMessage("발주오라 관리자 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 눌러 주세요.");
-      openBaljuoraWindow(created.consoleUrl);
-      toast.success(message);
+      if (opener.open(created.consoleUrl)) toast.success(message);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "작업을 만들지 못했습니다.");
     } finally {
@@ -158,6 +159,7 @@ export function SalesSyncCard({ sync, onDone, compact = false }: { sync: SalesSy
   const progressPercent = progress && progress.total > 0 ? Math.min(100, Math.round((progress.done / progress.total) * 100)) : view?.status === "done" ? 100 : view?.status === "running" ? 15 : 0;
   return (
     <section className={`admin-card sa-sync-card ${compact ? "is-compact" : ""}`} aria-live="polite">
+      {opener.sheet}
       <div className="sa-sync-head">
         <div>
           <h2><RefreshCw size={18} aria-hidden="true" /> 발주오라에서 판매·매출처 불러오기</h2>
